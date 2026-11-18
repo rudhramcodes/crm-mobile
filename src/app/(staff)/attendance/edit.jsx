@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { Search } from 'lucide-react-native';
 import {
-  Alert, Avatar, Button, Chip, DashboardState, DateField, Input, Pressable, Screen, SheetHeader, Text, Toggle, backTo,
+  Alert, Avatar, Button, Chip, DashboardState, DateField, Input, Pressable, Screen, SheetHeader, Text, Toggle, UserPicker, backTo,
 } from '@/components';
 import { useGetAttendanceSummaryQuery, useManualEntryMutation } from '@/services/attendanceApi';
-import { useGetUsersQuery } from '@/services/userApi';
 import { ATTENDANCE_STATUS } from '@/constants';
-import { useTheme } from '@/constants/theme';
 import { runAction, ymd } from '@/utils/attendance';
 import { apiError } from '@/utils/apiError';
 import { getFieldError } from '@/utils/getFieldError';
@@ -16,29 +13,6 @@ import { parseTime, toDisplay } from '@/utils/time';
 
 const OFF = ['absent', 'leave', 'holiday', 'weekend'];
 const hhmm = (t) => (t ? `${String(new Date(t).getHours()).padStart(2, '0')}:${String(new Date(t).getMinutes()).padStart(2, '0')}` : '');
-
-// Type a name, tap a match. Clients are left out: they have no attendance.
-function EmployeePicker({ onPick }) {
-  const theme = useTheme();
-  const [q, setQ] = useState('');
-  const { data, isFetching } = useGetUsersQuery({ search: q.trim() || undefined, isActive: true, limit: 20 });
-  const people = (data?.data?.users || []).filter((u) => u.role !== 'client').slice(0, 8);
-  return (
-    <View className="gap-2">
-      <Input label="Employee" value={q} onChangeText={setQ} placeholder="Search by name" autoCapitalize="none" right={<Search size={18} color={theme.muted} />} />
-      {people.map((u) => (
-        <Pressable key={u._id} onPress={() => onPick(u)} accessibilityLabel={`Pick ${u.name}`} className="flex-row items-center gap-3 rounded-2xl bg-surface-2 px-3 py-2.5">
-          <Avatar name={u.name} uri={u.avatar} size={32} />
-          <View className="flex-1">
-            <Text className="font-body-medium">{u.name}</Text>
-            <Text numberOfLines={1} className="text-xs text-muted">{u.email}</Text>
-          </View>
-        </Pressable>
-      ))}
-      {!people.length && !isFetching && <Text className="text-sm text-muted">No one matches.</Text>}
-    </View>
-  );
-}
 
 // The form itself; mounted once the day's record (if any) is loaded so the fields start from it.
 function EntryForm({ employee, name, date, setDate, record, onChangeEmployee }) {
@@ -121,7 +95,7 @@ export default function EditAttendance() {
   return (
     <Screen scroll edges={['bottom']} className="gap-4 pt-6">
       <SheetHeader title={record ? 'Edit day' : 'Add entry'} sub="The employee sees the change on their calendar." closeLabel="Cancel" />
-      {!person ? <EmployeePicker onPick={setPerson} /> : isFetching || isError ? (
+      {!person ? <UserPicker onPick={setPerson} /> : isFetching || isError ? (
         <DashboardState isLoading={isFetching} isError={isError} refetch={refetch} />
       ) : (
         <EntryForm

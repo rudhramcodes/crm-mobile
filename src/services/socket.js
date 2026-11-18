@@ -6,7 +6,6 @@ let socket = null;
 const AUTH_ERRORS = ['Invalid token', 'Authentication required'];
 
 // One live connection per signed-in session. The token is read on every (re)connect, so a refreshed one is picked up.
-// shortcut: no join:room/leave:room yet; add them with the first screen that follows one record live (M4 chat).
 export function connectSocket({ getState, dispatch }) {
   disconnectSocket();
   const s = io(SOCKET_URL, { auth: (cb) => cb({ token: getState().auth.accessToken }), transports: ['websocket'] });
@@ -29,3 +28,5 @@ export function disconnectSocket() {
   socket?.disconnect();
   socket = null;
 }
+
+export const getSocket = () => socket;
