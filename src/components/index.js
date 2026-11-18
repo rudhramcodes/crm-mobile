@@ -28,3 +28,8 @@ export * from './Dashboards';
 export * from './AttendanceParts';
 export * from './ClockPanel';
 export * from './DateField';
+export * from './UserPicker';
+export * from './TaskParts';
+export * from './TaskViews';
+export * from './TaskDetailParts';
+export * from './TaskChat';

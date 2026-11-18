@@ -17,6 +17,9 @@ export default function StaffLayout() {
       <Stack.Screen name="attendance/edit" options={modal} />
       <Stack.Screen name="attendance/holiday-form" options={modal} />
       <Stack.Screen name="attendance/shift-form" options={modal} />
+      <Stack.Screen name="tasks/new" options={modal} />
+      <Stack.Screen name="tasks/reschedule" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
+      <Stack.Screen name="tasks/review-note" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
     </Stack>
   );
 }
