@@ -131,3 +131,10 @@ export function formatMinutes(totalMinutes, fallback = '0m') {
   if (h > 0) return `${h}h`;
   return `${m}m`;
 }
+
+// ₹6.21L / ₹1.2Cr / ₹45.5K: short enough for a stat tile; show the full amount next to it.
+export function formatCompactCurrency(amount) {
+  const n = Number(amount) || 0;
+  const [div, unit] = Math.abs(n) >= 1e7 ? [1e7, 'Cr'] : Math.abs(n) >= 1e5 ? [1e5, 'L'] : Math.abs(n) >= 1e3 ? [1e3, 'K'] : [1, ''];
+  return `₹${Number((n / div).toFixed(div === 1 ? 0 : div === 1e3 ? 1 : 2))}${unit}`;
+}
