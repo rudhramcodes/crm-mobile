@@ -241,3 +241,33 @@ const devHost = __DEV__ && Constants.expoConfig?.hostUri?.split(':')[0];
 const reachable = (url) => (devHost ? url?.replace('localhost', devHost) : url);
 export const API_BASE_URL = reachable(process.env.EXPO_PUBLIC_API_URL);
 export const SOCKET_URL = reachable(process.env.EXPO_PUBLIC_SOCKET_URL);
+
+// Attendance day statuses. `dot` fills calendar cells and legends; every cell also carries the word for screen readers.
+export const ATTENDANCE_STATUS = [
+  { value: 'present', label: 'Present', color: 'bg-success/15 text-success', dot: 'bg-success' },
+  { value: 'wfh', label: 'WFH', color: 'bg-accent/15 text-accent-ink', dot: 'bg-accent' },
+  { value: 'half_day', label: 'Half day', color: 'bg-sand text-brown', dot: 'bg-sand' },
+  { value: 'absent', label: 'Absent', color: 'bg-danger/15 text-danger', dot: 'bg-danger' },
+  { value: 'leave', label: 'Leave', color: 'bg-ink text-bg', dot: 'bg-ink' },
+  { value: 'holiday', label: 'Holiday', color: 'bg-surface-2 text-ink', dot: 'bg-muted' },
+  { value: 'weekend', label: 'Weekend', color: 'bg-surface-2 text-muted', dot: 'bg-line' },
+];
+
+export const LEAVE_TYPES = [
+  { value: 'casual', label: 'Casual' },
+  { value: 'sick', label: 'Sick' },
+  { value: 'maternity', label: 'Maternity' },
+  { value: 'paternity', label: 'Paternity' },
+];
+
+export const REQUEST_STATUS = [
+  { value: 'pending', label: 'Pending', color: 'bg-accent/15 text-accent-ink' },
+  { value: 'approved', label: 'Approved', color: 'bg-success/15 text-success' },
+  { value: 'rejected', label: 'Rejected', color: 'bg-danger/15 text-danger' },
+];
+
+export const HOLIDAY_TYPES = [
+  { value: 'national', label: 'National', color: 'bg-ink text-bg' },
+  { value: 'company', label: 'Company', color: 'bg-sand text-brown' },
+  { value: 'optional', label: 'Optional', color: 'bg-surface-2 text-muted' },
+];

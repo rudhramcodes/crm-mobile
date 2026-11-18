@@ -14,7 +14,7 @@ import { useTheme } from '@/constants/theme';
 
 const roleName = { super_admin: 'Super admin', admin: 'Admin', manager: 'Manager', employee: 'Employee', client: 'Client' };
 
-function Toggle({ value, onValueChange, label }) {
+export function Toggle({ value, onValueChange, label }) {
   const theme = useTheme();
   return <Switch value={value} onValueChange={onValueChange} accessibilityLabel={label} trackColor={{ true: theme.accent, false: theme.line }} thumbColor={theme.surface} ios_backgroundColor={theme.line} />;
 }

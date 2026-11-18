@@ -116,61 +116,65 @@ Tags: **[Port]** rebuild as on web · **[Native]** better on phone · **[Web-onl
 - [x] `.env`: `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_SOCKET_URL`
 - [x] Copy `constants/index.js`, `utils/` formatters, all `services/*Api.js` from web (`api.js` rewritten for Bearer + body refresh token)
 - [x] Base UI kit: Text/Heading, Screen, Pressable, Button, Input, Badge, Avatar, Card, EmptyState, Skeleton (sheet-based Select/ConfirmSheet/DateField come with the first module that needs them)
-- [ ] (needs your Expo login) EAS: `eas init`, `eas build --profile development` for a dev client (needed for push + location)
+- [x] EAS: `eas init` done (projectId in app.json), `eas.json` added
+- [ ] (you) `eas build --profile development` for a dev client (needed for Face ID on iOS, push, location)
 
 ### M1 — Auth & session
-- [ ] Login (email + password) **[Port]**
-- [ ] Store `accessToken` + `refreshToken` in SecureStore; `baseQuery` adds `Authorization: Bearer`; on 401 → **one** shared refresh call, then retry (two parallel refreshes would invalidate each other) **[Native]**
-- [ ] `GET /auth/me` on app start → route by role (`client` → `(client)`, others → `(staff)`)
-- [ ] Forgot password, reset password (deep link `crm://reset-password?token=`) **[Port]**
-- [ ] Email verification: OTP screen (`/auth/verify-email-otp`), resend, "verify your email" banner **[Port]**
-- [ ] Forced change password when `mustChangePassword` **[Port]**
-- [ ] Client invite accept (set password) via deep link **[Port]**
-- [ ] Logout (`/auth/logout`, clear SecureStore, disconnect socket, remove push token)
-- [ ] **Suggestion:** Face ID / fingerprint unlock after first login **[Native]**
+- [x] Login (email + password) **[Port]**
+- [x] Store `accessToken` + `refreshToken` in SecureStore; `baseQuery` adds `Authorization: Bearer`; on 401 → **one** shared refresh call, then retry (two parallel refreshes would invalidate each other) **[Native]**
+- [x] `GET /auth/me` on app start → route by role (`client` → `(client)`, others → `(staff)`)
+- [x] Forgot password, reset password (deep link `crm://reset-password?token=`) **[Port]**
+- [x] Email verification: OTP screen (`/auth/verify-email-otp`), resend, "verify your email" banner **[Port]**
+- [x] Forced change password when `mustChangePassword` **[Port]**
+- [x] Client invite accept (set password) via deep link **[Port]**
+- [x] Logout (`/auth/logout`, clear SecureStore, disconnect socket, remove push token)
+- [x] **Suggestion:** Face ID / fingerprint unlock after first login **[Native]**
 
 ### M2 — App shell, notifications, realtime
-- [ ] Tab bar per role:
+- [x] Tab bar per role:
   - admin/super_admin/manager: Home · Tasks · Attendance · Inbox · More
   - employee: Home · Tasks · Attendance · Inbox · More (Leads/Clients inside More only if sales or read-only)
   - client: Home · Projects · Meetings · Invoices · Profile
-- [ ] "More" screen = web sidebar groups (CRM & Pipeline, Operations, Financials, Administration), same role filter as `layouts/Sidebar.jsx` (`NAV_ITEMS`, `payrollOnly`, sales check, `readOnlyModules`)
-- [ ] Hide write buttons when module is in `readOnlyModules`
-- [ ] Socket connect with token; listen `notification:new` / `notification:unread`; `entity:updated` → invalidate RTK tags
-- [ ] Notifications list: filters (read/unread, date), mark read, mark all read, delete, pagination, unread badge on tab **[Port]**
-- [ ] Notification types and deep links: task_assigned, lead_assigned, lead_created, lead_converted, meeting_scheduled, meeting_reminder, invoice_paid, invoice_overdue, payment_received, project_assigned, project_chat, project_stage_reverted, project_status_change, mention, contract_expiry
-- [ ] **Push notifications** (needs backend §2.2); tapping one opens the right screen **[Native]**
-- [ ] Notification sound on/off (setting) **[Port]**
-- [ ] Global search (replaces command palette) **[Native]**
-- [ ] Pull-to-refresh everywhere, skeleton loaders, empty states, error retry, offline banner
+- [x] "More" screen = web sidebar groups (CRM & Pipeline, Operations, Financials, Administration), same role filter as `layouts/Sidebar.jsx` (`NAV_ITEMS`, `payrollOnly`, sales check, `readOnlyModules`)
+- [ ] Hide write buttons when module is in `readOnlyModules` → done per module, as each one adds write buttons (helper ready: `canSeeNavItem` in `utils/access.js`)
+- [x] Socket connect with token; listen `notification:new` / `notification:unread`
+- [ ] `entity:updated` → invalidate RTK tags: comes with the first detail screen, which joins its `entity:id` room (M5 Tasks)
+- [x] Notifications list: filters (read/unread, date), mark read, mark all read, delete, pagination, unread badge on tab **[Port]**
+- [x] Notification types and deep links: task_assigned, lead_assigned, lead_created, lead_converted, meeting_scheduled, meeting_reminder, invoice_paid, invoice_overdue, payment_received, project_assigned, project_chat, project_stage_reverted, project_status_change, mention, contract_expiry
+- [x] **Push notifications** (needs backend §2.2); tapping one opens the right screen **[Native]**
+- [x] Notification sound on/off (setting) **[Port]**
+- [x] Global search (replaces command palette) **[Native]**
+- [x] Pull-to-refresh everywhere, skeleton loaders, empty states, error retry, offline banner
 
 ### M3 — Dashboards
-- [ ] **Admin/manager overview** (`GET /dashboard`): total leads, won deals, conversion, revenue (excl. cash) + cash collected separately, pending payments, overdue, active clients, upcoming meetings, lead sources, pipeline, revenue chart, recent activity **[Port]**
-- [ ] **Venture dashboard** (`GET /dashboard/venture/:brand`): brand switcher, per-brand metrics, comparison **[Port]**
-- [ ] **Employee dashboard** (`GET /dashboard/employee`): my tasks, completed count, upcoming meetings, attendance card, quick links (Tasks Hub, Meetings, Payslips) **[Port]**
-- [ ] Attendance clock card on Home (same as web header pill) **[Native]**
+- [x] **Admin/manager overview** (`GET /dashboard`): total leads, won deals, conversion, revenue (excl. cash) + cash collected separately, pending payments, overdue, active clients, upcoming meetings, lead sources, pipeline, revenue chart, recent activity **[Port]**
+- [x] **Venture dashboard** (`GET /dashboard/venture/:brand`): brand switcher, per-brand metrics, comparison **[Port]**
+- [x] **Employee dashboard** (`GET /dashboard/employee`): my tasks, completed count, upcoming meetings, attendance card, quick links (Tasks Hub, Meetings, Payslips) **[Port]**
+- [x] Attendance clock card on Home (same as web header pill) **[Native]**
+- (note) Overview has no "won deals" / "upcoming meetings" tiles: `GET /dashboard` doesn't return them (web doesn't show them either). Employee work calendar comes with M4 "My calendar".
 
 ### M4 — Attendance (highest mobile value)
 Employee:
-- [ ] Clock in with **GPS** (`expo-location`, server resolves area/office) + WFH toggle; shows "Cannot clock in" reason (holiday, leave, already out, ...) **[Native]**
-- [ ] Late detection (shift grace period), multiple sessions per day
-- [ ] Live timer, break start/end, break history **[Port]**
-- [ ] Clock out → confirmation sheet + summary (work minutes, breaks, overtime) **[Port]**
-- [ ] My calendar month view with colours: present, absent, half_day, wfh, leave, holiday, weekend; day detail sheet (sessions, breaks, locations, events) **[Port]**
-- [ ] My stats (attendance rate, late arrivals)
-- [ ] Regularization request (date, reason, clock-in/out time, break minutes) + my request status **[Port]**
-- [ ] Leaves: apply (sick, casual, maternity, paternity; date range), balance (casual 12/yr accrues 1 per month, sick 5), "exceeds balance" error, my leave list **[Port]**
-- [ ] Holidays list (national / company / optional)
-- [ ] **Suggestion:** local reminder "You haven't clocked in" at shift start + 15 min, and "Still clocked in?" at shift end **[Native]**
+- [x] Clock in with **GPS** (`expo-location`, server resolves area/office) + WFH toggle; shows "Cannot clock in" reason (holiday, leave, already out, ...) **[Native]**
+- [x] Late detection (shift grace period), multiple sessions per day
+- [x] Live timer, break start/end, break history **[Port]**
+- [x] Clock out → confirmation sheet + summary (work minutes, breaks, overtime) **[Port]**
+- [x] My calendar month view with colours: present, absent, half_day, wfh, leave, holiday, weekend; day detail sheet (sessions, breaks, locations, events) **[Port]**
+- [x] My stats (attendance rate, late arrivals)
+- [x] Regularization request (date, reason, clock-in/out time, break minutes) + my request status **[Port]**
+- [x] Leaves: apply (sick, casual, maternity, paternity; date range), balance (casual 12/yr accrues 1 per month, sick 5), "exceeds balance" error, my leave list **[Port]**
+- [x] Holidays list (national / company / optional)
+- [x] **Suggestion:** local reminder "You haven't clocked in" at shift start + 15 min, and "Still clocked in?" at shift end **[Native]**
 
 Admin/manager:
-- [ ] Today overview: present, absent, on leave, late (`/overview-stats`) **[Port]**
-- [ ] Attendance list with filters (employee, status, date range), detail, override edit with reason, manual entry (incl. WFH, reset sessions) **[Port]**
-- [ ] Regularization approvals (approve / reject with required reason) **[Port]**
-- [ ] Leave approvals (approve / reject with comment) **[Port]**
-- [ ] Reports daily / weekly / monthly (view) **[Port]**; Excel/PDF export → **[Web-only?]**
-- [ ] Shifts CRUD (name, start, end, grace, default, active), Holidays CRUD **[Port]** (small forms)
-- [ ] Bulk import attendance → **[Web-only?]**
+- [x] Today overview: present, absent, on leave, late (`/overview-stats`) **[Port]**
+- [x] Attendance list with filters (employee, status, date range), detail, override edit with reason, manual entry (incl. WFH, reset sessions) **[Port]**
+- [x] Regularization approvals (approve / reject with required reason) **[Port]**
+- [x] Leave approvals (approve / reject with comment) **[Port]**
+- [x] Reports daily / weekly / monthly (view) **[Port]**; Excel/PDF export → **[Web-only]** (screen says so)
+- [x] Shifts CRUD (name, start, end, grace, default, active), Holidays CRUD **[Port]** (small forms)
+- [x] Bulk import attendance → **[Web-only]**, not on mobile
+- (note) Shortcuts: records list shows newest 100, reports first 50 records (summary covers all), leaves newest 50. No clock-out reminder for overnight shifts. Records/reports/shifts screens rely on the server's role checks (links only show for leads/admins).
 
 ### M5 — Tasks
 - [ ] Views: **My Day** (personal focus), list, **Kanban** (todo / in_progress / review / done), calendar **[Port]**

@@ -1,8 +1,22 @@
 import { Stack } from 'expo-router';
 import { useLiveUpdates } from '@/hooks/useLiveUpdates';
+import { useClockReminders } from '@/hooks/useClockReminders';
+
+const modal = { presentation: 'modal' };
 
 // Tabs at the root; module screens (leads, task detail, ...) push on top of them as they're built.
 export default function StaffLayout() {
   useLiveUpdates();
-  return <Stack screenOptions={{ headerShown: false }} />;
+  useClockReminders();
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="attendance/clock-out" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
+      <Stack.Screen name="attendance/day" options={modal} />
+      <Stack.Screen name="attendance/regularize" options={modal} />
+      <Stack.Screen name="attendance/apply-leave" options={modal} />
+      <Stack.Screen name="attendance/edit" options={modal} />
+      <Stack.Screen name="attendance/holiday-form" options={modal} />
+      <Stack.Screen name="attendance/shift-form" options={modal} />
+    </Stack>
+  );
 }

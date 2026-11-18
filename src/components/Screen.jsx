@@ -13,13 +13,14 @@ export const Grain = () => (
 
 const styles = StyleSheet.create({ fill: { width: '100%', height: '100%' } });
 
-// Under native tabs the system pads for the tab bar: the first ScrollView on iOS, a SafeAreaView on Android.
-export function Screen({ scroll, className, edges = ['top'], children }) {
+// Android: native tabs pad the bottom for the tab bar. iOS: native tabs only pad the scroll view they find
+// through first children, and Grain comes first here, so the ScrollView asks UIKit for the tab bar inset itself.
+export function Screen({ scroll, className, edges = ['top'], refreshControl, children }) {
   return (
     <SafeAreaView edges={edges} className="flex-1 bg-bg">
       <Grain />
       {scroll ? (
-        <ScrollView contentContainerClassName={cn('px-5 pb-8', className)} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>{children}</ScrollView>
+        <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerClassName={cn('px-5 pb-8', className)} refreshControl={refreshControl} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>{children}</ScrollView>
       ) : (
         <View className={cn('flex-1 px-5', className)}>{children}</View>
       )}

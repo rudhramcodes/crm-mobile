@@ -162,6 +162,7 @@ export default function Inbox() {
   return (
     <Screen className="px-0">
       <FlashList
+        contentInsetAdjustmentBehavior="automatic"
         data={items}
         keyExtractor={(n) => n._id}
         renderItem={({ item }) => (

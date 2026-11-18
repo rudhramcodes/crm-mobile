@@ -6,18 +6,20 @@ import { Screen } from './Screen';
 import { Heading, Text } from './Text';
 import { Card } from './Card';
 import { Avatar } from './Avatar';
+import { Badge } from './Badge';
 import { useTheme } from '@/constants/theme';
 
-// shortcut: placeholder home for staff and clients until the M3 dashboards. Account actions live in More / Profile.
-export function SignedInHome({ subtitle }) {
+// Greeting + avatar, the designation pill, and the verify-email nudge; top of every Home.
+export function HomeHeader({ subtitle }) {
   const theme = useTheme();
   const user = useSelector((s) => s.auth.user);
   return (
-    <Screen scroll className="gap-5 pt-6">
+    <>
       <View className="flex-row items-center gap-3">
         <View className="flex-1">
           <Text className="text-sm text-muted">{subtitle}</Text>
           <Heading>Hi, {user.name.split(' ')[0]}</Heading>
+          {!!user.profile?.designation && <Badge label={user.profile.designation} className="mt-1" />}
         </View>
         <Avatar name={user.name} uri={user.avatar} size={48} />
       </View>
@@ -33,6 +35,15 @@ export function SignedInHome({ subtitle }) {
           <ChevronRight size={20} color={theme['accent-ink']} />
         </Card>
       )}
+    </>
+  );
+}
+
+// shortcut: placeholder home for clients until the portal module. Account actions live in Profile.
+export function SignedInHome({ subtitle }) {
+  return (
+    <Screen scroll className="gap-5 pt-6">
+      <HomeHeader subtitle={subtitle} />
     </Screen>
   );
 }
