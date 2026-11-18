@@ -1,0 +1,92 @@
+{
+  "expo": {
+    "name": "Rudhram CRM",
+    "slug": "rudhram-crm",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "rudhramcrm",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "bundleIdentifier": "com.rudhram.crm",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.rudhram.crm",
+      "adaptiveIcon": {
+        "backgroundColor": "#F6F1E0",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-sharing",
+      "expo-audio",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Rudhram CRM uses Face ID to unlock the app."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "backgroundColor": "#F6F1E0",
+          "dark": {
+            "image": "./assets/images/splash-icon.png",
+            "backgroundColor": "#1C120B"
+          }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Rudhram CRM uses your location to verify clock-in at the office."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Rudhram CRM needs your photos to attach images and set your profile picture.",
+          "cameraPermission": "Rudhram CRM needs the camera to take photos for chat and your profile."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#A77848"
+        }
+      ],
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": false,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "92e5005b-aeb0-4bd6-a002-53924c6aad6c"
+      }
+    }
+  }
+}
