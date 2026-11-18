@@ -19,8 +19,9 @@ module.exports = {
         'body-medium': ['Manrope_500Medium'],
         'body-semibold': ['Manrope_600SemiBold'],
         'body-bold': ['Manrope_700Bold'],
-        // shortcut: Marcellus stands in for Goldenbook until the licensed .otf files are in assets/fonts.
-        display: ['Marcellus_400Regular'],
+        // Goldenbook (licensed, assets/fonts): titles and numbers only, never body or inputs (DESIGN.md §3).
+        display: ['Goldenbook-Bold'],
+        'display-regular': ['Goldenbook-Regular'],
       },
       fontSize: {
         display: ['34px', '40px'],

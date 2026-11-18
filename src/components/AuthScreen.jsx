@@ -1,4 +1,4 @@
-import { ScrollView, View } from 'react-native';
+import { ScrollView, View, useColorScheme } from 'react-native';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -19,6 +19,7 @@ export const goBack = () => (router.canGoBack() ? router.back() : router.replace
 // holding the title and one form (DESIGN.md §5 Onboarding / auth).
 export function AuthScreen({ title, subtitle, back, children }) {
   const insets = useSafeAreaInsets();
+  const scheme = useColorScheme();
   return (
     <View className="flex-1 bg-bg">
       <StatusBar style="light" />
@@ -34,7 +35,8 @@ export function AuthScreen({ title, subtitle, back, children }) {
               </Pressable>
             )}
           </View>
-          <Image source={logo} style={{ width: 150, height: 82 }} contentFit="contain" accessibilityLabel="Rudhram" />
+          {/* The header is brown in both themes; in light mode the mark turns beige (single-colour PNG, so a tint recolours it). */}
+          <Image source={logo} style={{ width: 150, height: 82 }} contentFit="contain" tintColor={scheme === 'dark' ? null : brand.beige} accessibilityLabel="Rudhram" />
         </View>
         <View className="-mt-8 flex-1 overflow-hidden rounded-t-[32px] bg-bg px-5 pt-8" style={{ paddingBottom: insets.bottom + 24 }}>
           <Grain />

@@ -7,7 +7,6 @@ import { Provider, useDispatch, useSelector } from 'react-redux';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { WifiOff } from 'lucide-react-native';
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
-import { Marcellus_400Regular } from '@expo-google-fonts/marcellus';
 import { store } from '@/store';
 import { restoreSession } from '@/store/session';
 import { EmptyState, LockScreen, OfflineBanner, Screen, ToastHost } from '@/components';
@@ -75,7 +74,10 @@ function RootStack({ fontsReady }) {
 }
 
 export default function RootLayout() {
-  const [loaded, error] = useFonts({ Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold, Marcellus_400Regular });
+  const [loaded, error] = useFonts({ Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold,
+    'Goldenbook-Bold': require('../../assets/fonts/Goldenbook Bold.otf'),
+    'Goldenbook-Regular': require('../../assets/fonts/Goldenbook Regular.otf'),
+  });
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <Provider store={store}>
