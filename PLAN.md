@@ -138,7 +138,7 @@ Tags: **[Port]** rebuild as on web · **[Native]** better on phone · **[Web-onl
 - [x] "More" screen = web sidebar groups (CRM & Pipeline, Operations, Financials, Administration), same role filter as `layouts/Sidebar.jsx` (`NAV_ITEMS`, `payrollOnly`, sales check, `readOnlyModules`)
 - [ ] Hide write buttons when module is in `readOnlyModules` → done per module, as each one adds write buttons (helper ready: `canSeeNavItem` in `utils/access.js`)
 - [x] Socket connect with token; listen `notification:new` / `notification:unread`
-- [ ] `entity:updated` → invalidate RTK tags: comes with the first detail screen, which joins its `entity:id` room (M5 Tasks)
+- [x] `entity:updated` → invalidate RTK tags (`useEntityRoom`): comes with the first detail screen, which joins its `entity:id` room (M5 Tasks)
 - [x] Notifications list: filters (read/unread, date), mark read, mark all read, delete, pagination, unread badge on tab **[Port]**
 - [x] Notification types and deep links: task_assigned, lead_assigned, lead_created, lead_converted, meeting_scheduled, meeting_reminder, invoice_paid, invoice_overdue, payment_received, project_assigned, project_chat, project_stage_reverted, project_status_change, mention, contract_expiry
 - [x] **Push notifications** (needs backend §2.2); tapping one opens the right screen **[Native]**
@@ -177,17 +177,20 @@ Admin/manager:
 - (note) Shortcuts: records list shows newest 100, reports first 50 records (summary covers all), leaves newest 50. No clock-out reminder for overnight shifts. Records/reports/shifts screens rely on the server's role checks (links only show for leads/admins).
 
 ### M5 — Tasks
-- [ ] Views: **My Day** (personal focus), list, **Kanban** (todo / in_progress / review / done), calendar **[Port]**
-- [ ] Filters: member, priority, project, status, search (title, description, tags); watching list **[Port]**
-- [ ] Quick add (one line, Enter) + full form: title, description, assignee*, project, milestone, due date*, start date, estimated hours, priority (low/medium/high/urgent), initial status, tags, recurring (daily/weekly/monthly) **[Port]**
-- [ ] Task detail sheet: edit title/description inline, status, priority, assignee, reschedule
-- [ ] Subtasks (needs parent assignee + deadline first), checklist (add, tick, remove: admin only), comments (clients can comment too), dependencies (blocked by), watch/unwatch, tags add/remove, activity log
-- [ ] Time tracking: manual log (hours ≥ 0.25) + **stopwatch** (≥1 min); keep stopwatch running in background via saved start time **[Native]**
-- [ ] Rule: **only the creator can mark Done**; others "Submit for review" **[Port]**
-- [ ] Bulk select → status / priority / delete; reorder **[Port]**
-- [ ] Team workload / analytics (insights sheet) **[Port]**
-- [ ] Export CSV → share sheet **[Native]**; keyboard shortcuts → skip on mobile
-- [ ] Swipe right = done/review, swipe left = reschedule **[Native]**
+- [x] Views: **My Day** (personal focus), list, **Kanban** (todo / in_progress / review / done), calendar **[Port]**
+- [x] Filters: member, priority, project, status, search (title, description, tags); watching list **[Port]**
+- [x] Quick add (one line, Enter) + full form: title, description, assignee*, project, milestone, due date*, start date, estimated hours, priority (low/medium/high/urgent), initial status, tags, recurring (daily/weekly/monthly) **[Port]**
+- [x] Task detail sheet: edit title/description inline, status, priority, assignee, reschedule
+- [x] Subtasks (needs parent assignee + deadline first), checklist (add, tick, remove: admin only), comments (clients can comment too), dependencies (blocked by), watch/unwatch, tags add/remove, activity log
+- [x] Time tracking: manual log (hours ≥ 0.25) + **stopwatch** (≥1 min); keep stopwatch running in background via saved start time **[Native]**
+- [x] Rule: **only the creator can mark Done**; others "Submit for review" **[Port]**
+- [x] Bulk select → status / priority / delete; reorder **[Port]**
+- [x] Team workload / analytics (insights sheet) **[Port]**
+- [x] Export CSV → share sheet **[Native]**; keyboard shortcuts → skip on mobile
+- [x] Swipe right = done/review, swipe left = reschedule **[Native]**
+- Shortcuts taken (M5): lists load the first 100 tasks; the project picker shows the first 50 projects; Kanban moves cards with ← → ↑ ↓ buttons, not drag; the stopwatch is saved on the device only (not synced across devices).
+
+- Next: the full tasks & projects flow (teams, review in 1 hour, task chat with images, no email spam) is planned in [TASKS-FLOW.md](TASKS-FLOW.md), phases T1–T6. T1 (notifications) and T2 (review flow) are done.
 
 ### M6 — Projects
 - [ ] List + Kanban by SOP stage (brief → planning → execution → review → delivered, progress 0/20/50/80/100), filters (stage, priority, venture, search), stats **[Port]**

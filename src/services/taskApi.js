@@ -40,7 +40,15 @@ export const taskApi = api.injectEndpoints({
       invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
     }),
     addTaskComment: builder.mutation({
-      query: ({ id, text }) => ({ url: `/tasks/${id}/comments`, method: 'POST', body: { text } }),
+      // With files it goes as multipart: web pickers give a File, native ones a { uri, name, type } part.
+      query: ({ id, text, replyTo, files = [] }) => {
+        if (!files.length) return { url: `/tasks/${id}/comments`, method: 'POST', body: { text, replyTo } };
+        const body = new FormData();
+        if (text) body.append('text', text);
+        if (replyTo) body.append('replyTo', replyTo);
+        files.forEach((f) => body.append('files', f.file ?? { uri: f.uri, name: f.name, type: f.mime }));
+        return { url: `/tasks/${id}/comments`, method: 'POST', body };
+      },
       invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
     }),
     deleteTaskComment: builder.mutation({

@@ -30,6 +30,8 @@ export function useLiveUpdates({ client = false } = {}) {
       playNotificationSound().catch(() => {});
       showToast({ title: n.title || 'New notification', message: n.message, onPress: () => openNotification(n, { dispatch, client }) });
     });
+    // A repeat folded into an earlier notification: refresh the list, no toast or sound.
+    socket.on('notification:updated', () => dispatch(api.util.invalidateTags(['Notification'])));
     socket.on('notification:unread', ({ count }) => dispatch(notificationApi.util.upsertQueryData('getUnreadCount', undefined, count)));
     registerPush(dispatch).catch((e) => console.warn('[push]', e.message));
     return disconnectSocket;
