@@ -3,7 +3,8 @@ import { RefreshControl, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import {
-  BarChart3, Calendar, CheckCircle2, ClipboardCheck, CloudOff, CreditCard, ListTodo, MapPin, Plus, UserCheck, Users, Video, Wallet,
+  BarChart3, Calendar, CheckCircle2, CircleAlert, ClipboardCheck, Clock, CloudOff, CreditCard, IndianRupee, ListTodo, MapPin, Percent, Plus,
+  TrendingUp, UserCheck, Users, Video, Wallet,
 } from 'lucide-react-native';
 import { Screen } from './Screen';
 import { Text } from './Text';
@@ -148,14 +149,15 @@ export function AdminDashboard() {
       {!d ? <DashboardState isLoading={isLoading} isError={isError} refetch={refetch} /> : (
         <>
           <View className="flex-row flex-wrap gap-3">
-            <StatTile label="TOTAL LEADS" value={k.totalLeads} sub={`${k.conversionRate}% converted`} onPress={() => router.push('/leads')} />
-            <StatTile label="ACTIVE CLIENTS" value={k.activeClients} sub={`${k.activeProjects} active project${k.activeProjects === 1 ? '' : 's'}`} onPress={() => router.push('/clients')} />
-            <StatTile label="REVENUE" value={formatCompactCurrency(k.totalRevenue)} sub={`${formatCurrency(k.totalRevenue)}, excl. cash`} onPress={() => router.push('/payments')} />
-            <StatTile label="CASH COLLECTED" value={formatCompactCurrency(k.cashCollected)} sub={`${formatCurrency(k.cashCollected)}, separate`} onPress={() => router.push('/payments')} />
-            <StatTile label="PENDING PAYMENTS" value={k.pendingPayments} sub="Unpaid invoices" onPress={() => router.push('/invoices')} />
-            <StatTile label="OVERDUE" value={k.overdueInvoices} sub="Past due date" alert={k.overdueInvoices > 0} onPress={() => router.push('/invoices')} />
-            <StatTile label="CONVERSION" value={`${k.conversionRate}%`} sub="Leads won" onPress={() => router.push('/leads')} />
-            <StatTile label="COLLECTION RATE" value={`${k.collectionRate}%`} sub="Of invoiced amount" onPress={() => router.push('/invoices')} />
+            {/* Same icons as the web dashboard's KPI cards; Wallet and Percent where the web repeats or has none. */}
+            <StatTile label="TOTAL LEADS" icon={Users} value={k.totalLeads} sub={`${k.conversionRate}% converted`} onPress={() => router.push('/leads')} />
+            <StatTile label="ACTIVE CLIENTS" icon={UserCheck} tone="success" value={k.activeClients} sub={`${k.activeProjects} active project${k.activeProjects === 1 ? '' : 's'}`} onPress={() => router.push('/clients')} />
+            <StatTile label="REVENUE" icon={IndianRupee} tone="success" value={formatCompactCurrency(k.totalRevenue)} sub={`${formatCurrency(k.totalRevenue)}, excl. cash`} onPress={() => router.push('/payments')} />
+            <StatTile label="CASH COLLECTED" icon={Wallet} tone="success" value={formatCompactCurrency(k.cashCollected)} sub={`${formatCurrency(k.cashCollected)}, separate`} onPress={() => router.push('/payments')} />
+            <StatTile label="PENDING PAYMENTS" icon={Clock} value={k.pendingPayments} sub="Unpaid invoices" onPress={() => router.push('/invoices')} />
+            <StatTile label="OVERDUE" icon={CircleAlert} tone="danger" value={k.overdueInvoices} sub="Past due date" alert={k.overdueInvoices > 0} onPress={() => router.push('/invoices')} />
+            <StatTile label="CONVERSION" icon={TrendingUp} value={`${k.conversionRate}%`} sub="Leads won" onPress={() => router.push('/leads')} />
+            <StatTile label="COLLECTION RATE" icon={Percent} tone="success" value={`${k.collectionRate}%`} sub="Of invoiced amount" onPress={() => router.push('/invoices')} />
           </View>
 
           <Section title="Ventures" sub="Clients per brand. Tap one for its dashboard.">

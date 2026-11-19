@@ -63,7 +63,8 @@ The kit is printed on textured paper, and the app carries the same feel lightly.
 | Label | Manrope Medium | 13/18 | chips, meta, button text (15 for buttons) |
 | Caption | Manrope Medium | 11/14, +0.4 tracking, UPPERCASE | overline ("DEADLINE", "PRIORITY") |
 
-- **Goldenbook** is the brand face. It's licensed (Mark Simonson), so its `.otf` files must go in `assets/fonts/` (Light, Regular, Bold) and load via `useFonts`. Until they arrive, use **Marcellus** (`@expo-google-fonts/marcellus`) as a stand-in. It's the closest free Roman-capital serif. Swap it by changing only `fontFamily.display` in `tailwind.config.js`.
+- **Goldenbook** is the brand face. It's licensed (Mark Simonson), so its `.otf` files are in `assets/fonts/` (Regular, Bold) and load via `useFonts` in `src/app/_layout.jsx`. Tailwind: `font-display` = Bold, `font-display-regular` = Regular.
+- Goldenbook has **no ₹ glyph**. Set the rupee sign in Manrope next to Goldenbook digits (see `StatTile`), never inside a Goldenbook run.
 - Goldenbook is for display only: titles and numbers. Never use it for body text, inputs, or anything under 20 px.
 - **Manrope** is the UI sans. The kit doesn't name a body face, and Manrope's warm, open forms sit well next to Goldenbook.
 - Keep 2 weights per screen at most, besides display. Don't use all caps except for captions. Use `tabular-nums` for times and money.
