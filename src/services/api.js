@@ -44,6 +44,9 @@ export const api = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithReauth,
   tagTypes: [
+    'ProjectActivities',
+    'ProjectStats',
+    'EmailPreviews',
     'Lead',
     'LeadStats',
     'Client',

@@ -8,9 +8,8 @@ import {
   Input,
   MiniStats,
   PageHeader,
+  Pager,
   Screen,
-  Skeleton,
-  Text,
   VentureChips,
   clientAccess,
   usePullRefresh,
@@ -19,7 +18,7 @@ import { CLIENT_STATUS } from "@/constants";
 import { useTheme } from "@/constants/theme";
 import {
   useDeleteClientMutation,
-  useGetClientPagesInfiniteQuery,
+  useGetClientsQuery,
   useGetClientStatsQuery,
 } from "@/services/clientApi";
 import { runAction } from "@/utils/attendance";
@@ -27,7 +26,8 @@ import { cleanParams } from "@/utils/leads";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { Plus, Search, UserCheck } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { usePage, usePageNav } from "@/hooks/usePaged";
 import { View } from "react-native";
 import { useSelector } from "react-redux";
 
@@ -49,18 +49,22 @@ export default function Clients() {
     return () => clearTimeout(t);
   }, [typed]);
 
-  // 20 per page; the next page loads as the list nears its end.
-  const q = useGetClientPagesInfiniteQuery(cleanParams({ search, status, brand }));
+  // 20 per page from the server, with Previous / Next under the list.
+  const LIMIT = 20;
+  const listRef = useRef(null);
+  const filters = cleanParams({ search, status, brand });
+  const [page, setPage] = usePage(JSON.stringify(filters));
+  const q = useGetClientsQuery({ ...filters, page, limit: LIMIT });
   const statsQ = useGetClientStatsQuery();
   const stats = statsQ.data?.data;
   const refreshControl = usePullRefresh(() => {
     statsQ.refetch();
     return q.refetch();
   });
-  const pages = q.data?.pages || [];
-  const clients = pages.flatMap((p) => p.data || []);
-  const total = pages[0]?.pagination?.total ?? clients.length;
-  const loadMore = () => q.hasNextPage && !q.isFetching && q.fetchNextPage();
+  const clients = q.data?.data || [];
+  const meta = q.data?.pagination;
+  const total = meta?.total ?? clients.length;
+  const goTo = usePageNav(listRef, page, setPage, meta?.pages);
   const filtered = !!(search || brand || status !== "active");
   const active = stats ? stats.active || 0 : 0;
 
@@ -162,28 +166,25 @@ export default function Clients() {
   return (
     <Screen className="px-0">
       <FlashList
+        ref={listRef}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         data={clients}
         keyExtractor={(c) => c._id}
         renderItem={({ item }) => (
-          <View className="pb-2">
+          <View className={q.isFetching ? "pb-2 opacity-50" : "pb-2"}>
             <ClientRow client={item} onDelete={can.remove ? setDeleting : undefined} />
           </View>
         )}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
         ListFooterComponent={
-          q.isFetchingNextPage ? (
-            <Skeleton className="h-32 rounded-3xl" />
-          ) : clients.length ? (
-            <Text className="py-2 text-center text-xs text-muted">
-              {q.hasNextPage ? `Showing ${clients.length} of ${total}` : `All ${total} shown`}
-            </Text>
-          ) : null
+          q.isError && clients.length ? (
+            <Button title="Couldn't load this page. Try again" variant="ghost" size="sm" onPress={q.refetch} />
+          ) : (
+            <Pager page={page} pages={meta?.pages} total={total} limit={LIMIT} loading={q.isFetching} onChange={goTo} />
+          )
         }
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
         refreshControl={refreshControl}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
       />

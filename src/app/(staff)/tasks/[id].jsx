@@ -91,7 +91,11 @@ function TaskBody({ task: t }) {
           </Pressable>
         )}
         <Input editable={manage} value={title} onChangeText={setTitle} onFocus={titleFocus} onBlur={saveTitle} onSubmitEditing={saveTitle} maxLength={200} accessibilityLabel="Title" style={{ fontFamily: 'Goldenbook-Regular', fontSize: 24, height: undefined, minHeight: 52, paddingVertical: 10 }} multiline submitBehavior="blurAndSubmit" />
-        {!!t.project && <Text className="text-sm text-muted">{t.project.title}</Text>}
+        {!!t.project && (
+          <Pressable onPress={() => router.push(`/projects/${idOf(t.project)}`)} accessibilityRole="link" accessibilityLabel={`Project ${t.project.title}`}>
+            <Text className="text-sm text-accent-ink">{t.project.title}</Text>
+          </Pressable>
+        )}
       </View>
 
       {work ? <TaskFlow task={t} /> : (

@@ -185,8 +185,8 @@ export function ImageViewer({ images, index, onClose }) {
 }
 
 // All the task's photos and PDFs in one row; tap a photo to see it full screen.
-export function FilesStrip({ task }) {
-  const files = taskFiles(task);
+// Every photo and PDF in a chat, newest first. Pass `files` to show another set (a project's chat and its tasks').
+export function FilesStrip({ task, files = taskFiles(task) }) {
   const images = files.filter(isImage);
   const [open, setOpen] = useState(null);
   if (!files.length) return null;
@@ -275,7 +275,8 @@ export function PendingFiles({ files, remove }) {
 // Camera, gallery and PDF buttons.
 export function AttachButtons({ camera, gallery, pdf, full }) {
   const theme = useTheme();
-  return [[Camera, 'Take a photo', camera], [ImagePlus, 'Add photos', gallery], [Paperclip, 'Add a PDF', pdf]].map(([Icon, label, onPress]) => (
+  // No pdf handler (project chat takes photos only): no PDF button.
+  return [[Camera, 'Take a photo', camera], [ImagePlus, 'Add photos', gallery], [Paperclip, 'Add a PDF', pdf]].filter(([, , onPress]) => onPress).map(([Icon, label, onPress]) => (
     <Pressable key={label} onPress={onPress} disabled={full} accessibilityLabel={label} className={`h-11 w-11 items-center justify-center rounded-full bg-surface-2 ${full ? 'opacity-40' : ''}`}>
       <Icon size={20} color={theme.ink} />
     </Pressable>

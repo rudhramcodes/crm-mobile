@@ -37,3 +37,6 @@ export * from './LeadParts';
 export * from './ConfirmDialog';
 export * from './ClientParts';
 export * from './MeetingParts';
+export * from './ProjectParts';
+export * from './ProjectEditParts';
+export * from './Pager';
