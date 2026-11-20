@@ -3,7 +3,7 @@ import { api } from './api';
 
 // Expo's fetch (installed as the global fetch in this SDK) can't send React Native's { uri } parts and fails before the request
 // leaves the phone. It sends anything with name, type and bytes(), so read the picked file that way.
-const uploadPart = (f) => f.file ?? { name: f.name, type: f.mime, bytes: () => new File(f.uri).bytes() };
+export const uploadPart = (f) => f.file ?? { name: f.name, type: f.mime, bytes: () => new File(f.uri).bytes() };
 
 export const taskApi = api.injectEndpoints({
   endpoints: (builder) => ({

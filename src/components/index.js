@@ -37,3 +37,4 @@ export * from './LeadParts';
 export * from './ConfirmDialog';
 export * from './ClientParts';
 export * from './ProjectParts';
+export * from './ProjectEditParts';

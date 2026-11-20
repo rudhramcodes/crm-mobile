@@ -1,4 +1,5 @@
 import { api } from './api';
+import { uploadPart } from './taskApi';
 
 export const projectApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -80,17 +81,21 @@ export const projectApi = api.injectEndpoints({
       query: ({ id, taskId }) => ({ url: `/projects/${id}/tasks/${taskId}`, method: 'DELETE' }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Project', id }, 'Project'],
     }),
+    // Text, or multipart with up to 5 photos (field "images"), the same way task chat sends files.
     addProjectMessage: builder.mutation({
-      query: ({ id, formData }) => ({
-        url: `/projects/${id}/messages`,
-        method: 'POST',
-        body: formData,
-      }),
+      query: ({ id, text, files = [] }) => {
+        if (!files.length) return { url: `/projects/${id}/messages`, method: 'POST', body: { text } };
+        const body = new FormData();
+        if (text) body.append('text', text);
+        files.forEach((f) => body.append('images', uploadPart(f)));
+        return { url: `/projects/${id}/messages`, method: 'POST', body };
+      },
       invalidatesTags: (result, error, { id }) => [{ type: 'Project', id }, { type: 'ProjectActivities', id }],
     }),
     getProjectMessages: builder.query({
       query: ({ id }) => `/projects/${id}/messages`,
-      providesTags: (result, error, { id }) => [{ type: 'ProjectActivities', id }],
+      // Also the project's own tag, so a live "project changed" event refreshes the chat.
+      providesTags: (result, error, { id }) => [{ type: 'ProjectActivities', id }, { type: 'Project', id }],
     }),
     deleteProjectMessage: builder.mutation({
       query: ({ id, messageId }) => ({

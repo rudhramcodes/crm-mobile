@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { View } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import { useLocalSearchParams } from 'expo-router';
 import { useSelector } from 'react-redux';
-import { ExternalLink, MapPin } from 'lucide-react-native';
+import { MapPin } from 'lucide-react-native';
 import {
-  Avatar, Badge, Button, Card, DashboardState, PageHeader, Pressable, PriorityBadge, QuickAddTask, Screen, StageBar, TaskRow, Text,
-  backTo, brandLabel, showToast, usePullRefresh,
+  Avatar, Button, Card, CrewCard, DashboardState, DeliverablesCard, InwardCard, MilestonesCard, PageHeader, PriorityBadge, ProjectActivity, ProjectChat,
+  ProjectFiles, QuickAddTask, Screen, SignOffCard, StageBar, TaskRow, TeamCard, Text, backTo, brandLabel, usePullRefresh,
 } from '@/components';
 import { useTheme } from '@/constants/theme';
 import { useEntityRoom } from '@/hooks/useEntityRoom';
@@ -29,11 +28,8 @@ const Row = ({ label, children }) => (
   </View>
 );
 
-const MILESTONE = { pending: ['Not started', 'bg-surface-2 text-muted'], in_progress: ['In progress', 'bg-accent/15 text-accent-ink'], completed: ['Done', 'bg-success/15 text-success'] };
-const DELIVERABLE = { pending: ['Pending', 'bg-surface-2 text-muted'], in_progress: ['In progress', 'bg-accent/15 text-accent-ink'], ready: ['Ready', 'bg-sand text-brown'], delivered: ['Delivered', 'bg-success/15 text-success'] };
-const badge = (map, v) => { const [label, color] = map[v] || [v || 'Unknown', 'bg-surface-2 text-muted']; return <Badge label={label} color={color} />; };
-
-// One project on one scroll: where it stands (stage), the facts, its tasks by milestone, deliverables, team.
+// One project on one scroll: where it stands (stage), the facts, its tasks by milestone, the team chat and files,
+// then the parts editors keep up to date: deliverables, milestones, sign-off, team, inward data, crew, activity.
 // Tasks are the normal tasks (same rows, swipes and rules as the Tasks tab), linked to this project.
 function ProjectBody({ project: p }) {
   const theme = useTheme();
@@ -51,15 +47,14 @@ function ProjectBody({ project: p }) {
     ...milestones.map((m) => ({ key: m._id, m, tasks: open.filter((t) => idOf(t.milestone) === m._id) })),
     { key: 'none', tasks: open.filter((t) => !milestones.some((m) => m._id === idOf(t.milestone))) },
   ].filter((g) => g.m || g.tasks.length);
-  const team = p.teamMembers || [];
-  const openLink = (url) => WebBrowser.openBrowserAsync(url).catch(() => showToast({ title: "Couldn't open the link" }));
+  const edit = canEditProject(p, me);
 
   return (
     <>
       <PageHeader caption={[p.client?.companyName, brandLabel(p.client?.brand)].filter(Boolean).join(' · ').toUpperCase() || 'PROJECT'} title={p.title} fallback="/projects" />
 
       <Card className="gap-4 p-4">
-        <StageBar project={p} canEdit={canEditProject(p, me)} />
+        <StageBar project={p} canEdit={edit} />
       </Card>
 
       <Card className="gap-3 p-4">
@@ -101,7 +96,6 @@ function ProjectBody({ project: p }) {
                 {g.m ? (
                   <View className="flex-row items-center gap-2 pt-1">
                     <Text className="flex-1 text-caption text-muted">{g.m.title.toUpperCase()}{g.m.dueDate ? ` · ${shortDate(g.m.dueDate)}` : ''}</Text>
-                    {badge(MILESTONE, g.m.status)}
                   </View>
                 ) : milestones.length ? <Text className="pt-1 text-caption text-muted">NO MILESTONE</Text> : null}
                 {g.tasks.map((t) => <TaskRow key={t._id} task={t} />)}
@@ -115,39 +109,15 @@ function ProjectBody({ project: p }) {
         )}
       </View>
 
-      {!!p.deliverables?.length && (
-        <Card className="gap-3 p-4">
-          <Title right={<Text className="text-sm text-muted tabular-nums">{p.deliverables.filter((d) => d.status === 'delivered').length}/{p.deliverables.length}</Text>}>Deliverables</Title>
-          {p.deliverables.map((d) => (
-            <View key={d._id} className="flex-row items-center gap-3 border-t border-line pt-3">
-              <View className="flex-1 gap-0.5">
-                <Text className="font-body-medium">{d.title}</Text>
-                <Text numberOfLines={2} className="text-xs text-muted">{[d.category === 'others' ? 'Other' : d.category, d.details].filter(Boolean).join(' · ')}</Text>
-              </View>
-              {badge(DELIVERABLE, d.status)}
-              {!!d.driveUrl && (
-                <Pressable onPress={() => openLink(d.driveUrl)} accessibilityLabel={`Open ${d.title} in Drive`} className="h-11 w-11 items-center justify-center">
-                  <ExternalLink size={18} color={theme['accent-ink']} />
-                </Pressable>
-              )}
-            </View>
-          ))}
-        </Card>
-      )}
-
-      <Card className="gap-3 p-4">
-        <Title>Team</Title>
-        {team.map((m) => (
-          <View key={m._id || idOf(m.user)} className="flex-row items-center gap-3">
-            <Avatar name={m.user?.name || '?'} uri={m.user?.avatar} size={32} />
-            <Text className="flex-1 font-body-medium">{idOf(m.user) === me._id ? 'You' : m.user?.name || 'Someone'}</Text>
-            {!!m.role && <Text className="text-sm text-muted">{m.role}</Text>}
-          </View>
-        ))}
-        {!team.length && <Text className="text-sm text-muted">Nobody added yet.</Text>}
-      </Card>
-
-      <Text className="text-center text-xs text-muted">Project chat, files, QC and the closing note are on the web for now.</Text>
+      <ProjectChat project={p} />
+      <ProjectFiles projectId={p._id} tasks={tasks} />
+      <DeliverablesCard project={p} canEdit={edit} />
+      <MilestonesCard project={p} canEdit={edit} />
+      <SignOffCard key={p.closingNote?.writtenAt || 'note'} project={p} canEdit={edit} />
+      <TeamCard project={p} canEdit={edit} />
+      <InwardCard key={`${p.inwardData?.storageLocation}|${p.inwardData?.source}`} project={p} canEdit={edit} />
+      <CrewCard project={p} canEdit={edit} />
+      <ProjectActivity project={p} />
     </>
   );
 }
