@@ -7,7 +7,7 @@ import { EmptyState } from './EmptyState';
 // shortcut: stands in for modules not built yet (tabs, More rows, notification links); each goes as its module lands.
 export function ComingSoon({ title = 'Coming soon', tabs }) {
   return (
-    <Screen className="pt-6">
+    <Screen tab={tabs} className="pt-6">
       <Heading>{title}</Heading>
       <EmptyState
         icon={Hammer}

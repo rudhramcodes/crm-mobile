@@ -6,11 +6,17 @@ import { authApi } from './authApi';
 
 let pushToken = null;
 
-// In the foreground the live socket already shows a toast, so the system banner would double it.
+// Attendance reminders are push-only (no socket toast), so they always show; other pushes would double the socket toast.
+const PUSH_ONLY = ['clock_in_reminder', 'clock_in_missed', 'auto_clock_out'];
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({ shouldShowBanner: false, shouldShowList: true, shouldPlaySound: false, shouldSetBadge: true }),
+    handleNotification: async (n) => {
+      const own = PUSH_ONLY.includes(n.request.content.data?.type);
+      return { shouldShowBanner: own, shouldShowList: true, shouldPlaySound: own, shouldSetBadge: true };
+    },
   });
+  // The old on-phone reminders were replaced by server pushes; drop any still scheduled.
+  Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
 }
 
 // Ask once, then send this phone's Expo push token to the server. Quietly does nothing where push can't work.

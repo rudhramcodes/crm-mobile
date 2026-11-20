@@ -1,15 +1,18 @@
+import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
+import { useTheme } from '@/constants/theme';
 import { useLiveUpdates } from '@/hooks/useLiveUpdates';
-import { useClockReminders } from '@/hooks/useClockReminders';
 
-const modal = { presentation: 'modal' };
+// Android: iOS-style slide with the screen behind easing away, and forms rising from the bottom. iOS keeps its native motion.
+const android = Platform.OS === 'android';
+const modal = { presentation: 'modal', animation: android ? 'slide_from_bottom' : 'default' };
 
 // Tabs at the root; module screens (leads, task detail, ...) push on top of them as they're built.
 export default function StaffLayout() {
   useLiveUpdates();
-  useClockReminders();
+  const theme = useTheme();
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false, animation: android ? 'ios_from_right' : 'default', contentStyle: { backgroundColor: theme.bg } }}>
       <Stack.Screen name="attendance/clock-out" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
       <Stack.Screen name="attendance/day" options={modal} />
       <Stack.Screen name="attendance/regularize" options={modal} />
@@ -21,9 +24,9 @@ export default function StaffLayout() {
       <Stack.Screen name="tasks/reschedule" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
       <Stack.Screen name="tasks/review-note" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
       <Stack.Screen name="leads/new" options={modal} />
+      <Stack.Screen name="clients/new" options={modal} />
       <Stack.Screen name="leads/lost" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
       <Stack.Screen name="leads/community" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
-
     </Stack>
   );
 }

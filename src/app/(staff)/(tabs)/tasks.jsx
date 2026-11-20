@@ -45,7 +45,7 @@ export default function TasksTab() {
   const exportAll = () => (tasks.length ? shareCsv(tasks).catch((e) => showToast({ title: "Couldn't export", message: e.message })) : showToast({ title: 'No tasks to export' }));
 
   return (
-    <Screen scroll className="gap-4 pt-6" refreshControl={refreshControl}>
+    <Screen tab scroll className="gap-4 pt-6" refreshControl={refreshControl}>
       <View className="flex-row items-end gap-3">
         <View className="flex-1">
           <Text className="text-sm text-muted">{total} {total === 1 ? 'task' : 'tasks'}{f.watching ? ' watched' : ''}</Text>

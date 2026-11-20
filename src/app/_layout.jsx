@@ -1,8 +1,10 @@
 import '../global.css';
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { useColorScheme } from 'react-native';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import * as SystemUI from 'expo-system-ui';
 import { Provider, useDispatch, useSelector } from 'react-redux';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { WifiOff } from 'lucide-react-native';
@@ -11,15 +13,26 @@ import { store } from '@/store';
 import { restoreSession } from '@/store/session';
 import { EmptyState, LockScreen, OfflineBanner, Screen, ToastHost } from '@/components';
 import { useAutoLock } from '@/hooks/useAutoLock';
+import { useTheme } from '@/constants/theme';
 
 SplashScreen.preventAutoHideAsync();
+
+// Navigator colours = ours, so no screen, card or transition ever paints the library's default white.
+const navTheme = (t, dark) => {
+  const base = dark ? DarkTheme : DefaultTheme;
+  return { ...base, colors: { ...base.colors, primary: t.accent, background: t.bg, card: t.bg, text: t.ink, border: t.line, notification: t.accent } };
+};
 
 function RootStack({ fontsReady }) {
   const dispatch = useDispatch();
   const { status, user, locked } = useSelector((s) => s.auth);
   const restoring = status === 'restoring';
+  const theme = useTheme();
+  const scheme = useColorScheme();
 
   useEffect(() => { dispatch(restoreSession()); }, [dispatch]);
+  // The native window shows through while screens slide; it defaults to white, so give it our background.
+  useEffect(() => { SystemUI.setBackgroundColorAsync(theme.bg); }, [theme.bg]);
   useAutoLock();
   useEffect(() => { if (fontsReady && !restoring) SplashScreen.hideAsync(); }, [fontsReady, restoring]);
   if (!fontsReady || restoring) return null;
@@ -44,8 +57,8 @@ function RootStack({ fontsReady }) {
   // Where each state lands; a guarded-off route goes here (explicit, not "first available").
   const home = !signedIn ? '/sign-in' : !ready ? '/change-password' : client ? '/portal' : '/';
   return (
-    <>
-    <Stack screenOptions={{ headerShown: false }}>
+    <ThemeProvider value={navTheme(theme, scheme === 'dark')}>
+    <Stack screenOptions={{ headerShown: false, animation: 'fade', contentStyle: { backgroundColor: theme.bg } }}>
       <Stack.Protected redirectTo={home} guard={ready && !client}>
         <Stack.Screen name="(staff)" />
       </Stack.Protected>
@@ -69,7 +82,7 @@ function RootStack({ fontsReady }) {
     <ToastHost />
     {/* Over everything, so the screens underneath keep their place. */}
     {signedIn && locked && <LockScreen />}
-    </>
+    </ThemeProvider>
   );
 }
 

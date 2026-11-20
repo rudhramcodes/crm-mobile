@@ -25,7 +25,7 @@ export default function AttendanceTab() {
   const pendingRegs = regs.data?.data?.requests?.length ?? 0;
 
   return (
-    <Screen scroll className="gap-5 pt-6" refreshControl={refreshControl}>
+    <Screen tab scroll className="gap-5 pt-6" refreshControl={refreshControl}>
       <View>
         <Text className="text-sm text-muted">{todayLabel()}</Text>
         <Heading>Attendance</Heading>

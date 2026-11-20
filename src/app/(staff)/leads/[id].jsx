@@ -93,6 +93,7 @@ function LeadBody({ lead: l }) {
         </Card>
       )}
       {canWrite && l.status !== 'won' && <Button title="Convert to client" icon={UserCheck} onPress={() => change(l, 'won')} />}
+      {!!l.convertedToClient?._id && <Button title="View client" icon={UserCheck} variant="secondary" onPress={() => router.push(`/clients/${l.convertedToClient._id}`)} />}
 
       <Card className="gap-3 p-4">
         <Field label="Email" value={l.email} />
