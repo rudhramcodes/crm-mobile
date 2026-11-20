@@ -6,9 +6,10 @@ import { useDispatch } from 'react-redux';
 import { startOfDay, startOfMonth, startOfWeek } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { BellOff, CheckCheck, CloudOff, Trash2 } from 'lucide-react-native';
-import { Chip, EmptyState, Heading, Pressable, Screen, Skeleton, Text, showToast } from '@/components';
+import { Chip, EmptyState, Heading, Pager, Pressable, Screen, Skeleton, Text, showToast } from '@/components';
+import { usePage, usePageNav } from '@/hooks/usePaged';
 import {
-  useDeleteNotificationMutation, useGetNotificationPagesInfiniteQuery, useGetUnreadCountQuery, useMarkAllNotificationsReadMutation,
+  useDeleteNotificationMutation, useGetNotificationsQuery, useGetUnreadCountQuery, useMarkAllNotificationsReadMutation,
 } from '@/services/notificationApi';
 import { notificationConfig } from '@/constants/notifications';
 import { openNotification } from '@/hooks/useLiveUpdates';
@@ -22,6 +23,7 @@ const DATES = [
   { key: 'week', label: 'This week', from: startOfWeek },
   { key: 'month', label: 'This month', from: startOfMonth },
 ];
+const LIMIT = 20;
 const tiles = { sand: 'bg-sand', accent: 'bg-accent/15', success: 'bg-success/15', danger: 'bg-danger/15' };
 const priorityDot = { high: 'bg-danger', medium: 'bg-accent', low: 'bg-success' };
 
@@ -81,12 +83,17 @@ export default function Inbox() {
 
   const from = DATES.find((d) => d.key === range).from;
   const arg = useMemo(() => ({ read: unreadOnly ? false : undefined, startDate: from?.(new Date()).toISOString() }), [unreadOnly, from]);
-  const { data, isLoading, isError, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useGetNotificationPagesInfiniteQuery(arg);
+  // 20 per page from the server, with Previous / Next under the list; a filter change goes back to page 1.
+  const listRef = useRef(null);
+  const [page, setPage] = usePage(`${unreadOnly}|${range}`);
+  const { data, isLoading, isError, isFetching, refetch } = useGetNotificationsQuery({ ...arg, page, limit: LIMIT });
+  const meta = data?.pagination;
+  const goTo = usePageNav(listRef, page, setPage, meta?.pages);
   const { data: unread = 0 } = useGetUnreadCountQuery();
   const [markAll, { isLoading: markingAll }] = useMarkAllNotificationsReadMutation();
   const [remove] = useDeleteNotificationMutation();
 
-  const items = useMemo(() => (data?.pages ?? []).flatMap((p) => p.data).filter((n) => !hidden.includes(n._id)), [data, hidden]);
+  const items = useMemo(() => (data?.data ?? []).filter((n) => !hidden.includes(n._id)), [data, hidden]);
 
   // Delete waits 5 s for Undo (DESIGN.md §8); leaving the screen sends whatever is still waiting.
   useEffect(() => {
@@ -162,6 +169,7 @@ export default function Inbox() {
   return (
     <Screen tab className="px-0">
       <FlashList
+        ref={listRef}
         contentInsetAdjustmentBehavior="automatic"
         data={items}
         keyExtractor={(n) => n._id}
@@ -172,9 +180,7 @@ export default function Inbox() {
         )}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
-        ListFooterComponent={isFetchingNextPage ? <Skeleton className="h-24 rounded-3xl" /> : null}
-        onEndReached={() => hasNextPage && !isFetching && fetchNextPage()}
-        onEndReachedThreshold={0.5}
+        ListFooterComponent={<Pager page={page} pages={meta?.pages} total={meta?.total} limit={LIMIT} loading={isFetching} onChange={goTo} />}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={pull} tintColor={theme.accent} colors={[theme.accent]} />}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
       />

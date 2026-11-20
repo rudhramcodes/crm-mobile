@@ -37,21 +37,13 @@ function Group({ title, tasks, tone, empty, hint }) {
   );
 }
 
-// Personal focus over my own tasks: a one-line add (Enter saves it; @person, dates, !priority and #tags are understood),
-// then what needs me (reviews, overdue, today), what's later, and what's with the reviewer.
-export function MyDayView({ tasks }) {
+// One-line add: Enter saves it; @person, a day or time, !priority and #tags are understood.
+// `extra` is added to every task made here (a project page passes { project, milestone }).
+export function QuickAddTask({ extra, placeholder = 'Add a task · @name tomorrow 5pm !high' }) {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
   const [title, setTitle] = useState('');
   const [create, { isLoading }] = useCreateTaskMutation();
-  // Reviews come from their own query: they may sit outside the filtered list.
-  const reviews = useGetTasksQuery({ status: 'review', reviewer: me._id, sort: 'reviewDueAt', limit: 50 }).data?.data || [];
-  const g = myDay(tasks);
-  const reviewIds = new Set(reviews.map((t) => t._id));
-  const waiting = g.waiting.filter((t) => !reviewIds.has(t._id));
-  const focus = g.overdue.length + g.today.length + g.done.length;
-  const pct = focus ? Math.round((g.done.length / focus) * 100) : 0;
-
   // People load only once an @ is typed; teams are small and cached.
   const users = useGetUsersQuery({ isActive: true, limit: 200 }, { skip: !title.includes('@') }).data?.data?.users || [];
   const teams = useGetTeamsQuery().data || [];
@@ -60,15 +52,54 @@ export function MyDayView({ tasks }) {
 
   const add = async () => {
     if (!ok) return;
-    const body = { title: q.title, assignedTo: q.owner._id, helpers: q.helpers.map((h) => h._id), dueDate: q.dueDate, status: 'todo', priority: q.priority, tags: q.tags };
+    const body = { title: q.title, assignedTo: q.owner._id, helpers: q.helpers.map((h) => h._id), dueDate: q.dueDate, status: 'todo', priority: q.priority, tags: q.tags, ...extra };
     const who = q.owner._id === me._id ? '' : ` for ${q.owner.name.split(' ')[0]}`;
     if (await runAction(create(body), `Added${who} · ${dueText(q.dueDate)}`, "Couldn't add the task")) setTitle('');
   };
   // Tapping what was understood opens the full form with it filled in.
   const more = () => {
-    newTask({ title: q.title, dueDate: q.dueDate, priority: q.priority, tags: q.tags.join(', '), people: JSON.stringify([q.owner, ...q.helpers].map(({ _id, name, avatar }) => ({ _id, name, avatar }))) });
+    newTask({ title: q.title, dueDate: q.dueDate, priority: q.priority, tags: q.tags.join(', '), people: JSON.stringify([q.owner, ...q.helpers].map(({ _id, name, avatar }) => ({ _id, name, avatar }))), ...extra });
     setTitle('');
   };
+
+  return (
+    <>
+      <Input
+        value={title}
+        onChangeText={setTitle}
+        onSubmitEditing={add}
+        placeholder={placeholder}
+        accessibilityLabel="Add a task. Type @ for a person, a day, ! for priority, # for a tag"
+        returnKeyType="done"
+        submitBehavior="submit"
+        maxLength={200}
+        right={(
+          <Pressable onPress={add} disabled={!ok} accessibilityLabel="Add task" className="h-11 w-11 items-center justify-center">
+            <CornerDownLeft size={18} color={ok ? theme.ink : theme.muted} />
+          </Pressable>
+        )}
+      />
+      {!!q.bits.length && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerClassName="gap-2">
+          {q.bits.map((b) => <Chip key={b.kind + b.label} label={b.label} active onPress={more} />)}
+          <Chip label="More options" onPress={more} />
+        </ScrollView>
+      )}
+    </>
+  );
+}
+
+// Personal focus over my own tasks: a one-line add (Enter saves it; @person, dates, !priority and #tags are understood),
+// then what needs me (reviews, overdue, today), what's later, and what's with the reviewer.
+export function MyDayView({ tasks }) {
+  const me = useSelector((s) => s.auth.user);
+  // Reviews come from their own query: they may sit outside the filtered list.
+  const reviews = useGetTasksQuery({ status: 'review', reviewer: me._id, sort: 'reviewDueAt', limit: 50 }).data?.data || [];
+  const g = myDay(tasks);
+  const reviewIds = new Set(reviews.map((t) => t._id));
+  const waiting = g.waiting.filter((t) => !reviewIds.has(t._id));
+  const focus = g.overdue.length + g.today.length + g.done.length;
+  const pct = focus ? Math.round((g.done.length / focus) * 100) : 0;
 
   return (
     <View className="gap-5">
@@ -84,27 +115,7 @@ export function MyDayView({ tasks }) {
             </View>
           </>
         )}
-        <Input
-          value={title}
-          onChangeText={setTitle}
-          onSubmitEditing={add}
-          placeholder="Add a task · @name tomorrow 5pm !high"
-          accessibilityLabel="Add a task. Type @ for a person, a day, ! for priority, # for a tag"
-          returnKeyType="done"
-          submitBehavior="submit"
-          maxLength={200}
-          right={(
-            <Pressable onPress={add} disabled={!ok} accessibilityLabel="Add task" className="h-11 w-11 items-center justify-center">
-              <CornerDownLeft size={18} color={ok ? theme.ink : theme.muted} />
-            </Pressable>
-          )}
-        />
-        {!!q.bits.length && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerClassName="gap-2">
-            {q.bits.map((b) => <Chip key={b.kind + b.label} label={b.label} active onPress={more} />)}
-            <Chip label="More options" onPress={more} />
-          </ScrollView>
-        )}
+        <QuickAddTask />
       </Card>
       <Group title="NEEDS MY REVIEW" tasks={reviews} tone="text-accent-ink" hint="Approve or ask for changes within 1 office hour." />
       <Group title="OVERDUE" tasks={g.overdue} tone="text-danger" />

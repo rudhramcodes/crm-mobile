@@ -11,16 +11,6 @@ export const clientApi = api.injectEndpoints({
       keepUnusedDataFor: 0,
     }),
 
-    // Pages of 20 for the directory; all loaded pages refetch together when the Client tag is invalidated.
-    getClientPages: builder.infiniteQuery({
-      infiniteQueryOptions: {
-        initialPageParam: 1,
-        getNextPageParam: (last) => (last.pagination?.hasNextPage ? last.pagination.page + 1 : undefined),
-      },
-      query: ({ queryArg, pageParam }) => ({ url: '/clients', params: { ...queryArg, page: pageParam, limit: 20 } }),
-      providesTags: ['Client'],
-    }),
-
     getClientById: builder.query({
       query: (id) => `/clients/${id}`,
       providesTags: (result, error, id) => [{ type: 'Client', id }],
@@ -91,7 +81,6 @@ export const clientApi = api.injectEndpoints({
 
 export const {
   useGetClientsQuery,
-  useGetClientPagesInfiniteQuery,
   useGetClientByIdQuery,
   useCreateClientMutation,
   useUpdateClientMutation,

@@ -6,15 +6,6 @@ export const notificationApi = api.injectEndpoints({
       query: (params) => ({ url: '/notifications', params }),
       providesTags: ['Notification'],
     }),
-    // All pages refetch together when the Notification tag is invalidated.
-    getNotificationPages: builder.infiniteQuery({
-      infiniteQueryOptions: {
-        initialPageParam: 1,
-        getNextPageParam: (last) => (last.pagination?.hasNextPage ? last.pagination.page + 1 : undefined),
-      },
-      query: ({ queryArg, pageParam }) => ({ url: '/notifications', params: { ...queryArg, page: pageParam, limit: 20 } }),
-      providesTags: ['Notification'],
-    }),
     getUnreadCount: builder.query({
       query: () => '/notifications/unread-count',
       transformResponse: (res) => res.data.count,
@@ -38,7 +29,6 @@ export const notificationApi = api.injectEndpoints({
 
 export const {
   useGetNotificationsQuery,
-  useGetNotificationPagesInfiniteQuery,
   useGetUnreadCountQuery,
   useMarkNotificationReadMutation,
   useMarkAllNotificationsReadMutation,
