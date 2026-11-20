@@ -21,7 +21,8 @@ export const requestMeta = (v) => REQUEST_STATUS.find((s) => s.value === v) || R
 export const backTo = (fallback = '/attendance') => (router.canGoBack() ? router.back() : router.replace(fallback));
 
 // Back chevron, caption and title for pushed screens; `right` holds the screen's main action.
-export function PageHeader({ caption, title, right, fallback }) {
+// oneLine: shrink a long title to fit one line instead of wrapping.
+export function PageHeader({ caption, title, right, fallback, oneLine }) {
   const theme = useTheme();
   return (
     <View className="gap-1">
@@ -31,7 +32,7 @@ export function PageHeader({ caption, title, right, fallback }) {
       <View className="flex-row items-end gap-3">
         <View className="flex-1">
           {!!caption && <Text className="text-caption text-muted">{caption}</Text>}
-          <Heading numberOfLines={2}>{title}</Heading>
+          <Heading numberOfLines={oneLine ? 1 : 2} adjustsFontSizeToFit={oneLine}>{title}</Heading>
         </View>
         {right}
       </View>
