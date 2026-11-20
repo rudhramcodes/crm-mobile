@@ -8,7 +8,6 @@ import {
   PageHeader,
   Pager,
   Screen,
-  Text,
   UserRow,
   usePullRefresh,
 } from "@/components";
@@ -32,13 +31,13 @@ import { useSelector } from "react-redux";
 
 const LIMIT = 20;
 
-// Users & Employees: same as the web — role counts + filter, search, paged list, delete for super admins.
+// Users: same as the web — role counts + filter, search, paged list, delete for super admins.
 export default function Users() {
   const me = useSelector((s) => s.auth.user);
   if (!isAdmin(me)) {
     return (
       <Screen>
-        <PageHeader title="Users & Employees" oneLine fallback="/more" />
+        <PageHeader title="Users" fallback="/more" />
         <EmptyState
           icon={ShieldAlert}
           title="Admins only"
@@ -90,8 +89,7 @@ function UserList({ me }) {
     <View className="gap-4 pb-4 pt-2">
       <PageHeader
         caption={`${total} ${total === 1 ? "PERSON" : "PEOPLE"}`}
-        title="Users & Employees"
-        oneLine
+        title="Users"
         fallback="/more"
         right={
           <Button
@@ -102,9 +100,6 @@ function UserList({ me }) {
           />
         }
       />
-      <Text className="text-sm text-muted">
-        Manage employee records, and payroll-ready details.
-      </Text>
       <Input
         value={typed}
         onChangeText={setTyped}

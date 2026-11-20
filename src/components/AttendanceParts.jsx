@@ -70,8 +70,9 @@ export function MiniStats({ items }) {
   return (
     <View className="flex-row gap-2">
       {items.map((i) => (
-        <View key={i.label} className="flex-1 rounded-2xl bg-surface-2 px-3 py-2.5" accessible accessibilityLabel={`${i.label}: ${i.value}`}>
-          <Text className="text-caption text-muted">{i.label.toUpperCase()}</Text>
+        <View key={i.label} className="flex-1 rounded-2xl bg-surface-2 px-2.5 py-2.5" accessible accessibilityLabel={`${i.label}: ${i.value}`}>
+          {/* One line: long labels (e.g. CANCELLED in a row of four) shrink a little instead of wrapping. */}
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} className="text-caption text-muted">{i.label.toUpperCase()}</Text>
           <Text className="font-body-semibold tabular-nums">{i.value}</Text>
         </View>
       ))}

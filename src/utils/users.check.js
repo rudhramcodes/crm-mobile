@@ -16,7 +16,7 @@ assert.equal(userFormError({ ...f, role: 'client', dateOfJoining: '' }, false), 
 const created = userBody({ ...f, location: 'Surat' }, { editing: false, payroll: true });
 assert.equal(created.location, 'Surat');
 assert.equal(userBody(f, { editing: false }).location, null);
-assert.equal(userBody({ ...f, role: 'client', location: 'Surat' }, { editing: false }).location, undefined);
+assert.equal(userBody({ ...f, role: 'client', location: 'Surat' }, { editing: false }).location, null);
 assert.equal(created.name, 'Asha');
 assert.equal(created.password, 'Secret123');
 assert.equal(created.isActive, undefined);

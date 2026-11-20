@@ -15,7 +15,8 @@ const ROLE_VARIANT = { super_admin: 'primary', admin: 'info', manager: 'warning'
 export const RoleBadge = ({ role }) => <Badge label={ROLE_LABELS[role] || role} variant={ROLE_VARIANT[role]} />;
 
 // The web table row as a card: person, role, employee ID / designation, joined, status, salary (payroll admins).
-export function UserRow({ user: u, showSalary, onDelete }) {
+// readOnly: not tappable (managers viewing a team can't open the edit form).
+export function UserRow({ user: u, showSalary, onDelete, readOnly }) {
   const theme = useTheme();
   const active = u.isActive !== false;
   const p = u.profile || {};
@@ -23,6 +24,7 @@ export function UserRow({ user: u, showSalary, onDelete }) {
   return (
     <Pressable
       onPress={() => router.push(`/users/new?id=${u._id}`)}
+      disabled={readOnly}
       accessibilityLabel={`${u.name}, ${ROLE_LABELS[u.role] || u.role}, ${active ? 'active' : 'inactive'}`}
       className="gap-3 rounded-3xl border border-line bg-surface p-4"
     >

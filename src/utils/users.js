@@ -1,6 +1,9 @@
 // Pure user-form helpers (no React/RN imports, so users.check.js runs under plain node). Same rules as the web UserFormModal.
 
 // Roles that get an employee profile (ID, designation, dates) and compensation; the server's STAFF_ROLES.
+// "Surat Team"; 'none' is the admins' list of staff without a location.
+export const teamName = (location) => (location === 'none' ? 'No location' : `${location} Team`);
+
 export const isStaffRole = (role) => ['admin', 'manager', 'employee'].includes(role);
 
 // Stored date → "YYYY-MM-DD" in local time (the web's dateInput).
@@ -48,7 +51,7 @@ export const userFormError = (f, editing) => {
 export const userBody = (f, { editing, payroll }) => {
   const t = (v) => String(v || '').trim();
   const body = { name: t(f.name), email: t(f.email), role: f.role, phone: f.phone };
-  if (f.role !== 'client') body.location = f.location || null; // clients aren't in teams
+  body.location = f.role === 'client' ? null : f.location || null; // clients aren't in location teams
   if (!editing) body.password = f.password;
   if (editing) body.isActive = !!f.isActive;
   if (isStaffRole(f.role)) {

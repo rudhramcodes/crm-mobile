@@ -31,7 +31,12 @@ import { cleanParams } from "@/utils/leads";
 import { brandCounts, clientOptions } from "@/utils/meetings";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
-import { CalendarDays, Plus, Search, SlidersHorizontal } from "lucide-react-native";
+import {
+  CalendarDays,
+  Plus,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 import { useSelector } from "react-redux";
@@ -86,7 +91,9 @@ export default function Meetings() {
   const remove = async (allSeries) => {
     await runAction(
       del({ id: deleting?._id, allSeries }),
-      allSeries ? "Recurring series deleted successfully" : "Meeting deleted successfully",
+      allSeries
+        ? "Recurring series deleted successfully"
+        : "Meeting deleted successfully",
       allSeries ? "Failed to delete series" : "Failed to delete meeting",
     );
     setDeleting(null);
@@ -100,13 +107,18 @@ export default function Meetings() {
         fallback="/more"
         right={
           can.manage ? (
-            <Button title="New" icon={Plus} size="sm" onPress={() => router.push("/meetings/new")} />
+            <Button
+              title="New"
+              icon={Plus}
+              size="sm"
+              onPress={() => router.push("/meetings/new")}
+            />
           ) : null
         }
       />
-      <Text className="-mt-2 text-sm text-muted">
+      {/* <Text className="-mt-2 text-sm text-muted">
         Coordinate video appointments, discussions, and follow-up agendas
-      </Text>
+      </Text> */}
 
       <MiniStats
         items={[
@@ -118,8 +130,16 @@ export default function Meetings() {
       />
 
       <View className="flex-row gap-2">
-        <Chip label="List" active={view === "list"} onPress={() => setView("list")} />
-        <Chip label="Calendar" active={view === "calendar"} onPress={() => setView("calendar")} />
+        <Chip
+          label="List"
+          active={view === "list"}
+          onPress={() => setView("list")}
+        />
+        <Chip
+          label="Calendar"
+          active={view === "calendar"}
+          onPress={() => setView("calendar")}
+        />
       </View>
 
       <View className="flex-row items-start gap-2">
@@ -148,7 +168,10 @@ export default function Meetings() {
               : "h-[52px] w-[52px] items-center justify-center rounded-2xl bg-surface-2"
           }
         >
-          <SlidersHorizontal size={20} color={showFilters || active ? theme.bg : theme.ink} />
+          <SlidersHorizontal
+            size={20}
+            color={showFilters || active ? theme.bg : theme.ink}
+          />
         </Pressable>
       </View>
 
@@ -166,34 +189,82 @@ export default function Meetings() {
           <Text className="text-caption text-muted">STATUS</Text>
           <View className="flex-row flex-wrap gap-2">
             {[{ value: "", label: "All" }, ...MEETING_STATUS].map((s) => (
-              <Chip key={s.value || "all"} label={s.label} active={f.status === s.value} onPress={() => set({ status: s.value })} />
+              <Chip
+                key={s.value || "all"}
+                label={s.label}
+                active={f.status === s.value}
+                onPress={() => set({ status: s.value })}
+              />
             ))}
           </View>
           {view === "list" && (
             <>
-              <DateField label="From" value={f.from} onChange={(from) => set({ from })} onClear={() => set({ from: "" })} placeholder="From date" maxDate={f.to || undefined} />
-              <DateField label="To" value={f.to} onChange={(to) => set({ to })} onClear={() => set({ to: "" })} placeholder="To date" minDate={f.from || undefined} />
+              <DateField
+                label="From"
+                value={f.from}
+                onChange={(from) => set({ from })}
+                onClear={() => set({ from: "" })}
+                placeholder="From date"
+                maxDate={f.to || undefined}
+              />
+              <DateField
+                label="To"
+                value={f.to}
+                onChange={(to) => set({ to })}
+                onClear={() => set({ to: "" })}
+                placeholder="To date"
+                minDate={f.from || undefined}
+              />
             </>
           )}
-          {!!active && <Button title="Clear filters" size="sm" variant="secondary" onPress={() => setF(EMPTY)} />}
+          {!!active && (
+            <Button
+              title="Clear filters"
+              size="sm"
+              variant="secondary"
+              onPress={() => setF(EMPTY)}
+            />
+          )}
         </View>
       )}
 
-      <VentureChips value={brand} onChange={setBrand} counts={brandCounts(meetings)} />
+      <VentureChips
+        value={brand}
+        onChange={setBrand}
+        counts={brandCounts(meetings)}
+      />
     </View>
   );
 
   const empty =
     view === "calendar" ? (
-      <MeetingCalendar filters={base} canManage={can.manage} onDelete={can.remove ? setDeleting : undefined} />
+      <MeetingCalendar
+        filters={base}
+        canManage={can.manage}
+        onDelete={can.remove ? setDeleting : undefined}
+      />
     ) : q.isLoading || q.isError ? (
-      <DashboardState isLoading={q.isLoading} isError={q.isError} refetch={q.refetch} />
+      <DashboardState
+        isLoading={q.isLoading}
+        isError={q.isError}
+        refetch={q.refetch}
+      />
     ) : (
       <EmptyState
         icon={CalendarDays}
         title={filtered ? "No meetings match" : "No scheduled meetings found"}
-        message={filtered ? "Try another search or clear the filters." : "Schedule a new briefing or client sync to get started."}
-        actionTitle={filtered ? "Clear filters" : can.manage ? "Schedule meeting" : undefined}
+        message={
+          filtered
+            ? "Try another search or clear the filters."
+            : "Schedule a new briefing or client sync to get started."
+        }
+        actionTitle={
+          filtered
+            ? "Clear filters"
+            : can.manage
+              ? "Schedule meeting"
+              : undefined
+        }
         onAction={filtered ? reset : () => router.push("/meetings/new")}
       />
     );
@@ -207,7 +278,11 @@ export default function Meetings() {
         keyExtractor={(m) => m._id}
         renderItem={({ item }) => (
           <View className="pb-2">
-            <MeetingRow meeting={item} canManage={can.manage} onDelete={can.remove ? setDeleting : undefined} />
+            <MeetingRow
+              meeting={item}
+              canManage={can.manage}
+              onDelete={can.remove ? setDeleting : undefined}
+            />
           </View>
         )}
         ListHeaderComponent={header}
@@ -217,7 +292,9 @@ export default function Meetings() {
             <Skeleton className="h-32 rounded-3xl" />
           ) : meetings.length ? (
             <Text className="py-2 text-center text-xs text-muted">
-              {q.hasNextPage ? `Showing ${meetings.length} of ${total}` : `All ${total} shown`}
+              {q.hasNextPage
+                ? `Showing ${meetings.length} of ${total}`
+                : `All ${total} shown`}
             </Text>
           ) : null
         }
@@ -229,13 +306,17 @@ export default function Meetings() {
 
       <ConfirmDialog
         visible={!!deleting}
-        title={deleting?.seriesId ? "Delete recurring meeting?" : "Delete meeting?"}
+        title={
+          deleting?.seriesId ? "Delete recurring meeting?" : "Delete meeting?"
+        }
         message={
           deleting?.seriesId
             ? `"${deleting?.title}" is part of a recurring series.`
             : `Are you sure you want to delete meeting "${deleting?.title}"? This cannot be undone.`
         }
-        confirmLabel={deleting?.seriesId ? "Delete this occurrence only" : "Delete meeting"}
+        confirmLabel={
+          deleting?.seriesId ? "Delete this occurrence only" : "Delete meeting"
+        }
         secondaryLabel={deleting?.seriesId ? "Delete entire series" : undefined}
         onSecondary={() => remove(true)}
         loading={d.isLoading}

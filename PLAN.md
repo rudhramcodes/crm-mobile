@@ -298,6 +298,13 @@ Admin/manager:
   - "Read-only modules" isn't on the web; skipped.
 - [x] Role change happens in the edit form (as on the web); delete (super_admin, not on super admins; blocked for payroll history)
 
+### M16b — Teams (by location)
+
+- [x] Teams page: Surat / Mumbai / Delhi team cards (count + avatars); "No location" card for admins (staff without a location)
+- [x] Team page: people in that location (active staff), search, pages; admins tap a person to edit their location
+- [x] Custom teams (hand-made groups for the task people picker) stay below, unchanged
+- [x] Server: `location` filter on GET /users (`none` = no location; clients excluded); a client's location is cleared
+
 ### M17 — Settings & profile
 
 - [ ] Profile (name, phone, avatar from camera), change password (policy hints) **[Port]**
