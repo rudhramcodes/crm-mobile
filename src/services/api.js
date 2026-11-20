@@ -1,7 +1,7 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import { clearRefreshToken, getRefreshToken, saveRefreshToken } from '@/utils/refreshToken';
 import { API_BASE_URL } from '@/constants';
 import { loggedOut, setCredentials } from '@/store/authSlice';
+import { clearRefreshToken, getRefreshToken, saveRefreshToken } from '@/utils/refreshToken';
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 // Mobile has no cookies: send the access token as Bearer and refresh with the stored refresh token.
 const baseQuery = fetchBaseQuery({
@@ -52,6 +52,7 @@ export const api = createApi({
     'Meeting',
     'Project',
     'Task',
+    'Team',
     'Invoice',
     'InvoiceStats',
     'Quotation',

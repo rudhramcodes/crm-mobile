@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSelector } from 'react-redux';
-import { Alert, Avatar, Button, Chip, DateField, Input, Pressable, Screen, SheetHeader, Text, Toggle, UserPicker, backTo } from '@/components';
+import { Alert, Button, Chip, DateField, Input, PeoplePicker, Screen, SheetHeader, Text, Toggle, backTo } from '@/components';
 import { TASK_PRIORITY, TASK_STATUS } from '@/constants';
 import { useCreateTaskMutation } from '@/services/taskApi';
 import { useGetProjectByIdQuery, useGetProjectsQuery } from '@/services/projectApi';
-import { runAction } from '@/utils/attendance';
+import { runAction, ymd } from '@/utils/attendance';
 import { apiError } from '@/utils/apiError';
 import { getFieldError } from '@/utils/getFieldError';
 
@@ -23,23 +23,28 @@ function Chips({ label, items, value, onChange }) {
   );
 }
 
-// Full task form. Params prefill it: title, status, dueDate, project (from quick add, a board column or a calendar day).
+// Full task form. Params prefill it: title, status, dueDate, project, priority, tags, people (JSON) — from quick add, a board column or a calendar day.
 export default function NewTask() {
   const p = useLocalSearchParams();
   const me = useSelector((s) => s.auth.user);
   const [create, { isLoading, error }] = useCreateTaskMutation();
   const [title, setTitle] = useState(p.title || '');
   const [description, setDescription] = useState('');
-  const [assignee, setAssignee] = useState({ _id: me._id, name: me.name, avatar: me.avatar });
-  const [picking, setPicking] = useState(false);
+  const [team, setTeam] = useState(() => {
+    const people = p.people ? JSON.parse(p.people) : [{ _id: me._id, name: me.name, avatar: me.avatar }];
+    return { owner: people[0] || null, helpers: people.slice(1) };
+  });
+  const [copyForEach, setCopyForEach] = useState(false);
   const [project, setProject] = useState(p.project || '');
   const [milestone, setMilestone] = useState('');
-  const [dueDate, setDue] = useState(p.dueDate || '');
+  // Quick add can send a time ("5pm"); keep it unless the date is changed here.
+  const timedDue = p.dueDate?.includes('T') ? p.dueDate : null;
+  const [dueDate, setDue] = useState(p.dueDate ? ymd(p.dueDate) : '');
   const [startDate, setStart] = useState('');
   const [hours, setHours] = useState('');
-  const [priority, setPriority] = useState('medium');
+  const [priority, setPriority] = useState(p.priority || 'medium');
   const [status, setStatus] = useState(p.status || 'todo');
-  const [tags, setTags] = useState('');
+  const [tags, setTags] = useState(p.tags || '');
   const [recurring, setRecurring] = useState(false);
   const [frequency, setFrequency] = useState('weekly');
   const projects = useGetProjectsQuery({ page: 1, limit: 50 }).data?.data || [];
@@ -52,10 +57,12 @@ export default function NewTask() {
     const body = {
       title: title.trim(),
       description: description.trim() || undefined,
-      assignedTo: assignee._id,
+      assignedTo: team.owner?._id,
+      helpers: team.helpers.map((h) => h._id),
+      copyForEach: team.helpers.length ? copyForEach : undefined,
       project: project || undefined,
       milestone: milestone || undefined,
-      dueDate,
+      dueDate: timedDue && ymd(timedDue) === dueDate ? timedDue : dueDate,
       startDate: startDate || undefined,
       estimatedHours: hours.trim() ? Number(hours) : undefined,
       priority,
@@ -65,7 +72,8 @@ export default function NewTask() {
     };
     const res = await runAction(create(body), 'Task created', "Couldn't create the task");
     const id = res?.data?.task?._id;
-    if (id) router.replace(`/tasks/${id}`);
+    if (res?.data?.tasks?.length > 1) backTo('/tasks');
+    else if (id) router.replace(`/tasks/${id}`);
     else if (res) backTo('/tasks');
   };
 
@@ -77,16 +85,20 @@ export default function NewTask() {
       <Input label="Description" value={description} onChangeText={setDescription} multiline maxLength={5000} style={{ height: 96, paddingTop: 14, textAlignVertical: 'top' }} error={err('description')} />
 
       <View className="gap-1.5">
-        <Text className="font-body-medium text-sm">Assignee *</Text>
-        {picking ? <UserPicker label="Search people" onPick={(u) => { setAssignee(u); setPicking(false); }} /> : (
-          <Pressable onPress={() => setPicking(true)} accessibilityLabel={`Assignee: ${assignee.name}. Change`} className="flex-row items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3">
-            <Avatar name={assignee.name} uri={assignee.avatar} size={32} />
-            <Text className="flex-1 font-body-medium">{assignee._id === me._id ? `${assignee.name} (me)` : assignee.name}</Text>
-            <Text className="font-body-semibold text-accent-ink">Change</Text>
-          </Pressable>
-        )}
+        <Text className="font-body-medium text-sm">People *</Text>
+        <Text className="text-sm text-muted">The star is the owner. Everyone else helps.</Text>
+        <PeoplePicker owner={team.owner} helpers={team.helpers} onChange={setTeam} />
         {!!err('assignedTo') && <Text className="text-sm text-danger">{err('assignedTo')}</Text>}
       </View>
+      {!!team.helpers.length && (
+        <View className="flex-row items-center gap-3">
+          <View className="flex-1">
+            <Text className="font-body-medium">Copy for each person</Text>
+            <Text className="text-sm text-muted">{copyForEach ? `${team.helpers.length + 1} separate tasks, each reviewed on its own.` : 'Off: one task everyone shares.'}</Text>
+          </View>
+          <Toggle value={copyForEach} onValueChange={setCopyForEach} label="Copy for each person" />
+        </View>
+      )}
 
       <DateField label="Due date *" value={dueDate} onChange={setDue} minDate={startDate || undefined} error={err('dueDate')} />
       <DateField label="Start date" value={startDate} onChange={(d) => { setStart(d); if (dueDate && d > dueDate) setDue(d); }} error={err('startDate')} />
@@ -106,7 +118,7 @@ export default function NewTask() {
       </View>
       {recurring && <Chips label="Every" items={FREQ} value={frequency} onChange={setFrequency} />}
 
-      <Button title="Create task" loading={isLoading} disabled={title.trim().length < 2 || !dueDate || badHours} onPress={save} />
+      <Button title={copyForEach && team.helpers.length ? `Create ${team.helpers.length + 1} tasks` : 'Create task'} loading={isLoading} disabled={title.trim().length < 2 || !dueDate || !team.owner || badHours} onPress={save} />
     </Screen>
   );
 }

@@ -126,6 +126,7 @@ export function TaskRow({ task: t, selecting, selected, onToggleSelect, swipe = 
           </View>
         </View>
         {!!t.assignedTo?.name && <Avatar name={t.assignedTo.name} uri={t.assignedTo.avatar} size={28} />}
+        {!!t.helpers?.length && <Text className="text-xs font-body-semibold text-muted" accessibilityLabel={`${t.helpers.length} helping`}>+{t.helpers.length}</Text>}
       </Pressable>
     </View>
   );

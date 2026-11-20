@@ -5,7 +5,7 @@ import { useSelector } from 'react-redux';
 import { CalendarClock, Eye, EyeOff, Repeat, X } from 'lucide-react-native';
 import {
   ActivityLog, Avatar, Card, ReviewPanel, Checklist, Chip, ConfirmDelete, FilesStrip, DashboardState, DateField, Dependencies, Input, PageHeader, Pressable, Screen,
-  Subtasks, TaskChat, Text, TimeTracker, UserPicker, backTo, openReschedule, showToast, usePullRefresh,
+  Subtasks, TaskChat, Text, TimeTracker, PeoplePicker, Button, backTo, openReschedule, showToast, usePullRefresh,
 } from '@/components';
 import { TASK_PRIORITY, TASK_STATUS } from '@/constants';
 import { useDeleteTaskMutation, useGetTaskByIdQuery, useUnwatchTaskMutation, useUpdateTaskMutation, useWatchTaskMutation } from '@/services/taskApi';
@@ -29,7 +29,7 @@ function TaskBody({ task: t }) {
   const [description, setDescription] = useState(t.description || '');
   const [hours, setHours] = useState(t.estimatedHours ? String(t.estimatedHours) : '');
   const [tag, setTag] = useState('');
-  const [picking, setPicking] = useState(false);
+  const [people, setPeople] = useState(null); // draft { owner, helpers } while editing
   const creator = canReview(t, me);
   const watching = (t.watchers || []).some((w) => idOf(w) === me._id);
   const save = (body, done) => runAction(update({ id: t._id, ...body }), done, "Couldn't save");
@@ -90,11 +90,26 @@ function TaskBody({ task: t }) {
 
       <Card className="gap-4 p-4">
         <View className="gap-1.5">
-          <Label>ASSIGNEE</Label>
-          {picking ? <UserPicker label="Reassign to" onPick={(u) => { setPicking(false); if (u._id !== idOf(t.assignedTo)) save({ assignedTo: u._id }, `Assigned to ${u.name}`); }} /> : (
-            <Pressable onPress={() => setPicking(true)} accessibilityLabel={`Assignee ${t.assignedTo?.name || 'none'}. Change`} className="flex-row items-center gap-3">
+          <Label>PEOPLE</Label>
+          {people ? (
+            <View className="gap-3">
+              <PeoplePicker owner={people.owner} helpers={people.helpers} onChange={setPeople} />
+              <View className="flex-row gap-2">
+                <Button title="Cancel" variant="secondary" className="flex-1" onPress={() => setPeople(null)} />
+                <Button title="Save people" className="flex-1" onPress={() => {
+                  if (!people.owner) return showToast({ title: 'Star someone as the owner' });
+                  save({ assignedTo: people.owner._id, helpers: people.helpers.map((h) => h._id) }, 'People saved');
+                  setPeople(null);
+                }} />
+              </View>
+            </View>
+          ) : (
+            <Pressable onPress={() => setPeople({ owner: t.assignedTo || null, helpers: t.helpers || [] })} accessibilityLabel={`Owner ${t.assignedTo?.name || 'none'}${t.helpers?.length ? `, ${t.helpers.length} helping` : ''}. Change`} className="flex-row items-center gap-3">
               <Avatar name={t.assignedTo?.name || '?'} uri={t.assignedTo?.avatar} size={32} />
-              <Text className="flex-1 font-body-medium">{t.assignedTo?.name || 'Unassigned'}</Text>
+              <View className="flex-1">
+                <Text className="font-body-medium">{t.assignedTo?.name || 'Unassigned'}</Text>
+                {!!t.helpers?.length && <Text className="text-sm text-muted" numberOfLines={1}>with {t.helpers.map((h) => h.name).join(', ')}</Text>}
+              </View>
               <Text className="font-body-semibold text-accent-ink">Change</Text>
             </Pressable>
           )}

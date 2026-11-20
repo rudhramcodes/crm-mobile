@@ -179,7 +179,7 @@ All changes keep the web app (`CRM/client`, 17 files use `assignedTo`) working.
 |---|---|---|---|---|
 | **T1** ✅ | Notifications fix: no email spam, quiet hours, grouping, deep links to the task, DB-based "sent" check | yes | small | S |
 | **T2** ✅ | Review flow: submit note + images, Approve / Ask for changes, 1-hour reminders + escalation, review timer, "Needs my review" in My Day | yes | yes | M |
-| **T3** | Task chat with images/files, replies, Files strip, image viewer | yes | yes | M |
+| **T3** ✅ | Task chat with images/files, replies, Files strip, image viewer | yes | yes | M |
 | **T4** | Owner + helpers, Teams, "copy for each person", workload hint, one-line quick add with @ / dates / ! / # | yes | yes | M |
 | **T5** | Auto status, auto milestone, dependency unblock push, stale nudge, recurring check, daily email | yes | small | M |
 | **T6** | One task system (migrate project tasks) + Projects page (M6) with Overview/Tasks/Chat/Files/Team + templates | yes + web | yes | L |
@@ -200,6 +200,15 @@ T1 first because it is small and stops spam today. T2 next because review speed 
 - The submit / changes note is text only; images come with T3.
 - Swiping or ticking a task still sends it for review at once, with no note.
 - Review alerts go by push and in-app only, never email.
+
+**T3 done (Nov 2026).** Shortcuts taken, upgrade later:
+- Up to 5 photos or PDFs per message, 10 MB each. No video, Word or Excel files yet.
+- Message alerts go to the owner, creator, reviewer, watchers and the person replied to, never the sender. Repeats fold into one alert (T1 grouping).
+- Only the author or an admin can delete a message; its files are deleted with it.
+- The Files strip collects files from the chat only. The review note (T2) is still text only.
+- Without Cloudinary keys the dev server saves files to `server/uploads` and serves them at `/uploads`. Production never does this and returns 503 instead.
+- The web client shows chat text only, not the files.
+- Pinch zoom and swiping between photos in the viewer still need a check on a real phone.
 
 ---
 
