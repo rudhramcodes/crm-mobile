@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "bundleIdentifier": "com.rudhram.crm",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
+      }
     },
     "android": {
       "package": "com.rudhram.crm",
@@ -72,7 +75,8 @@
           "color": "#A77848"
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-widgets"
     ],
     "experiments": {
       "typedRoutes": false,

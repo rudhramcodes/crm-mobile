@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { useLiveUpdates } from '@/hooks/useLiveUpdates';
 import { useClockReminders } from '@/hooks/useClockReminders';
+import { useClockTimer } from '@/hooks/useClockTimer';
 
 const modal = { presentation: 'modal' };
 
@@ -8,6 +9,7 @@ const modal = { presentation: 'modal' };
 export default function StaffLayout() {
   useLiveUpdates();
   useClockReminders();
+  useClockTimer();
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="attendance/clock-out" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />

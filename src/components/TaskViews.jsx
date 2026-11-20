@@ -23,17 +23,19 @@ import { cn } from '@/utils/cn';
 
 const newTask = (params) => router.push({ pathname: '/tasks/new', params });
 
-function Group({ title, tasks, tone, empty }) {
+function Group({ title, tasks, tone, empty, hint }) {
   if (!tasks.length && !empty) return null;
   return (
     <View className="gap-2">
       <Text className={cn('text-caption', tone || 'text-muted')}>{title} · {tasks.length}</Text>
+      {!!hint && !!tasks.length && <Text className="-mt-1 text-xs text-muted">{hint}</Text>}
       {tasks.length ? tasks.map((t) => <TaskRow key={t._id} task={t} />) : <Text className="text-sm text-muted">{empty}</Text>}
     </View>
   );
 }
 
-// Personal focus: a one-line add (Enter saves it for today, assigned to me), then overdue, today, upcoming, done.
+// Personal focus over my own tasks: a one-line add (Enter saves it for today, assigned to me),
+// then what needs me (reviews, overdue, today), what's later, and what's with the reviewer.
 export function MyDayView({ tasks }) {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
@@ -42,6 +44,8 @@ export function MyDayView({ tasks }) {
   // Reviews come from their own query: they may sit outside the filtered list.
   const reviews = useGetTasksQuery({ status: 'review', reviewer: me._id, sort: 'reviewDueAt', limit: 50 }).data?.data || [];
   const g = myDay(tasks);
+  const reviewIds = new Set(reviews.map((t) => t._id));
+  const waiting = g.waiting.filter((t) => !reviewIds.has(t._id));
   const focus = g.overdue.length + g.today.length + g.done.length;
   const pct = focus ? Math.round((g.done.length / focus) * 100) : 0;
 
@@ -54,13 +58,17 @@ export function MyDayView({ tasks }) {
   return (
     <View className="gap-5">
       <Card className="gap-3 p-4">
-        <View className="flex-row items-end justify-between">
-          <Text className="text-caption text-muted">TODAY&apos;S PROGRESS</Text>
-          <Text className="font-body-semibold tabular-nums">{g.done.length} of {focus} · {pct}%</Text>
-        </View>
-        <View className="h-1.5 overflow-hidden rounded-full bg-sand" accessible accessibilityLabel={`${pct}% of today's focus done`}>
-          <View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
-        </View>
+        {!!focus && (
+          <>
+            <View className="flex-row items-end justify-between">
+              <Text className="text-caption text-muted">TODAY</Text>
+              <Text className="font-body-semibold tabular-nums">{g.done.length} of {focus} done</Text>
+            </View>
+            <View className="h-1.5 overflow-hidden rounded-full bg-sand" accessible accessibilityLabel={`${pct}% of today's tasks done`}>
+              <View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+            </View>
+          </>
+        )}
         <Input
           value={title}
           onChangeText={setTitle}
@@ -77,11 +85,12 @@ export function MyDayView({ tasks }) {
           )}
         />
       </Card>
-      <Group title="NEEDS MY REVIEW" tasks={reviews} tone="text-accent-ink" />
+      <Group title="NEEDS MY REVIEW" tasks={reviews} tone="text-accent-ink" hint="Approve or ask for changes within 1 office hour." />
       <Group title="OVERDUE" tasks={g.overdue} tone="text-danger" />
-      <Group title="TODAY" tasks={g.today} empty="Nothing due today. Add one above." />
-      <Group title="UPCOMING" tasks={g.upcoming} />
-      <Group title="DONE" tasks={g.done} />
+      <Group title="TODAY" tasks={g.today} empty={g.overdue.length ? 'Nothing else due today.' : 'Nothing due today. Add one above.'} />
+      <Group title="LATER" tasks={g.upcoming} />
+      <Group title="WITH THE REVIEWER" tasks={waiting} hint="Nothing to do until they reply." />
+      <Group title="DONE TODAY" tasks={g.done} />
     </View>
   );
 }

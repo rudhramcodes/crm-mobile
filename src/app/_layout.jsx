@@ -75,8 +75,8 @@ function RootStack({ fontsReady }) {
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({ Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold,
-    'Goldenbook-Bold': require('../../assets/fonts/Goldenbook Bold.otf'),
-    'Goldenbook-Regular': require('../../assets/fonts/Goldenbook Regular.otf'),
+    'Goldenbook-Bold': require('../../assets/fonts/Goldenbook-Bold.otf'),
+    'Goldenbook-Regular': require('../../assets/fonts/Goldenbook-Regular.otf'),
   });
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
