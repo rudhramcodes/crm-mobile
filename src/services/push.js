@@ -47,6 +47,8 @@ if (Platform.OS !== 'web') {
   Object.entries(CATEGORIES).forEach(([id, actions]) => {
     Notifications.setNotificationCategoryAsync(id, actions).catch(() => {});
   });
+  // The old on-phone clock reminders were replaced by server pushes; drop any still scheduled.
+  Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
 }
 
 // Same look as a server push, for notifications that arrive over the socket on a phone without push.

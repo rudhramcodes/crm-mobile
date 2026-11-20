@@ -35,3 +35,4 @@ export * from './TaskDetailParts';
 export * from './TaskChat';
 export * from './LeadParts';
 export * from './ConfirmDialog';
+export * from './ClientParts';

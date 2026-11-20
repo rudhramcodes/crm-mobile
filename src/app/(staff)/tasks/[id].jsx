@@ -4,8 +4,8 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronUp, Eye, Repeat, X } from 'lucide-react-native';
 import {
-  ActivityLog, Avatar, Card, Checklist, Chip, ConfirmDelete, FilesStrip, DashboardState, DateField, Dependencies, Input, PageHeader, Pressable, Screen,
-  Subtasks, TaskChat, TaskFlow, Text, TimeTracker, UserPicker, backTo, openReschedule, showToast, usePullRefresh,
+  ActivityLog, Avatar, Button, Card, Checklist, Chip, ConfirmDelete, FilesStrip, DashboardState, DateField, Dependencies, Input, PageHeader, PeoplePicker, Pressable, Screen,
+  Subtasks, TaskChat, TaskFlow, Text, TimeTracker, backTo, openReschedule, showToast, usePullRefresh,
 } from '@/components';
 import { TASK_PRIORITY } from '@/constants';
 import { useDeleteTaskMutation, useGetTaskByIdQuery, useUnwatchTaskMutation, useUpdateTaskMutation, useWatchTaskMutation } from '@/services/taskApi';
@@ -43,7 +43,7 @@ function TaskBody({ task: t }) {
   const [description, setDescription, descFocus, descDone] = useSynced(t.description || '');
   const [hours, setHours, hoursFocus, hoursDone] = useSynced(t.estimatedHours ? String(t.estimatedHours) : '');
   const [tag, setTag] = useState('');
-  const [picking, setPicking] = useState(false);
+  const [people, setPeople] = useState(null); // draft { owner, helpers } while editing
   const [more, setMore] = useState(false);
   const watching = (t.watchers || []).some((w) => idOf(w) === me._id);
   const manage = canManageTask(t, me); // plan it: title, priority, people
@@ -100,19 +100,28 @@ function TaskBody({ task: t }) {
 
       <Card className="gap-4 p-4">
         <View className="gap-1.5">
-          <Label>ASSIGNEE</Label>
-          {picking ? <UserPicker label="Reassign to" onPick={(u) => { setPicking(false); if (u._id !== idOf(t.assignedTo)) save({ assignedTo: u._id }, `Assigned to ${u.name}`); }} onCancel={() => setPicking(false)} /> : (
-            <Pressable onPress={() => setPicking(true)} disabled={!manage} accessibilityLabel={`Assignee ${t.assignedTo?.name || 'none'}${manage ? '. Change' : ''}`} className="flex-row items-center gap-3">
+          <Label>PEOPLE</Label>
+          {people ? (
+            <View className="gap-3">
+              <PeoplePicker owner={people.owner} helpers={people.helpers} onChange={setPeople} />
+              <View className="flex-row gap-2">
+                <Button title="Cancel" variant="secondary" className="flex-1" onPress={() => setPeople(null)} />
+                <Button title="Save people" className="flex-1" onPress={() => {
+                  if (!people.owner) return showToast({ title: 'Star someone as the owner' });
+                  save({ assignedTo: people.owner._id, helpers: people.helpers.map((h) => h._id) }, 'People saved');
+                  setPeople(null);
+                }} />
+              </View>
+            </View>
+          ) : (
+            <Pressable onPress={() => setPeople({ owner: t.assignedTo || null, helpers: t.helpers || [] })} disabled={!manage} accessibilityLabel={`Owner ${t.assignedTo?.name || 'none'}${t.helpers?.length ? `, ${t.helpers.length} helping` : ''}${manage ? '. Change' : ''}`} className="flex-row items-center gap-3">
               <Avatar name={t.assignedTo?.name || '?'} uri={t.assignedTo?.avatar} size={32} />
-              <Text className="flex-1 font-body-medium">{t.assignedTo?._id === me._id ? 'You' : t.assignedTo?.name || 'Unassigned'}</Text>
+              <View className="flex-1">
+                <Text className="font-body-medium">{idOf(t.assignedTo) === me._id ? 'You' : t.assignedTo?.name || 'Unassigned'}</Text>
+                {!!t.helpers?.length && <Text className="text-sm text-muted" numberOfLines={1}>with {t.helpers.map((h) => (idOf(h) === me._id ? 'you' : h.name)).join(', ')}</Text>}
+              </View>
               {manage && <Text className="font-body-semibold text-accent-ink">Change</Text>}
             </Pressable>
-          )}
-          {!!t.helpers?.length && (
-            <View className="flex-row items-center gap-2 pt-1" accessible accessibilityLabel={`Helpers: ${t.helpers.map((h) => h.name).join(', ')}`}>
-              <View className="flex-row">{t.helpers.slice(0, 4).map((h, i) => <View key={idOf(h)} style={{ marginLeft: i ? -8 : 0 }}><Avatar name={h.name} uri={h.avatar} size={24} /></View>)}</View>
-              <Text numberOfLines={1} className="flex-1 text-sm text-muted">Helping: {t.helpers.map((h) => (idOf(h) === me._id ? 'you' : h.name?.split(' ')[0])).join(', ')}</Text>
-            </View>
           )}
         </View>
         <View className="gap-1.5">

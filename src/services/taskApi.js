@@ -12,6 +12,12 @@ export const taskApi = api.injectEndpoints({
       providesTags: ['Task'],
       keepUnusedDataFor: 0,
     }),
+    // { [userId]: { open, overdue } } for the people picker.
+    getWorkload: builder.query({
+      query: () => '/tasks/workload',
+      transformResponse: (r) => r.data?.workload || {},
+      providesTags: ['Task'],
+    }),
     getTaskById: builder.query({
       query: (id) => `/tasks/${id}`,
       providesTags: (result, error, id) => [{ type: 'Task', id }],
@@ -104,6 +110,7 @@ export const taskApi = api.injectEndpoints({
 });
 
 export const {
+  useGetWorkloadQuery,
   useGetTasksQuery, useGetTaskByIdQuery, useCreateTaskMutation,
   useUpdateTaskMutation, useDeleteTaskMutation,
   useGetSubtasksQuery, useGetDependenciesQuery,

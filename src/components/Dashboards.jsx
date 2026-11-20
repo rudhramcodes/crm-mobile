@@ -143,7 +143,7 @@ export function AdminDashboard() {
   const aging = d?.invoices?.aging || [];
 
   return (
-    <Screen scroll className="gap-5 pt-6" refreshControl={refreshControl}>
+    <Screen tab scroll className="gap-5 pt-6" refreshControl={refreshControl}>
       <HomeHeader subtitle={today()} />
       <View className="flex-row gap-3">
         {canWriteModule(user, 'leads') && <Button title="New lead" icon={Plus} size="sm" className="flex-1" onPress={() => router.push('/leads/new')} />}
@@ -210,7 +210,7 @@ export function EmployeeDashboard() {
   const tasks = d?.tasks;
 
   return (
-    <Screen scroll className="gap-5 pt-6" refreshControl={refreshControl}>
+    <Screen tab scroll className="gap-5 pt-6" refreshControl={refreshControl}>
       <HomeHeader subtitle={today()} />
       <AttendanceCard />
       {!d ? <DashboardState isLoading={isLoading} isError={isError} refetch={refetch} /> : (

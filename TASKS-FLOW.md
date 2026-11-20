@@ -207,6 +207,8 @@ T1 first because it is small and stops spam today. T2 next because review speed 
 - Files strip on top of the task, and a full-screen viewer: swipe between photos, pinch or double-tap to zoom. PDFs open in the in-app browser.
 - Review notes ("Send for review" and "Ask for changes") can carry photos/PDFs. They're posted to the task chat right after the note, and the review card shows everything sent since the task went into review.
 - Not done yet: long-press a message → "Make a task" (with T4 quick add), the project-level Files tab (T6). Only photos and PDFs are accepted, not other file types.
+- Without Cloudinary keys the dev server saves files to `server/uploads` and serves them at `/uploads`. Production never does this and returns 503 instead.
+- The web client shows chat text only, not the files.
 
 **Simple flow (Nov 2026), part of T5.**
 - The task screen has one card that always shows the next step: To do → **Start work** → "How far along?" 25 / 50 / 75% → **Done, send for review** (or **Mark done** for the reviewer) → Approve / Ask for changes → Done, with **Reopen**.

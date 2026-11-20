@@ -106,21 +106,28 @@ export function LeadFilters({ f, set }) {
 }
 
 // Always-visible venture switcher: logo (or initial) + name per venture.
-export function VentureChips({ value, onChange, noneLabel = 'All ventures' }) {
+// noneLabel={null} hides the "all/none" chip (venture required); counts = { [brand or '']: n } adds a count pill.
+export function VentureChips({ value, onChange, noneLabel = 'All ventures', counts }) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-5" contentContainerClassName="gap-2 px-5">
-      {[ALL, ...LEAD_BRANDS].map((b) => {
+      {(noneLabel === null ? LEAD_BRANDS : [ALL, ...LEAD_BRANDS]).map((b) => {
         const active = value === b.value;
+        const count = counts?.[b.value];
         return (
           <Pressable
             key={b.value || 'all'}
             onPress={() => onChange(b.value)}
-            accessibilityLabel={b.value ? `Venture ${b.label}` : noneLabel}
+            accessibilityLabel={`${b.value ? `Venture ${b.label}` : noneLabel}${count != null ? `, ${count}` : ''}`}
             accessibilityState={{ selected: active }}
             className={cn('h-10 flex-row items-center gap-2 rounded-full pr-4', b.value ? 'pl-1.5' : 'pl-4', active ? 'bg-ink' : 'bg-surface-2')}
           >
             {!!b.value && <BrandMark brand={b.value} size={28} />}
             <Text className={cn('font-body-medium text-sm', active ? 'text-bg' : 'text-ink')}>{b.value ? b.label : noneLabel}</Text>
+            {count != null && (
+              <View className={cn('rounded-full px-1.5', active ? 'bg-bg/20' : 'bg-bg')}>
+                <Text className={cn('text-xs tabular-nums', active ? 'text-bg' : 'text-muted')}>{count}</Text>
+              </View>
+            )}
           </Pressable>
         );
       })}

@@ -160,7 +160,7 @@ export default function Inbox() {
   );
 
   return (
-    <Screen className="px-0">
+    <Screen tab className="px-0">
       <FlashList
         contentInsetAdjustmentBehavior="automatic"
         data={items}
