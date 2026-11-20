@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSelector } from 'react-redux';
+import { ChevronDown, ChevronUp } from 'lucide-react-native';
 import { Alert, Avatar, Button, Chip, DateField, Input, Pressable, Screen, SheetHeader, Text, Toggle, UserPicker, backTo } from '@/components';
 import { TASK_PRIORITY, TASK_STATUS } from '@/constants';
+import { useTheme } from '@/constants/theme';
 import { useCreateTaskMutation } from '@/services/taskApi';
 import { useGetProjectByIdQuery, useGetProjectsQuery } from '@/services/projectApi';
-import { runAction } from '@/utils/attendance';
+import { runAction, ymd } from '@/utils/attendance';
 import { apiError } from '@/utils/apiError';
 import { getFieldError } from '@/utils/getFieldError';
 
@@ -23,10 +25,13 @@ function Chips({ label, items, value, onChange }) {
   );
 }
 
-// Full task form. Params prefill it: title, status, dueDate, project (from quick add, a board column or a calendar day).
+// Task form: the four things every task needs up front (due defaults to today), the rest under "More options".
+// Params prefill it: title, status, dueDate, project (from quick add, a board column or a calendar day).
 export default function NewTask() {
   const p = useLocalSearchParams();
+  const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
+  const [more, setMore] = useState(!!(p.status || p.project));
   const [create, { isLoading, error }] = useCreateTaskMutation();
   const [title, setTitle] = useState(p.title || '');
   const [description, setDescription] = useState('');
@@ -34,7 +39,7 @@ export default function NewTask() {
   const [picking, setPicking] = useState(false);
   const [project, setProject] = useState(p.project || '');
   const [milestone, setMilestone] = useState('');
-  const [dueDate, setDue] = useState(p.dueDate || '');
+  const [dueDate, setDue] = useState(p.dueDate || ymd());
   const [startDate, setStart] = useState('');
   const [hours, setHours] = useState('');
   const [priority, setPriority] = useState('medium');
@@ -71,13 +76,12 @@ export default function NewTask() {
 
   return (
     <Screen scroll edges={['bottom']} className="gap-4 pt-6">
-      <SheetHeader title="New task" sub="Fields with * are required." closeLabel="Cancel" />
+      <SheetHeader title="New task" closeLabel="Cancel" />
       <Alert message={fieldErrors.length ? '' : message} />
-      <Input label="Title *" value={title} onChangeText={setTitle} placeholder="Edit the wedding teaser" maxLength={200} error={err('title')} />
-      <Input label="Description" value={description} onChangeText={setDescription} multiline maxLength={5000} style={{ height: 96, paddingTop: 14, textAlignVertical: 'top' }} error={err('description')} />
+      <Input label="What needs doing?" value={title} onChangeText={setTitle} placeholder="Edit the wedding teaser" maxLength={200} autoFocus={!p.title} error={err('title')} />
 
       <View className="gap-1.5">
-        <Text className="font-body-medium text-sm">Assignee *</Text>
+        <Text className="font-body-medium text-sm">Who does it?</Text>
         {picking ? <UserPicker label="Search people" onPick={(u) => { setAssignee(u); setPicking(false); }} /> : (
           <Pressable onPress={() => setPicking(true)} accessibilityLabel={`Assignee: ${assignee.name}. Change`} className="flex-row items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3">
             <Avatar name={assignee.name} uri={assignee.avatar} size={32} />
@@ -88,23 +92,33 @@ export default function NewTask() {
         {!!err('assignedTo') && <Text className="text-sm text-danger">{err('assignedTo')}</Text>}
       </View>
 
-      <DateField label="Due date *" value={dueDate} onChange={setDue} minDate={startDate || undefined} error={err('dueDate')} />
-      <DateField label="Start date" value={startDate} onChange={(d) => { setStart(d); if (dueDate && d > dueDate) setDue(d); }} error={err('startDate')} />
+      <DateField label="Due" value={dueDate} onChange={setDue} minDate={startDate || undefined} error={err('dueDate')} />
       <Chips label="Priority" items={TASK_PRIORITY.map((x) => [x.value, x.label])} value={priority} onChange={setPriority} />
-      <Chips label="Status" items={TASK_STATUS.map((x) => [x.value, x.label])} value={status} onChange={setStatus} />
-      {!!projects.length && <Chips label="Project" items={[['', 'None'], ...projects.map((x) => [x._id, x.title])]} value={project} onChange={(v) => { setProject(v); setMilestone(''); }} />}
-      {!!milestones.length && <Chips label="Milestone" items={[['', 'None'], ...milestones.map((x) => [x._id, x.title])]} value={milestone} onChange={setMilestone} />}
-      <Input label="Estimated hours" value={hours} onChangeText={setHours} keyboardType="decimal-pad" placeholder="4" error={badHours ? 'Enter a number of hours' : err('estimatedHours')} />
-      <Input label="Tags" value={tags} onChangeText={setTags} placeholder="edit, urgent-client" autoCapitalize="none" hint="Separate with commas." error={err('tags')} />
 
-      <View className="flex-row items-center gap-3">
-        <View className="flex-1">
-          <Text className="font-body-medium">Repeats</Text>
-          <Text className="text-sm text-muted">A new copy is created on schedule.</Text>
-        </View>
-        <Toggle value={recurring} onValueChange={setRecurring} label="Repeats" />
-      </View>
-      {recurring && <Chips label="Every" items={FREQ} value={frequency} onChange={setFrequency} />}
+      <Pressable onPress={() => setMore((m) => !m)} accessibilityRole="button" accessibilityState={{ expanded: more }} className="h-12 flex-row items-center justify-center gap-2 rounded-full bg-surface-2">
+        <Text className="font-body-semibold">{more ? 'Fewer options' : 'More options'}</Text>
+        {more ? <ChevronUp size={18} color={theme.ink} /> : <ChevronDown size={18} color={theme.ink} />}
+      </Pressable>
+      {more && (
+        <>
+          <Input label="Description" value={description} onChangeText={setDescription} multiline maxLength={5000} style={{ height: 96, paddingTop: 14, textAlignVertical: 'top' }} error={err('description')} />
+          <DateField label="Start date" value={startDate} onChange={(d) => { setStart(d); if (dueDate && d > dueDate) setDue(d); }} error={err('startDate')} />
+          <Chips label="Status" items={TASK_STATUS.map((x) => [x.value, x.label])} value={status} onChange={setStatus} />
+          {!!projects.length && <Chips label="Project" items={[['', 'None'], ...projects.map((x) => [x._id, x.title])]} value={project} onChange={(v) => { setProject(v); setMilestone(''); }} />}
+          {!!milestones.length && <Chips label="Milestone" items={[['', 'None'], ...milestones.map((x) => [x._id, x.title])]} value={milestone} onChange={setMilestone} />}
+          <Input label="Estimated hours" value={hours} onChangeText={setHours} keyboardType="decimal-pad" placeholder="4" error={badHours ? 'Enter a number of hours' : err('estimatedHours')} />
+          <Input label="Tags" value={tags} onChangeText={setTags} placeholder="edit, urgent-client" autoCapitalize="none" hint="Separate with commas." error={err('tags')} />
+
+          <View className="flex-row items-center gap-3">
+            <View className="flex-1">
+              <Text className="font-body-medium">Repeats</Text>
+              <Text className="text-sm text-muted">A new copy is created on schedule.</Text>
+            </View>
+            <Toggle value={recurring} onValueChange={setRecurring} label="Repeats" />
+          </View>
+          {recurring && <Chips label="Every" items={FREQ} value={frequency} onChange={setFrequency} />}
+        </>
+      )}
 
       <Button title="Create task" loading={isLoading} disabled={title.trim().length < 2 || !dueDate || badHours} onPress={save} />
     </Screen>

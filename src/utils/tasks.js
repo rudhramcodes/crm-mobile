@@ -4,6 +4,7 @@ import * as Sharing from 'expo-sharing';
 import { TASK_PRIORITY, TASK_STATUS } from '@/constants';
 import { getPref, setPref } from './prefs';
 import { ymd } from './attendance';
+import { showWorkTimer } from '@/services/liveActivity';
 
 export const taskStatus = (v) => TASK_STATUS.find((s) => s.value === v) || TASK_STATUS[0];
 export const taskPriority = (v) => TASK_PRIORITY.find((p) => p.value === v) || TASK_PRIORITY[1];
@@ -25,7 +26,8 @@ export const reviewClock = (task, now = Date.now()) => {
   const due = new Date(task.reviewDueAt);
   return { late: false, label: `Review due ${due.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}, ${due.toLocaleDateString('en-IN', { weekday: 'short' })}` };
 };
-export const isOverdue = (t) => !!t.dueDate && t.status !== 'done' && ymd(t.dueDate) < ymd();
+// Late only while it's still with the doer: in review it waits on the reviewer (who has their own clock).
+export const isOverdue = (t) => !!t.dueDate && !['done', 'review'].includes(t.status) && ymd(t.dueDate) < ymd();
 export const dueLabel = (d) => {
   if (!d) return 'No due date';
   const day = ymd(d);
@@ -39,15 +41,20 @@ export const dueLabel = (d) => {
 // "@[Asha](64f…)" mentions read as "@Asha".
 export const plainMentions = (text = '') => text.replace(/@\[([^\]]+)\]\([a-f0-9]{24}\)/g, '@$1');
 
-// My Day buckets, same rules as the web: in-progress work counts as today.
+// My Day buckets. In-progress work counts as today; tasks in review wait on the reviewer, so they never count as overdue.
+// Done means done today; anything else open with a later (or no) date is upcoming.
 export const myDay = (tasks) => {
   const today = ymd();
   const due = (t) => (t.dueDate ? ymd(t.dueDate) : null);
+  const open = tasks.filter((t) => t.status !== 'done' && t.status !== 'review');
+  const overdue = open.filter((t) => due(t) && due(t) < today);
+  const todays = open.filter((t) => !overdue.includes(t) && (due(t) === today || t.status === 'in_progress'));
   return {
-    overdue: tasks.filter((t) => t.status !== 'done' && due(t) && due(t) < today),
-    today: tasks.filter((t) => t.status !== 'done' && (due(t) === today || (t.status === 'in_progress' && !(due(t) && due(t) < today)))),
-    upcoming: tasks.filter((t) => t.status !== 'done' && t.status !== 'in_progress' && due(t) > today),
-    done: tasks.filter((t) => t.status === 'done'),
+    overdue,
+    today: todays,
+    upcoming: open.filter((t) => !overdue.includes(t) && !todays.includes(t)),
+    waiting: tasks.filter((t) => t.status === 'review'),
+    done: tasks.filter((t) => t.status === 'done' && ymd(t.completedAt || t.updatedAt) === today),
   };
 };
 
@@ -86,4 +93,8 @@ const WATCH_KEY = 'task-stopwatch';
 export const getStopwatch = async () => {
   try { return JSON.parse((await getPref(WATCH_KEY)) || 'null'); } catch { return null; }
 };
-export const setStopwatch = (v) => setPref(WATCH_KEY, v ? JSON.stringify(v) : null);
+export const setStopwatch = (v) => {
+  // Also shown in the Dynamic Island / Lock Screen while it runs.
+  showWorkTimer('task', v ? { title: v.title, sub: 'Stopwatch running', start: v.startedAt, taskId: v.taskId } : null);
+  return setPref(WATCH_KEY, v ? JSON.stringify(v) : null);
+};

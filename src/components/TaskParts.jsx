@@ -66,6 +66,8 @@ export function TaskRow({ task: t, selecting, selected, onToggleSelect, swipe = 
   const late = isOverdue(t);
   const total = t.checklists?.length || 0;
   const ticked = t.checklists?.filter((c) => c.checked).length || 0;
+  // Checklist % when there is one, else the doer's own "how far along".
+  const pct = total ? (ticked / total) * 100 : t.status === 'in_progress' ? t.progress || 0 : 0;
   const finishLabel = finishStatus(t, me) === 'done' ? (t.status === 'review' ? 'Approve' : 'Done') : 'Review';
   const clock = reviewClock(t);
 
@@ -110,17 +112,16 @@ export function TaskRow({ task: t, selecting, selected, onToggleSelect, swipe = 
             {!!t.parent && <GitBranch size={14} color={theme.muted} accessibilityLabel="Subtask" />}
             {!!clock && <Text className={cn('text-sm tabular-nums', clock.late ? 'font-body-semibold text-danger' : 'text-accent-ink')}>{clock.label}</Text>}
           </View>
+          {/* Only what's worth a glance: High/Urgent, and a status the review clock doesn't already say. */}
           <View className="flex-row items-center gap-2">
-            <PriorityBadge priority={t.priority} />
-            {t.status !== 'todo' && !done && <TaskStatusBadge status={t.status} />}
-            {total > 0 && (
-              <View className="flex-1 flex-row items-center gap-2" accessibilityLabel={`Checklist ${ticked} of ${total}`}>
+            {['high', 'urgent'].includes(t.priority) && <PriorityBadge priority={t.priority} />}
+            {t.status !== 'todo' && !done && !clock && <TaskStatusBadge status={t.status} />}
+            {(total > 0 || pct > 0) && (
+              <View className="flex-1 flex-row items-center gap-2" accessibilityLabel={total ? `Checklist ${ticked} of ${total}` : `${pct}% done`}>
                 <View className="h-1.5 flex-1 overflow-hidden rounded-full bg-sand">
-                  <View className="h-full rounded-full bg-accent" style={{ width: `${(ticked / total) * 100}%` }} />
+                  <View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
                 </View>
-                <Text className="text-xs text-muted tabular-nums">
-                  {ticked}/{total}
-                </Text>
+                <Text className="text-xs text-muted tabular-nums">{total ? `${ticked}/${total}` : `${pct}%`}</Text>
               </View>
             )}
           </View>

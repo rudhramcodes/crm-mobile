@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Text as RNText, View } from 'react-native';
+import { View } from 'react-native';
 import { Image } from 'expo-image';
 import Svg, { Circle } from 'react-native-svg';
 import { Pressable } from './Pressable';
@@ -36,12 +36,12 @@ export function StatTile({ label, value, sub, alert, onPress, icon: Icon, tone =
           </View>
         )}
       </View>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} className={cn('mt-1 font-display text-[34px] leading-[40px] tabular-nums', alert ? 'text-danger' : 'text-ink')}>
-        {/* ₹ in Manrope: Goldenbook has no rupee glyph. */}
-        {!!pre && <RNText className="font-body-semibold text-xl text-muted">{pre}</RNText>}
-        {num}
-        {!!unit && <RNText className="font-display-regular text-2xl">{unit}</RNText>}
-      </Text>
+      {/* Separate texts on one baseline: nesting the Manrope ₹ inside the Goldenbook number pushes the digits up and clips them on iOS. Goldenbook has no ₹ glyph. */}
+      <View className="mt-1 flex-row items-baseline">
+        {!!pre && <Text className="font-body-semibold text-xl text-muted">{pre}</Text>}
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} className={cn('shrink font-display text-[34px] leading-[40px] tabular-nums', alert ? 'text-danger' : 'text-ink')}>{num}</Text>
+        {!!unit && <Text className={cn('font-display-regular text-2xl', alert ? 'text-danger' : 'text-ink')}>{unit}</Text>}
+      </View>
       {!!sub && <Text numberOfLines={1} className="text-xs text-muted">{sub}</Text>}
     </Card>
   );

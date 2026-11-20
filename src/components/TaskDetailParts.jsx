@@ -3,16 +3,18 @@ import { View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
-import { Check, CheckSquare, Link2, MessageSquareWarning, Pause, Play, Plus, Send, Square, Timer, Trash2, X } from 'lucide-react-native';
+import { Check, CheckSquare, Link2, Lock, MessageSquareWarning, Pause, Play, Plus, RotateCcw, Send, Square, Timer, Trash2, X } from 'lucide-react-native';
 import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { Card } from './Card';
+import { Chip } from './Chip';
 import { Input } from './Input';
 import { Pressable } from './Pressable';
 import { Text } from './Text';
 import { showToast } from './Toast';
 import { UserPicker } from './UserPicker';
 import { TaskRow, TaskStatusBadge } from './TaskParts';
+import { ImageViewer, MessageFiles } from './TaskChat';
 import {
   useAddChecklistItemMutation, useAddDependencyMutation, useAddTimeEntryMutation, useCreateTaskMutation,
   useGetDependenciesQuery, useGetSubtasksQuery, useGetTasksQuery, useRemoveChecklistItemMutation,
@@ -21,7 +23,7 @@ import {
 import { useTheme } from '@/constants/theme';
 import { hms, isAdmin, runAction } from '@/utils/attendance';
 import { formatHours, getTimeAgo } from '@/utils/formatters';
-import { canReview, getStopwatch, idOf, isCreator, reviewClock, reviewerOf, setStopwatch } from '@/utils/tasks';
+import { canReview, getStopwatch, idOf, isCreator, reviewClock, reviewerOf, setStopwatch, taskStatus } from '@/utils/tasks';
 import { cn } from '@/utils/cn';
 
 const Title = ({ children, right }) => (
@@ -248,6 +250,17 @@ const pretty = (v) => {
   return String(v).replace(/_/g, ' ');
 };
 
+// Plain sentences for the common changes; anything else falls back to "changed <field> from A to B".
+const describe = (a) => {
+  const id = (v) => /^[a-f0-9]{24}$/.test(v || '');
+  if (a.field === 'status') return `moved it from ${taskStatus(a.oldValue).label} to ${taskStatus(a.newValue).label}`;
+  if (a.field === 'assignedTo') return id(a.newValue) || !a.newValue ? `reassigned it (was ${pretty(a.oldValue)})` : `assigned it to ${pretty(a.newValue)}`;
+  if (a.field === 'helpers') return [a.newValue, a.oldValue].filter(Boolean).join(', ').replace(/^./, (c) => c.toLowerCase()).concat(' as helpers');
+  if (a.field === 'dueDate') return `moved the due date from ${pretty(a.oldValue)} to ${pretty(a.newValue)}`;
+  if (a.field && (a.oldValue || a.newValue)) return `changed ${a.field.replace(/([A-Z])/g, ' $1').toLowerCase()} from ${pretty(a.oldValue)} to ${pretty(a.newValue)}`;
+  return a.action.replace(/_/g, ' ');
+};
+
 // Who changed what, newest first, with the reason when one was given (deadline moves).
 export function ActivityLog({ task }) {
   const [all, setAll] = useState(false);
@@ -260,7 +273,7 @@ export function ActivityLog({ task }) {
         <View key={a._id || i} className="gap-0.5 border-l-2 border-line pl-3">
           <Text className="text-sm">
             <Text className="font-body-semibold text-sm">{a.performedBy?.name || 'Someone'}</Text>
-            {' '}{a.field && (a.oldValue || a.newValue) ? `changed ${a.field.replace(/([A-Z])/g, ' $1').toLowerCase()} from ${pretty(a.oldValue)} to ${pretty(a.newValue)}` : a.action.replace(/_/g, ' ')}
+            {' '}{describe(a)}
           </Text>
           {!!a.reason && <Text className="text-sm text-muted">Reason: {a.reason}</Text>}
           <Text className="text-xs text-muted">{getTimeAgo(a.createdAt || a.timestamp)}</Text>
@@ -284,12 +297,20 @@ function useNow(on) {
   return now;
 }
 
+// Photos and PDFs posted in the chat since the task was last sent for review.
+const reviewFiles = (t) => {
+  const sent = [...(t.activities || [])].reverse().find((a) => a.field === 'status' && a.newValue === 'review')?.createdAt;
+  if (!sent) return [];
+  return (t.comments || []).filter((c) => new Date(c.createdAt) >= new Date(sent)).flatMap((c) => c.files || []);
+};
+
 // The review loop on one card: the doer sends it, the reviewer approves or sends it back, the clock shows the 1-hour promise.
 export function ReviewPanel({ task: t }) {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
   const [update, u] = useUpdateTaskMutation();
   const [handing, setHanding] = useState(false);
+  const [viewing, setViewing] = useState(null);
   const inReview = t.status === 'review';
   const now = useNow(inReview);
   const reviewer = reviewerOf(t);
@@ -302,6 +323,8 @@ export function ReviewPanel({ task: t }) {
   }
 
   const clock = reviewClock(t, now);
+  const files = reviewFiles(t);
+  const images = files.filter((f) => f.mime?.startsWith('image/'));
   const approve = async () => {
     if (await runAction(update({ id: t._id, status: 'done' }), 'Approved', "Couldn't approve")) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
@@ -326,6 +349,8 @@ export function ReviewPanel({ task: t }) {
         </View>
       )}
       {!!t.reviewNote && <Text className="text-sm">“{t.reviewNote}”</Text>}
+      {!!files.length && <MessageFiles files={files} onOpenImage={(f) => setViewing(images.indexOf(f))} />}
+      <ImageViewer key={viewing} images={images} index={viewing} onClose={() => setViewing(null)} />
       {mine ? (
         <View className="gap-2">
           <Button title="Approve" icon={Check} loading={u.isLoading} onPress={approve} />
@@ -339,6 +364,87 @@ export function ReviewPanel({ task: t }) {
           <Text className="text-sm font-body-semibold text-accent-ink">Hand review to someone else</Text>
         </Pressable>
       ))}
+    </Card>
+  );
+}
+
+const STEPS = [['todo', 'To do'], ['in_progress', 'Working'], ['review', 'Review'], ['done', 'Done']];
+const PCTS = [25, 50, 75];
+
+// The task's whole life on one card: where it is, and the one thing to do next.
+// To do: Start work. Working: how far along, then Send for review (or Mark done for the reviewer).
+// Review: the review card. Done: who finished it, and Reopen.
+export function TaskFlow({ task: t }) {
+  const theme = useTheme();
+  const me = useSelector((s) => s.auth.user);
+  const [update, u] = useUpdateTaskMutation();
+  const step = STEPS.findIndex(([v]) => v === t.status);
+  const reviewer = canReview(t, me);
+  const blockers = (t.dependsOn || []).filter((d) => d?.status && d.status !== 'done');
+  const total = t.checklists?.length || 0;
+  const ticked = t.checklists?.filter((c) => c.checked).length || 0;
+  const pct = total ? Math.round((ticked / total) * 100) : t.progress || 0;
+  const set = (body, done) => runAction(update({ id: t._id, ...body }), done, "Couldn't update the task");
+  const finish = async () => {
+    if (!reviewer) return openNote(t, 'submit');
+    if (await set({ status: 'done' }, 'Marked done')) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  };
+
+  if (t.status === 'review') return <ReviewPanel task={t} />;
+
+  return (
+    <Card className="gap-4 p-4">
+      <View className="gap-2" accessible accessibilityLabel={`Step ${step + 1} of 4: ${STEPS[step]?.[1]}`}>
+        <View className="flex-row gap-1.5">
+          {STEPS.map(([v], i) => <View key={v} className={cn('h-1.5 flex-1 rounded-full', i <= step ? (t.status === 'done' ? 'bg-success' : 'bg-accent') : 'bg-sand')} />)}
+        </View>
+        <View className="flex-row">
+          {STEPS.map(([v, l], i) => <Text key={v} className={cn('flex-1 text-xs', i === step ? 'font-body-semibold text-ink' : 'text-muted')}>{l}</Text>)}
+        </View>
+      </View>
+
+      {t.status === 'todo' && (blockers.length ? (
+        <View className="flex-row items-center gap-3 rounded-2xl bg-surface-2 p-3">
+          <Lock size={18} color={theme.muted} />
+          <Text className="flex-1 text-sm">Waiting on {blockers.map((b) => `"${b.title}"`).join(', ')}. You&apos;ll get a notification when you can start.</Text>
+        </View>
+      ) : (
+        <Button title="Start work" icon={Play} loading={u.isLoading} onPress={() => set({ status: 'in_progress' }, 'Started. Good luck!')} />
+      ))}
+
+      {t.status === 'in_progress' && (
+        <>
+          <View className="gap-2">
+            <View className="flex-row items-end justify-between">
+              <Text className="font-body-semibold">How far along?</Text>
+              <Text className="font-body-semibold tabular-nums text-accent-ink">{pct}%</Text>
+            </View>
+            {total ? (
+              <Text className="text-sm text-muted">{ticked === total ? 'All checklist items ticked. Ready when you are.' : `${ticked} of ${total} checklist items ticked. Tick them below as you go.`}</Text>
+            ) : (
+              <View className="flex-row gap-2">
+                {PCTS.map((p) => <Chip key={p} label={`${p}%`} active={t.progress === p} onPress={() => p !== t.progress && set({ progress: p }, `${p}% done`)} />)}
+              </View>
+            )}
+          </View>
+          <Button title={reviewer ? 'Mark done' : 'Done, send for review'} icon={reviewer ? Check : Send} loading={u.isLoading} onPress={finish} />
+          {!reviewer && <Text className="-mt-2 text-xs text-muted">{reviewerOf(t)?.name || 'The creator'} checks it and marks it Done.</Text>}
+        </>
+      )}
+
+      {t.status === 'done' && (
+        <View className="flex-row items-center gap-3">
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-success/15"><Check size={20} color={theme.success} /></View>
+          <Text className="flex-1 text-sm">Done{t.completedAt ? ` on ${new Date(t.completedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : ''}.</Text>
+          <Button title="Reopen" icon={RotateCcw} size="sm" variant="secondary" loading={u.isLoading} onPress={() => set({ status: 'in_progress' }, 'Reopened')} />
+        </View>
+      )}
+
+      {t.status === 'in_progress' && (
+        <Pressable onPress={() => set({ status: 'todo' }, 'Moved back to To Do')} accessibilityRole="button" className="self-start py-1">
+          <Text className="text-sm font-body-semibold text-muted">Not started after all? Move back to To Do</Text>
+        </Pressable>
+      )}
     </Card>
   );
 }

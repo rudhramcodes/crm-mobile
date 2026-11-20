@@ -179,7 +179,7 @@ All changes keep the web app (`CRM/client`, 17 files use `assignedTo`) working.
 |---|---|---|---|---|
 | **T1** ✅ | Notifications fix: no email spam, quiet hours, grouping, deep links to the task, DB-based "sent" check | yes | small | S |
 | **T2** ✅ | Review flow: submit note + images, Approve / Ask for changes, 1-hour reminders + escalation, review timer, "Needs my review" in My Day | yes | yes | M |
-| **T3** | Task chat with images/files, replies, Files strip, image viewer | yes | yes | M |
+| **T3** ✅ | Task chat with images/files, replies, Files strip, image viewer | yes | yes | M |
 | **T4** | Owner + helpers, Teams, "copy for each person", workload hint, one-line quick add with @ / dates / ! / # | yes | yes | M |
 | **T5** | Auto status, auto milestone, dependency unblock push, stale nudge, recurring check, daily email | yes | small | M |
 | **T6** | One task system (migrate project tasks) + Projects page (M6) with Overview/Tasks/Chat/Files/Team + templates | yes + web | yes | L |
@@ -200,6 +200,21 @@ T1 first because it is small and stops spam today. T2 next because review speed 
 - The submit / changes note is text only; images come with T3.
 - Swiping or ticking a task still sends it for review at once, with no note.
 - Review alerts go by push and in-app only, never email.
+
+**T3 done (Nov 2026).**
+- Task chat: text, photos (camera or gallery), PDFs, @mentions, replies, delete own message (admins can delete any). Up to 5 files per message, 10 MB each; images go to Cloudinary, PDFs as raw files.
+- Everyone on the task (owner, helpers, creator, reviewer, watchers, the person replied to) is notified; T1 folds repeats into one push.
+- Files strip on top of the task, and a full-screen viewer: swipe between photos, pinch or double-tap to zoom. PDFs open in the in-app browser.
+- Review notes ("Send for review" and "Ask for changes") can carry photos/PDFs. They're posted to the task chat right after the note, and the review card shows everything sent since the task went into review.
+- Not done yet: long-press a message → "Make a task" (with T4 quick add), the project-level Files tab (T6). Only photos and PDFs are accepted, not other file types.
+
+**Simple flow (Nov 2026), part of T5.**
+- The task screen has one card that always shows the next step: To do → **Start work** → "How far along?" 25 / 50 / 75% → **Done, send for review** (or **Mark done** for the reviewer) → Approve / Ask for changes → Done, with **Reopen**.
+- Blocked tasks show "Waiting on X" instead of Start, and the owner gets "You can start now" when the last blocking task is done.
+- A To Do task starts itself when someone sets progress, ticks a checklist item or logs time (not while it is still blocked). Done sets progress to 100.
+- Started / finished / moved back now reach owner, helpers, creator and watchers (not the person who did it), in plain words ("Rahul started …"). Before, helpers and watchers heard nothing.
+- My Day is only my tasks; tasks in review sit under "With the reviewer", not "Overdue". Done means done today.
+- New: `progress` (0-100) on Task. Test: `server/src/modules/tasks/__tests__/task.flow.test.js`.
 
 ---
 

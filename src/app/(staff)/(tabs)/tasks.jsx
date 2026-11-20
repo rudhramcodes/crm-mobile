@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
-import { BarChart3, CheckSquare, Download, ListTodo, Plus, Search, SlidersHorizontal } from 'lucide-react-native';
+import { useSelector } from 'react-redux';
+import { BarChart3, Download, ListTodo, Plus, Search, SlidersHorizontal } from 'lucide-react-native';
 import {
-  BoardView, BulkBar, Button, CalendarView, Chip, DashboardState, EmptyState, FilterPanel, Heading, Input, ListView, MiniStats, MyDayView, Pressable, Screen, SwipeIntro, Text, showToast, usePullRefresh,
+  BoardView, BulkBar, Button, CalendarView, Chip, DashboardState, EmptyState, FilterPanel, Heading, Input, ListView, MyDayView, Pressable, Screen, SwipeIntro, Text, showToast, usePullRefresh,
 } from '@/components';
 import { useGetTasksQuery, useGetWatchedTasksQuery } from '@/services/taskApi';
 import { useTheme } from '@/constants/theme';
-import { isOverdue, shareCsv } from '@/utils/tasks';
+import { shareCsv } from '@/utils/tasks';
 
 const VIEWS = [['day', 'My Day'], ['list', 'List'], ['board', 'Board'], ['calendar', 'Calendar']];
 const EMPTY = { status: '', priority: '', project: '', assignedTo: '', assigneeName: '', watching: false };
@@ -15,6 +16,7 @@ const EMPTY = { status: '', priority: '', project: '', assignedTo: '', assigneeN
 // Tasks hub: four views over one filtered list, plus search, filters, bulk select, insights and CSV export.
 export default function TasksTab() {
   const theme = useTheme();
+  const me = useSelector((s) => s.auth.user);
   const [view, setView] = useState('day');
   const [f, setF] = useState(EMPTY);
   const [showFilters, setShowFilters] = useState(false);
@@ -24,9 +26,11 @@ export default function TasksTab() {
   const [selected, setSelected] = useState([]);
 
   // shortcut: first 100 tasks for the filters (server max); add paging when a filtered list routinely holds more.
+  // My Day is personal: always my tasks (owner or helper), whatever the assignee filter says.
+  const day = view === 'day';
   const params = {
     page: 1, limit: 100, search: search || undefined, status: f.status || undefined, priority: f.priority || undefined,
-    project: f.project || undefined, assignedTo: f.assignedTo || undefined,
+    project: f.project || undefined, assignedTo: (day ? me._id : f.assignedTo) || undefined,
   };
   const all = useGetTasksQuery(params, { skip: f.watching });
   const watched = useGetWatchedTasksQuery(params, { skip: !f.watching });
@@ -35,6 +39,7 @@ export default function TasksTab() {
   const tasks = q.data?.data || [];
   const total = q.data?.pagination?.total ?? tasks.length;
   const active = ['status', 'priority', 'project', 'assignedTo', 'watching'].filter((k) => f[k]).length;
+  const round = 'h-11 w-11 items-center justify-center rounded-full bg-surface-2';
 
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
   const toggle = (id) => {
@@ -48,9 +53,11 @@ export default function TasksTab() {
     <Screen scroll className="gap-4 pt-6" refreshControl={refreshControl}>
       <View className="flex-row items-end gap-3">
         <View className="flex-1">
-          <Text className="text-sm text-muted">{total} {total === 1 ? 'task' : 'tasks'}{f.watching ? ' watched' : ''}</Text>
+          <Text className="text-sm text-muted">{day ? `${total} on my plate` : `${total} ${total === 1 ? 'task' : 'tasks'}${f.watching ? ' watched' : ''}`}</Text>
           <Heading>Tasks</Heading>
         </View>
+        <Pressable onPress={() => router.push({ pathname: '/tasks/insights', params: { q: JSON.stringify({ ...params, watching: f.watching }) } })} accessibilityLabel="Insights" className={round}><BarChart3 size={20} color={theme.ink} /></Pressable>
+        <Pressable onPress={exportAll} accessibilityLabel="Export as CSV" className={round}><Download size={20} color={theme.ink} /></Pressable>
         <Button title="New" icon={Plus} size="sm" onPress={() => router.push('/tasks/new')} />
       </View>
 
@@ -81,21 +88,14 @@ export default function TasksTab() {
       </View>
       {showFilters && <FilterPanel f={f} set={set} />}
 
-      <View className="flex-row gap-2">
-        <Button title="Insights" icon={BarChart3} size="sm" variant="secondary" className="flex-1" onPress={() => router.push({ pathname: '/tasks/insights', params: { q: JSON.stringify({ ...params, watching: f.watching }) } })} />
-        <Button title="Export" icon={Download} size="sm" variant="secondary" className="flex-1" onPress={exportAll} />
-        {view === 'list' && <Button title={selecting ? 'Cancel' : 'Select'} icon={CheckSquare} size="sm" variant="secondary" className="flex-1" onPress={() => (selecting ? clear() : setSelecting(true))} />}
-      </View>
 
       {q.isLoading || q.isError ? <DashboardState isLoading={q.isLoading} isError={q.isError} refetch={q.refetch} /> : (
         <>
-          <MiniStats items={[
-            { label: 'Open', value: tasks.filter((t) => t.status !== 'done').length },
-            { label: 'Doing', value: tasks.filter((t) => t.status === 'in_progress').length },
-            { label: 'Overdue', value: tasks.filter(isOverdue).length },
-            { label: 'Done', value: tasks.filter((t) => t.status === 'done').length },
-          ]}
-          />
+          {view === 'list' && !!tasks.length && !selecting && (
+            <Pressable onPress={() => setSelecting(true)} accessibilityRole="button" className="-my-1 self-end py-1">
+              <Text className="font-body-semibold text-sm text-accent-ink">Select several</Text>
+            </Pressable>
+          )}
           {selecting && <BulkBar tasks={tasks} selected={selected} onClear={clear} />}
           {(view === 'day' || view === 'list') && !selecting && !!tasks.length && <SwipeIntro />}
           {view === 'day' && <MyDayView tasks={tasks} />}
@@ -110,7 +110,6 @@ export default function TasksTab() {
               onAction={() => (search || active ? (setF(EMPTY), setTyped(''), setSearch('')) : router.push('/tasks/new'))}
             />
           ))}
-          {view === 'list' && !!tasks.length && <Text className="text-xs text-muted">Swipe right to finish, left to reschedule. Long-press to select.</Text>}
         </>
       )}
     </Screen>

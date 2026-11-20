@@ -190,7 +190,7 @@ Admin/manager:
 - [x] Swipe right = done/review, swipe left = reschedule **[Native]**
 - Shortcuts taken (M5): lists load the first 100 tasks; the project picker shows the first 50 projects; Kanban moves cards with ← → ↑ ↓ buttons, not drag; the stopwatch is saved on the device only (not synced across devices).
 
-- Next: the full tasks & projects flow (teams, review in 1 hour, task chat with images, no email spam) is planned in [TASKS-FLOW.md](TASKS-FLOW.md), phases T1–T6. T1 (notifications) and T2 (review flow) are done.
+- Next: the full tasks & projects flow (teams, review in 1 hour, task chat with images, no email spam) is planned in [TASKS-FLOW.md](TASKS-FLOW.md), phases T1–T6. T1 (notifications), T2 (review flow) and T3 (task chat with photos and files) are done.
 
 ### M6 — Projects
 - [ ] List + Kanban by SOP stage (brief → planning → execution → review → delivered, progress 0/20/50/80/100), filters (stage, priority, venture, search), stats **[Port]**
@@ -333,3 +333,38 @@ Uncommitted change in `CRM/server/src/modules/auth/auth.controller.js` returns `
 - **Problem:** the User model stores **one** `refreshToken` (`auth.service.js generateTokens` overwrites it). Phone login replaces the laptop's token, so the laptop is logged out within 15 min, and the other way round.
 - **Fix:** store `refreshTokens: [String]` (keep the last ~5), check with `includes`, replace only the used one on refresh, remove only the current one on logout. Add one test: login twice, both refresh tokens still work.
 - **Also:** the web app now gets the refresh token in the JSON body too, so page JavaScript can read it (it was HttpOnly-cookie only before). Return it in the body only when the request sends a header such as `X-Client: mobile`.
+
+---
+
+## 9. Notifications on the phone (Nov 2026)
+
+They look and behave like any normal app's: the phone's own banner (also while the app is open), sound, the red number on the app icon, and buttons under the notification. The in-app toast is only used on the web preview.
+
+**How each kind behaves** (server: `server/src/modules/notifications/pushStyle.js`, app: `src/services/push.js`)
+
+| Kind | Who gets it | iPhone | Buttons |
+|---|---|---|---|
+| Review needed | the reviewer | normal banner | Approve · Open |
+| Review reminder (45 min) / late (1 h) | reviewer (late: + admins) | **time-sensitive**: shows even in Focus | Approve · Open |
+| Changes needed | owner + helpers | normal | Open |
+| Task assigned / added as helper | that person (never yourself) | normal | Start work · Open |
+| Due soon (9 am list) | owner | normal | Open |
+| Approved | owner, helpers, creator, watchers | normal | |
+| Started / finished / moved back | owner, helpers, creator, watchers (not who did it) | **quiet**: list only, no sound | |
+| Chat message, @mention, reply | everyone on the task (not the sender), grouped per 10 min | normal | **Reply** (type right in the notification) |
+| You can start now (blocker done) | owner of the waiting task | normal | |
+| Lead assigned, meeting reminder | that person | normal / meeting: time-sensitive | Open |
+| Leave / regularization request | approvers | normal | Open |
+| Leave / regularization decided | the employee | normal | |
+| Invoices, payments, contracts | admins | normal | |
+| New lead, lead converted, project status | as before | quiet | |
+
+**Rules**
+- Never notify the person who did the action, and never for a task you gave yourself.
+- One task's notifications stack together on the lock screen (thread per task / lead / project).
+- No banner for the task you have open right now (like a chat app).
+- Quiet hours 21:00-08:00 IST hold task pushes (urgent tasks still go). Repeats within 10 min fold into one.
+- Android: each kind has its own channel (Reviews, Tasks, Messages, Leads and meetings, Attendance and leave, Invoices and payments, Other) that people can mute in system settings.
+- Without a push token (simulator, notifications denied at first, web) the app posts the same banner itself from the live socket.
+
+**Dynamic Island / Lock Screen** (`src/widgets/WorkTimer.jsx`, iOS 16.4+): a live timer while clocked in (pauses on a break, ends on clock-out) and while a task stopwatch runs. iOS counts the time itself; the app only updates it on clock in/out, break, stopwatch start/stop. Tapping it opens Attendance or the task.
