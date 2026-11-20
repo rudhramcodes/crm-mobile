@@ -33,3 +33,5 @@ export * from './TaskParts';
 export * from './TaskViews';
 export * from './TaskDetailParts';
 export * from './TaskChat';
+export * from './LeadParts';
+export * from './ConfirmDialog';

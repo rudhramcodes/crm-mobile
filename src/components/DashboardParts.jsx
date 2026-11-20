@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Text as RNText, View } from 'react-native';
 import { Image } from 'expo-image';
 import Svg, { Circle } from 'react-native-svg';
 import { Pressable } from './Pressable';
@@ -12,12 +12,36 @@ import { cn } from '@/utils/cn';
 export const shortDate = (d) => new Date(d).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
 const monthLabel = (ym, month = 'short') => new Date(`${ym}-01T00:00:00`).toLocaleDateString('en-IN', { month, year: month === 'long' ? 'numeric' : undefined });
 
-// Stat tile (DESIGN.md §5): caption, Numeral XL value, muted sub-line. `alert` = danger fill for overdue/unpaid.
-export function StatTile({ label, value, sub, alert, onPress }) {
+// Icon tints from the brand palette only (DESIGN.md §1): ochre for pipeline/pending, green for money in, red for overdue.
+const TONES = { accent: ['bg-accent/15', 'accent-ink'], success: ['bg-success/15', 'success'], danger: ['bg-danger/15', 'danger'] };
+
+// "₹12.35L" → ['₹', '12.35', 'L'], "68%" → ['', '68', '%'], "—" → ['', '—', '']: the digits big, the symbol and unit smaller.
+export const splitNumber = (value) => {
+  const m = String(value ?? '').match(/^(\D*?)(-?[\d.,]+)(\D*)$/);
+  return m ? m.slice(1) : ['', String(value ?? ''), ''];
+};
+
+// Stat tile (DESIGN.md §5): caption + icon, Numeral XL value, muted sub-line. `alert` = danger fill for overdue/unpaid.
+export function StatTile({ label, value, sub, alert, onPress, icon: Icon, tone = 'accent' }) {
+  const theme = useTheme();
+  const [tint, ink] = TONES[tone];
+  const [pre, num, unit] = splitNumber(value);
   return (
     <Card onPress={onPress} accessibilityLabel={`${label}, ${value}`} className={cn('min-w-[45%] flex-1 gap-1 p-4', alert && 'border-transparent bg-danger/10')}>
-      <Text className="text-caption text-muted">{label}</Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit className={cn('font-display text-numeral tabular-nums', alert ? 'text-danger' : 'text-ink')}>{value}</Text>
+      <View className="flex-row items-center gap-2">
+        <Text className="flex-1 text-caption text-muted">{label}</Text>
+        {Icon && (
+          <View className={cn('h-8 w-8 items-center justify-center rounded-xl', tint)}>
+            <Icon size={16} strokeWidth={1.8} color={theme[ink]} />
+          </View>
+        )}
+      </View>
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} className={cn('mt-1 font-display text-[34px] leading-[40px] tabular-nums', alert ? 'text-danger' : 'text-ink')}>
+        {/* ₹ in Manrope: Goldenbook has no rupee glyph. */}
+        {!!pre && <RNText className="font-body-semibold text-xl text-muted">{pre}</RNText>}
+        {num}
+        {!!unit && <RNText className="font-display-regular text-2xl">{unit}</RNText>}
+      </Text>
       {!!sub && <Text numberOfLines={1} className="text-xs text-muted">{sub}</Text>}
     </Card>
   );
@@ -29,7 +53,7 @@ export function Section({ title, sub, action, onAction, children, className }) {
     <Card className={cn('gap-4', className)}>
       <View className="flex-row items-start gap-3">
         <View className="flex-1">
-          <Text className="font-display text-title">{title}</Text>
+          <Text className="font-display-regular text-title">{title}</Text>
           {!!sub && <Text className="text-sm text-muted">{sub}</Text>}
         </View>
         {action && (

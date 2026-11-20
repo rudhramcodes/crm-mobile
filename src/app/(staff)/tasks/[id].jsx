@@ -65,7 +65,7 @@ function TaskBody({ task: t }) {
           </Pressable>
         )}
       />
-      <Input value={title} onChangeText={setTitle} onBlur={saveTitle} onSubmitEditing={saveTitle} maxLength={200} accessibilityLabel="Title" className="-mt-3" style={{ fontFamily: 'Marcellus_400Regular', fontSize: 24, height: undefined, minHeight: 52, paddingVertical: 10 }} multiline submitBehavior="blurAndSubmit" />
+      <Input value={title} onChangeText={setTitle} onBlur={saveTitle} onSubmitEditing={saveTitle} maxLength={200} accessibilityLabel="Title" className="-mt-3" style={{ fontFamily: 'Goldenbook-Regular', fontSize: 24, height: undefined, minHeight: 52, paddingVertical: 10 }} multiline submitBehavior="blurAndSubmit" />
       {!!t.parent && (
         <Pressable onPress={() => router.push(`/tasks/${idOf(t.parent)}`)} accessibilityRole="link" className="-mt-2">
           <Text className="text-sm text-accent-ink">Part of: {t.parent.title || 'parent task'}</Text>
