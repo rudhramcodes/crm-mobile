@@ -21,7 +21,7 @@ import {
   meetingTime,
   usePullRefresh,
 } from "@/components";
-import { MEETING_STATUS } from "@/constants";
+import { MEETING_STATUS, ROLE_LABELS } from "@/constants";
 import { useTheme } from "@/constants/theme";
 import {
   useAddActionItemMutation,
@@ -56,13 +56,6 @@ import { useSelector } from "react-redux";
 const Label = ({ children }) => (
   <Text className="text-caption text-muted">{children}</Text>
 );
-const roleLabel = {
-  super_admin: "Super admin",
-  admin: "Admin",
-  manager: "Manager",
-  employee: "Employee",
-  client: "Client",
-};
 const shortDay = (d) =>
   new Date(d).toLocaleDateString("en-IN", {
     day: "numeric",
@@ -310,7 +303,7 @@ function MeetingBody({ meeting: m }) {
                   )}
                 </View>
                 <Badge
-                  label={roleLabel[full.role] || "Staff"}
+                  label={ROLE_LABELS[full.role] || "Staff"}
                   variant={full.role === "client" ? "success" : "default"}
                 />
               </View>

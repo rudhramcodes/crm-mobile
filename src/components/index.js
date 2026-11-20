@@ -40,3 +40,4 @@ export * from './MeetingParts';
 export * from './ProjectParts';
 export * from './ProjectEditParts';
 export * from './Pager';
+export * from './UserParts';

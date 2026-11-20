@@ -12,7 +12,7 @@ import { Text } from './Text';
 import { BrandMark } from './DashboardParts';
 import { brandLabel } from './ClientParts';
 import { showToast } from './Toast';
-import { MEETING_STATUS } from '@/constants';
+import { MEETING_STATUS, ROLE_LABELS } from '@/constants';
 import { useTheme } from '@/constants/theme';
 import { useGetMeetingsQuery, useUpdateMeetingMutation } from '@/services/meetingApi';
 import { isAdmin, runAction, ymd } from '@/utils/attendance';
@@ -209,8 +209,6 @@ export function SearchPick({ label, placeholder, searchPlaceholder, items, value
   );
 }
 
-const roleLabel = { super_admin: 'Super admin', admin: 'Admin', manager: 'Manager', employee: 'Employee', client: 'Client' };
-
 // Multi-select of people with search (staff and client portal users, as on the web).
 export function AttendeePicker({ users, value, onChange, loading }) {
   const theme = useTheme();
@@ -236,7 +234,7 @@ export function AttendeePicker({ users, value, onChange, loading }) {
                 <Text numberOfLines={1} className="font-body-medium">{u.name || u.email}</Text>
                 <Text numberOfLines={1} className="text-xs text-muted">{u.email}</Text>
               </View>
-              <Badge label={roleLabel[u.role] || u.role} variant={u.role === 'client' ? 'success' : 'default'} />
+              <Badge label={ROLE_LABELS[u.role] || u.role} variant={u.role === 'client' ? 'success' : 'default'} />
             </Pressable>
           );
         })}
