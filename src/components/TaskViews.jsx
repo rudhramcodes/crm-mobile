@@ -14,6 +14,9 @@ import { ConfirmDelete } from './AttendanceParts';
 import { TaskRow } from './TaskParts';
 import { TASK_PRIORITY, TASK_STATUS } from '@/constants';
 import { useGetProjectsQuery } from '@/services/projectApi';
+import { useGetUsersQuery } from '@/services/userApi';
+import { useGetTeamsQuery } from '@/services/teamApi';
+import { dueText, parseQuickAdd } from '@/utils/quickAdd';
 import { useBulkUpdateTasksMutation, useCreateTaskMutation, useGetTasksQuery, useDeleteTaskMutation, useReorderTasksMutation, useUpdateTaskMutation } from '@/services/taskApi';
 import { useTheme } from '@/constants/theme';
 import { isAdmin, runAction, ymd } from '@/utils/attendance';
@@ -33,7 +36,7 @@ function Group({ title, tasks, tone, empty }) {
   );
 }
 
-// Personal focus: a one-line add (Enter saves it for today, assigned to me), then overdue, today, upcoming, done.
+// Personal focus: a one-line add (Enter saves it; @person, dates, !priority and #tags are understood), then overdue, today, upcoming, done.
 export function MyDayView({ tasks }) {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
@@ -45,10 +48,22 @@ export function MyDayView({ tasks }) {
   const focus = g.overdue.length + g.today.length + g.done.length;
   const pct = focus ? Math.round((g.done.length / focus) * 100) : 0;
 
+  // People load only once an @ is typed; teams are small and cached.
+  const users = useGetUsersQuery({ isActive: true, limit: 200 }, { skip: !title.includes('@') }).data?.data?.users || [];
+  const teams = useGetTeamsQuery().data || [];
+  const q = parseQuickAdd(title, { me, users: users.filter((u) => u.role !== 'client'), teams });
+  const ok = q.title.length >= 2 && !isLoading;
+
   const add = async () => {
-    const t = title.trim();
-    if (t.length < 2 || isLoading) return;
-    if (await runAction(create({ title: t, assignedTo: me._id, dueDate: ymd(), status: 'todo', priority: 'medium' }), 'Added for today', "Couldn't add the task")) setTitle('');
+    if (!ok) return;
+    const body = { title: q.title, assignedTo: q.owner._id, helpers: q.helpers.map((h) => h._id), dueDate: q.dueDate, status: 'todo', priority: q.priority, tags: q.tags };
+    const who = q.owner._id === me._id ? '' : ` for ${q.owner.name.split(' ')[0]}`;
+    if (await runAction(create(body), `Added${who} · ${dueText(q.dueDate)}`, "Couldn't add the task")) setTitle('');
+  };
+  // Tapping what was understood opens the full form with it filled in.
+  const more = () => {
+    newTask({ title: q.title, dueDate: q.dueDate, priority: q.priority, tags: q.tags.join(', '), people: JSON.stringify([q.owner, ...q.helpers].map(({ _id, name, avatar }) => ({ _id, name, avatar }))) });
+    setTitle('');
   };
 
   return (
@@ -65,17 +80,23 @@ export function MyDayView({ tasks }) {
           value={title}
           onChangeText={setTitle}
           onSubmitEditing={add}
-          placeholder="Add a task for today"
-          accessibilityLabel="Add a task for today"
+          placeholder="Add a task · @name tomorrow 5pm !high"
+          accessibilityLabel="Add a task. Type @ for a person, a day, ! for priority, # for a tag"
           returnKeyType="done"
           submitBehavior="submit"
           maxLength={200}
           right={(
-            <Pressable onPress={add} disabled={title.trim().length < 2 || isLoading} accessibilityLabel="Add task" className="h-11 w-11 items-center justify-center">
-              <CornerDownLeft size={18} color={title.trim().length < 2 ? theme.muted : theme.ink} />
+            <Pressable onPress={add} disabled={!ok} accessibilityLabel="Add task" className="h-11 w-11 items-center justify-center">
+              <CornerDownLeft size={18} color={ok ? theme.ink : theme.muted} />
             </Pressable>
           )}
         />
+        {!!q.bits.length && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerClassName="gap-2">
+            {q.bits.map((b) => <Chip key={b.kind + b.label} label={b.label} active onPress={more} />)}
+            <Chip label="More options" onPress={more} />
+          </ScrollView>
+        )}
       </Card>
       <Group title="NEEDS MY REVIEW" tasks={reviews} tone="text-accent-ink" />
       <Group title="OVERDUE" tasks={g.overdue} tone="text-danger" />

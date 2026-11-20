@@ -16,6 +16,7 @@ import {
   ListTodo,
   Wallet,
   PlusCircle,
+  UsersRound,
 } from 'lucide-react-native';
 
 export const ROLES = {
@@ -205,6 +206,7 @@ export const NAV_ITEMS = [
   { label: 'Payroll', path: '/payroll', icon: Wallet, roles: ['super_admin', 'admin', 'manager', 'employee'], payrollOnly: true },
   { label: 'My Payslips', path: '/my-payslips', icon: Wallet, roles: ['admin', 'manager', 'employee'] },
   { label: 'Attendance', path: '/attendance', icon: ClipboardCheck, roles: ['super_admin', 'admin', 'manager', 'employee'] },
+  { label: 'Teams', path: '/teams', icon: UsersRound, roles: ['super_admin', 'admin', 'manager'] },
   { label: 'Freelancers', path: '/freelancers', icon: BriefcaseBusiness, roles: ['super_admin', 'admin', 'manager'] },
   { label: 'Notifications', path: '/notifications', icon: Bell, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Users', path: '/users', icon: Users, roles: ['super_admin', 'admin'] },
@@ -215,7 +217,7 @@ export const NAV_ITEMS = [
 export const NAV_SECTIONS = [
   { label: 'Overview', paths: ['/dashboard'] },
   { label: 'CRM & Pipeline', paths: ['/leads', '/clients', '/meetings'] },
-  { label: 'Operations', paths: ['/projects', '/tasks', '/attendance', '/freelancers'] },
+  { label: 'Operations', paths: ['/projects', '/tasks', '/teams', '/attendance', '/freelancers'] },
   { label: 'Financials', paths: ['/quotations', '/invoices', '/payments', '/reports', '/payroll', '/my-payslips'] },
   { label: 'Administration', paths: ['/notifications', '/users', '/settings'] },
 ];

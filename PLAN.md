@@ -198,7 +198,7 @@ Admin/manager:
 - [x] Swipe right = done/review, swipe left = reschedule **[Native]**
 - Shortcuts taken (M5): lists load the first 100 tasks; the project picker shows the first 50 projects; Kanban moves cards with ← → ↑ ↓ buttons, not drag; the stopwatch is saved on the device only (not synced across devices).
 
-- Next: the full tasks & projects flow (teams, review in 1 hour, task chat with images, no email spam) is planned in [TASKS-FLOW.md](TASKS-FLOW.md), phases T1–T6. T1 (notifications) and T2 (review flow) are done.
+- Next: the full tasks & projects flow (teams, review in 1 hour, task chat with images, no email spam) is planned in [TASKS-FLOW.md](TASKS-FLOW.md), phases T1–T6. T1 (notifications), T2 (review flow) and T3 (task chat with files) are done.
 
 ### M6 — Projects
 

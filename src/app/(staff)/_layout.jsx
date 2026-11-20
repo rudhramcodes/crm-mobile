@@ -24,6 +24,7 @@ export default function StaffLayout() {
       <Stack.Screen name="clients/new" options={modal} />
       <Stack.Screen name="leads/lost" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
       <Stack.Screen name="leads/community" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
+
     </Stack>
   );
 }
