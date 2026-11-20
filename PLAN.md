@@ -221,14 +221,14 @@ Admin/manager:
 - Pagination (Nov 2026): projects, clients, notifications and project tasks use numbered pages (Previous · Page X of Y · Next) from the server; the activity log pages on the device. Chat keeps "Show earlier".
 
 ### M7 — Meetings
-
-- [ ] List + calendar view; filters: search, status, venture, client, date range **[Port]**
-- [ ] Create/edit: title, date, start/end (end after start), venture, related lead / client / project, attendees, location, video link, recurrence (none/daily/weekly/monthly + count) **[Port]**
-- [ ] Generate **Zoho Meeting / Google Meet** link, regenerate, **Join** (opens app/browser) **[Native]**
-- [ ] Detail: status change (scheduled/completed/cancelled), discussion notes (employees can edit), recording link
-- [ ] Action items: add, assignee, deadline, done, remove, **convert to task** (pick project) **[Port]**
-- [ ] Delete single / whole recurring series
-- [ ] **Suggestion:** "Add to phone calendar" button **[Native]**
+- [x] List + calendar view (calendar loads the whole month); filters: search, status, venture (tabs with counts), client, date range; KPIs; 20 per page with infinite scroll **[Port]**
+- [x] Create/edit: title, venture, status, client / lead (client fills venture + invites its portal user), date (Today/Tomorrow), start time (slots or typed) + duration → end, recurrence (none/daily/weekly/monthly + 2–60 occurrences), Google Meet / Zoho link, paste / test / remove link, location, attendees, agenda **[Port]**
+- [x] Join opens the Zoho / Meet app or browser **[Native]**
+- [x] Detail: status change, client/lead links, participants, discussion notes (all staff can edit) **[Port]**
+- [x] Action items: add, done, remove, **convert to task** (project, assignee, deadline) **[Port]**
+- [x] Delete single / whole recurring series (series from the list, like the web)
+- [ ] (later) "Add to phone calendar" (needs expo-calendar); recording link (not shown on the web either)
+- Server fixes shipped with M7: venture saved on create; search + venture filter together.
 
 ### M8 — Leads (sales)
 
@@ -248,7 +248,7 @@ Admin/manager:
 - [x] Create/edit: venture*, company*, contact person*, email*, phone, GSTIN, PAN, address (street, city, state, PIN, country) **[Port]**
 - [x] Detail: Call / WhatsApp / Email, schedule meeting, notes feed, active/inactive toggle, delete, **send portal invite**, copy client ID **[Port]**
 - [ ] (later) Chat button and related projects, invoices, meetings of this client (not on the web yet)
-- Shortcuts: "Schedule meeting" opens `/meetings/new?client=` (Coming soon until M7); notes are read-only (no server endpoint, same as web).
+- Shortcuts: notes are read-only (no server endpoint, same as web).
 
 ### M10 — Quotations (admin)
 
