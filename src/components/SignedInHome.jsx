@@ -42,7 +42,7 @@ export function HomeHeader({ subtitle }) {
 // shortcut: placeholder home for clients until the portal module. Account actions live in Profile.
 export function SignedInHome({ subtitle }) {
   return (
-    <Screen scroll className="gap-5 pt-6">
+    <Screen tab scroll className="gap-5 pt-6">
       <HomeHeader subtitle={subtitle} />
     </Screen>
   );

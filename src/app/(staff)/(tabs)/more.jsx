@@ -28,7 +28,7 @@ export default function More() {
     : null;
 
   return (
-    <Screen scroll className="gap-5 pt-6">
+    <Screen tab scroll className="gap-5 pt-6">
       <Heading>More</Heading>
       <Input
         value={query}

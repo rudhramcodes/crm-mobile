@@ -170,7 +170,7 @@ Employee:
 - [x] Regularization request (date, reason, clock-in/out time, break minutes) + my request status **[Port]**
 - [x] Leaves: apply (sick, casual, maternity, paternity; date range), balance (casual 12/yr accrues 1 per month, sick 5), "exceeds balance" error, my leave list **[Port]**
 - [x] Holidays list (national / company / optional)
-- [x] **Suggestion:** local reminder "You haven't clocked in" at shift start + 15 min, and "Still clocked in?" at shift end **[Native]**
+- [x] Clock reminders now come from the **server** as push (`CRM/server/src/jobs/clockReminder.job.js`), so they arrive even if the app is never opened: 9:50 "Time to clock in", 10:05 "You haven't clocked in yet" (Mon-Sat, skips holiday/leave/clocked in), and "Clocked out automatically" when the auto clock-out runs at shift end. Times are fixed for now. Test: `node scripts/sendClockReminder.mjs in|late` (server). Needs a development build on Android.
 
 Admin/manager:
 
@@ -181,7 +181,7 @@ Admin/manager:
 - [x] Reports daily / weekly / monthly (view) **[Port]**; Excel/PDF export → **[Web-only]** (screen says so)
 - [x] Shifts CRUD (name, start, end, grace, default, active), Holidays CRUD **[Port]** (small forms)
 - [x] Bulk import attendance → **[Web-only]**, not on mobile
-- (note) Shortcuts: records list shows newest 100, reports first 50 records (summary covers all), leaves newest 50. No clock-out reminder for overnight shifts. Records/reports/shifts screens rely on the server's role checks (links only show for leads/admins).
+- (note) Shortcuts: records list shows newest 100, reports first 50 records (summary covers all), leaves newest 50. Records/reports/shifts screens rely on the server's role checks (links only show for leads/admins).
 
 ### M5 — Tasks
 
