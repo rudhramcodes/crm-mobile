@@ -231,3 +231,33 @@ export function ProjectChat({ project: p }) {
     </Card>
   );
 }
+
+// Segmented tabs for a long page: one short label each, with an optional count. Keeps the page to one job at a time.
+export function Tabs({ tabs, value, onChange }) {
+  return (
+    <View accessibilityRole="tablist" className="flex-row gap-1 rounded-full bg-surface-2 p-1">
+      {tabs.map((t) => {
+        const active = t.value === value;
+        return (
+          <Pressable
+            key={t.value}
+            onPress={() => onChange(t.value)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={t.count ? `${t.label}, ${t.count}` : t.label}
+            className={cn('h-10 flex-1 flex-row items-center justify-center gap-1 rounded-full px-1', active && 'bg-ink')}
+          >
+            <Text numberOfLines={1} className={cn('font-body-medium text-sm', active ? 'text-bg' : 'text-ink')}>{t.label}</Text>
+            {!!t.count && <Text className={cn('text-xs tabular-nums', active ? 'text-bg/70' : 'text-muted')}>{t.count > 99 ? '99+' : t.count}</Text>}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// "Show N more" under a list that pages (client side via usePaged, or the server's next page).
+export function ShowMore({ count, onPress, loading, label = 'more' }) {
+  if (!count) return null;
+  return <Button title={`Show ${count} ${label}`} variant="ghost" size="sm" loading={loading} onPress={onPress} />;
+}

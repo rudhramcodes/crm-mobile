@@ -7,6 +7,7 @@ import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { Button } from './Button';
 import { Card } from './Card';
+import { ConfirmDialog } from './ConfirmDialog';
 import { Chip } from './Chip';
 import { DateField } from './DateField';
 import { Input } from './Input';
@@ -23,6 +24,7 @@ import { shortDate, stageOf } from '@/utils/projects';
 import { getTimeAgo } from '@/utils/formatters';
 import { idOf } from '@/utils/tasks';
 import { cn } from '@/utils/cn';
+import { usePaged } from '@/hooks/usePaged';
 
 const Title = ({ children, right }) => (
   <View className="flex-row items-center gap-2">
@@ -36,6 +38,14 @@ const Chips = ({ items, value, onChange, disabled }) => (
   </ScrollView>
 );
 const iso = (d) => (d ? new Date(d).toISOString() : undefined);
+// Only plain web links are saved or opened: a typed "javascript:" or app-scheme link never reaches the browser.
+// A link typed without a scheme ("drive.google.com/…") gets https://; any other scheme stays and is refused.
+const webUrl = (v) => { const t = String(v || '').trim(); return t && !/^[a-z][a-z\d+.-]*:/i.test(t) ? `https://${t}` : t; };
+const isWebUrl = (v) => /^https?:\/\/\S+$/i.test(webUrl(v));
+const openLink = (url) => {
+  if (!isWebUrl(url)) return showToast({ title: "That link isn't a web address" });
+  return WebBrowser.openBrowserAsync(webUrl(url)).catch(() => showToast({ title: "Couldn't open the link" }));
+};
 const tone = (map, v) => { const [label, color] = map[v] || [v || 'Unknown', 'bg-surface-2 text-muted']; return <Badge label={label} color={color} />; };
 
 const DELIVERABLE = { pending: ['Pending', 'bg-surface-2 text-muted'], in_progress: ['In progress', 'bg-accent/15 text-accent-ink'], ready: ['Ready', 'bg-sand text-brown'], delivered: ['Delivered', 'bg-success/15 text-success'] };
@@ -50,11 +60,13 @@ export function DeliverablesCard({ project: p, canEdit }) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ title: '', category: 'video', driveUrl: '' });
   const list = p.deliverables || [];
-  const clean = (d) => ({ _id: d._id, title: d.title, category: d.category, details: d.details || '', status: d.status, driveUrl: d.driveUrl || '', deliveredAt: d.deliveredAt || null });
+  const clean = (d) => ({ _id: d._id, title: d.title, category: d.category, details: d.details || '', status: d.status, driveUrl: webUrl(d.driveUrl), deliveredAt: d.deliveredAt || null });
   const save = (next, done) => runAction(update({ id: p._id, deliverables: next.map(clean) }), done, "Couldn't save the deliverables");
   const setOne = (d, patch, done) => save(list.map((x) => (x._id === d._id ? { ...x, ...patch, deliveredAt: patch.status === 'delivered' ? new Date().toISOString() : patch.status ? null : x.deliveredAt } : x)), done);
+  const badLink = !!draft.driveUrl.trim() && !isWebUrl(draft.driveUrl);
   const add = async () => {
-    if (await save([...list, { ...draft, title: draft.title.trim(), status: 'pending' }], 'Deliverable added')) { setDraft({ title: '', category: 'video', driveUrl: '' }); setAdding(false); }
+    if (!draft.title.trim() || badLink || u.isLoading) return;
+    if (await save([...list, { ...draft, title: draft.title.trim(), driveUrl: webUrl(draft.driveUrl), status: 'pending' }], 'Deliverable added')) { setDraft({ title: '', category: 'video', driveUrl: '' }); setAdding(false); }
   };
   if (!list.length && !canEdit) return null;
 
@@ -70,7 +82,7 @@ export function DeliverablesCard({ project: p, canEdit }) {
             </View>
             {tone(DELIVERABLE, d.status)}
             {!!d.driveUrl && (
-              <Pressable onPress={() => WebBrowser.openBrowserAsync(d.driveUrl).catch(() => showToast({ title: "Couldn't open the link" }))} accessibilityLabel={`Open ${d.title} in Drive`} className="h-11 w-11 items-center justify-center">
+              <Pressable onPress={() => openLink(d.driveUrl)} accessibilityLabel={`Open ${d.title} in Drive`} className="h-11 w-11 items-center justify-center">
                 <ExternalLink size={18} color={theme['accent-ink']} />
               </Pressable>
             )}
@@ -88,10 +100,10 @@ export function DeliverablesCard({ project: p, canEdit }) {
         <View className="gap-2 rounded-2xl bg-surface-2 p-3">
           <Input value={draft.title} onChangeText={(v) => setDraft({ ...draft, title: v })} placeholder="Teaser film, 120 edited photos…" accessibilityLabel="Deliverable" maxLength={200} autoFocus />
           <Chips items={CATEGORY} value={draft.category} onChange={(v) => setDraft({ ...draft, category: v })} />
-          <Input value={draft.driveUrl} onChangeText={(v) => setDraft({ ...draft, driveUrl: v })} placeholder="Google Drive link (optional)" accessibilityLabel="Drive link" autoCapitalize="none" keyboardType="url" />
+          <Input value={draft.driveUrl} onChangeText={(v) => setDraft({ ...draft, driveUrl: v })} placeholder="Google Drive link (optional)" accessibilityLabel="Drive link" autoCapitalize="none" autoCorrect={false} keyboardType="url" maxLength={2000} error={badLink ? 'Paste a link starting with https://' : undefined} />
           <View className="flex-row gap-2">
             <Button title="Cancel" variant="secondary" size="sm" className="flex-1" onPress={() => setAdding(false)} />
-            <Button title="Add" size="sm" className="flex-1" disabled={!draft.title.trim()} loading={u.isLoading} onPress={add} />
+            <Button title="Add" size="sm" className="flex-1" disabled={!draft.title.trim() || badLink} loading={u.isLoading} onPress={add} />
           </View>
         </View>
       ) : <Button title="Add a deliverable" icon={Plus} variant="secondary" size="sm" onPress={() => setAdding(true)} />)}
@@ -99,18 +111,30 @@ export function DeliverablesCard({ project: p, canEdit }) {
   );
 }
 
+// Saves once when you leave the field or press done (both fire on submit, so the last saved value is remembered).
 function DriveLink({ value = '', onSave }) {
   const [v, setV] = useState(value);
+  const [saved, setSaved] = useState(value);
+  const bad = !!v.trim() && !isWebUrl(v);
+  const commit = () => {
+    const next = webUrl(v);
+    if (bad || next === saved) return;
+    setSaved(next);
+    onSave(next);
+  };
   return (
     <Input
       value={v}
       onChangeText={setV}
-      onBlur={() => v.trim() !== value && onSave(v.trim())}
-      onSubmitEditing={() => v.trim() !== value && onSave(v.trim())}
+      onBlur={commit}
+      onSubmitEditing={commit}
       placeholder="Google Drive link"
       accessibilityLabel="Drive link"
       autoCapitalize="none"
+      autoCorrect={false}
       keyboardType="url"
+      maxLength={2000}
+      error={bad ? 'Paste a link starting with https://' : undefined}
     />
   );
 }
@@ -128,7 +152,7 @@ export function MilestonesCard({ project: p, canEdit }) {
   const setStatus = (m, status) => runAction(save({ id: p._id, milestones: body(list.map((x) => (x._id === m._id ? { ...x, status } : x))) }), `${m.title}: ${MILESTONE[status][0]}`, "Couldn't save");
   const add = async () => {
     const t = title.trim();
-    if (t.length < 2) return;
+    if (t.length < 2 || s.isLoading) return;
     if (await runAction(save({ id: p._id, milestones: [...body(list), { title: t, status: 'pending' }] }), 'Milestone added', "Couldn't add it")) setTitle('');
   };
   if (!list.length && !can) return null;
@@ -159,8 +183,10 @@ export function TeamCard({ project: p, canEdit }) {
   const me = useSelector((s) => s.auth.user);
   const [update, u] = useUpdateProjectMutation();
   const [picking, setPicking] = useState(false);
+  const [removing, setRemoving] = useState(null);
   const team = p.teamMembers || [];
   const save = (next, done) => runAction(update({ id: p._id, teamMembers: next.map((m) => ({ user: idOf(m.user), role: m.role || '' })) }), done, "Couldn't save the team");
+  const removingMe = removing && idOf(removing.user) === me._id;
   const add = (user) => { setPicking(false); if (!team.some((m) => idOf(m.user) === user._id)) save([...team, { user }], `${user.name} added`); };
   return (
     <Card className="gap-3 p-4">
@@ -170,7 +196,7 @@ export function TeamCard({ project: p, canEdit }) {
           <Avatar name={m.user?.name || '?'} uri={m.user?.avatar} size={32} />
           <Text className="flex-1 font-body-medium">{idOf(m.user) === me._id ? 'You' : m.user?.name || 'Someone'}{m.role ? <Text className="text-sm text-muted"> · {m.role}</Text> : ''}</Text>
           {canEdit && (
-            <Pressable onPress={() => save(team.filter((x) => x !== m), `${m.user?.name || 'They'} removed`)} disabled={u.isLoading} accessibilityLabel={`Remove ${m.user?.name}`} className="h-11 w-11 items-center justify-center">
+            <Pressable onPress={() => setRemoving(m)} disabled={u.isLoading} accessibilityLabel={`Remove ${m.user?.name}`} className="h-11 w-11 items-center justify-center">
               <X size={18} color={theme.muted} />
             </Pressable>
           )}
@@ -178,6 +204,19 @@ export function TeamCard({ project: p, canEdit }) {
       ))}
       {!team.length && <Text className="text-sm text-muted">Nobody added yet.</Text>}
       {canEdit && (picking ? <UserPicker label="Add to the team" onPick={add} onCancel={() => setPicking(false)} /> : <Button title="Add someone" icon={Plus} variant="secondary" size="sm" onPress={() => setPicking(true)} />)}
+      <ConfirmDialog
+        visible={!!removing}
+        title={removingMe ? 'Leave this project?' : `Remove ${removing?.user?.name || 'them'}?`}
+        message={removingMe ? 'You may no longer be able to edit it.' : 'They stop getting this project’s updates. You can add them back any time.'}
+        confirmLabel={removingMe ? 'Leave' : 'Remove'}
+        loading={u.isLoading}
+        onCancel={() => setRemoving(null)}
+        onConfirm={async () => {
+          const m = removing;
+          await save(team.filter((x) => x !== m), removingMe ? 'You left the project' : `${m.user?.name || 'They'} removed`);
+          setRemoving(null);
+        }}
+      />
     </Card>
   );
 }
@@ -324,9 +363,10 @@ const SAID = {
 };
 // Who did what on the project, newest first (stage moves show from → to and the reason).
 export function ProjectActivity({ project: p }) {
-  const [all, setAll] = useState(false);
-  const list = useGetProjectActivitiesQuery(p._id).data?.data || [];
   const stages = [...(p.stageHistory || [])].reverse();
+  // Stage moves are shown above with from → to and the reason, so they're not repeated in the log.
+  const list = (useGetProjectActivitiesQuery(p._id).data?.data || []).filter((a) => !(stages.length && a.action === 'stage_changed'));
+  const page = usePaged(list, 10);
   if (!list.length && !stages.length) return null;
   return (
     <Card className="gap-3 p-4">
@@ -338,14 +378,14 @@ export function ProjectActivity({ project: p }) {
           <Text className="text-xs text-muted">{getTimeAgo(h.changedAt)}</Text>
         </View>
       ))}
-      {(all ? list : list.slice(0, 6)).map((a, i) => (
+      {page.shown.map((a, i) => (
         <View key={a._id || i} className="gap-0.5 border-l-2 border-line pl-3">
           <Text className="text-sm"><Text className="font-body-semibold text-sm">{a.performedBy?.name || 'Someone'}</Text> {SAID[a.action] || String(a.action || 'changed something').replace(/_/g, ' ')}</Text>
           {!!a.reason && <Text className="text-sm text-muted">Reason: {a.reason}</Text>}
           <Text className="text-xs text-muted">{getTimeAgo(a.createdAt)}</Text>
         </View>
       ))}
-      {list.length > 6 && <Button title={all ? 'Show less' : `Show all ${list.length}`} variant="ghost" size="sm" onPress={() => setAll((x) => !x)} />}
+      {!!page.left && <Button title={`Show ${page.next} more`} variant="ghost" size="sm" onPress={page.more} />}
     </Card>
   );
 }
