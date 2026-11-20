@@ -12,16 +12,6 @@ export const taskApi = api.injectEndpoints({
       providesTags: ['Task'],
       keepUnusedDataFor: 0,
     }),
-    // { [userId]: { open, overdue } } for the people picker.
-    // Server-side pages of tasks (e.g. one project's open or done tasks); loaded pages refetch together on a Task change.
-    getTaskPages: builder.infiniteQuery({
-      infiniteQueryOptions: {
-        initialPageParam: 1,
-        getNextPageParam: (last) => (last.pagination?.hasNextPage ? last.pagination.page + 1 : undefined),
-      },
-      query: ({ queryArg, pageParam }) => ({ url: '/tasks', params: { limit: 30, ...queryArg, page: pageParam } }),
-      providesTags: ['Task'],
-    }),
     getWorkload: builder.query({
       query: () => '/tasks/workload',
       transformResponse: (r) => r.data?.workload || {},
@@ -120,7 +110,7 @@ export const taskApi = api.injectEndpoints({
 
 export const {
   useGetWorkloadQuery,
-  useGetTasksQuery, useGetTaskPagesInfiniteQuery, useGetTaskByIdQuery, useCreateTaskMutation,
+  useGetTasksQuery, useGetTaskByIdQuery, useCreateTaskMutation,
   useUpdateTaskMutation, useDeleteTaskMutation,
   useGetSubtasksQuery, useGetDependenciesQuery,
   useAddDependencyMutation, useRemoveDependencyMutation,

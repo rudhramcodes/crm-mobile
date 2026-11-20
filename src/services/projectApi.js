@@ -7,15 +7,6 @@ export const projectApi = api.injectEndpoints({
       query: (params) => ({ url: '/projects', params }),
       providesTags: ['Project'],
     }),
-    // Server-side pages of 20 for the lists; every loaded page refetches together when the Project tag is invalidated.
-    getProjectPages: builder.infiniteQuery({
-      infiniteQueryOptions: {
-        initialPageParam: 1,
-        getNextPageParam: (last) => (last.pagination?.hasNextPage ? last.pagination.page + 1 : undefined),
-      },
-      query: ({ queryArg, pageParam }) => ({ url: '/projects', params: { ...queryArg, page: pageParam, limit: 20 } }),
-      providesTags: ['Project'],
-    }),
     getProjectById: builder.query({
       query: (id) => `/projects/${id}`,
       providesTags: (result, error, id) => [{ type: 'Project', id }],
@@ -118,7 +109,6 @@ export const projectApi = api.injectEndpoints({
 
 export const {
   useGetProjectsQuery,
-  useGetProjectPagesInfiniteQuery,
   useGetProjectByIdQuery,
   useGetProjectStatsQuery,
   useCreateProjectMutation,

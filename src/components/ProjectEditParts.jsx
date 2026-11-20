@@ -7,6 +7,7 @@ import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { Button } from './Button';
 import { Card } from './Card';
+import { Pager } from './Pager';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Chip } from './Chip';
 import { DateField } from './DateField';
@@ -366,7 +367,7 @@ export function ProjectActivity({ project: p }) {
   const stages = [...(p.stageHistory || [])].reverse();
   // Stage moves are shown above with from → to and the reason, so they're not repeated in the log.
   const list = (useGetProjectActivitiesQuery(p._id).data?.data || []).filter((a) => !(stages.length && a.action === 'stage_changed'));
-  const page = usePaged(list, 10);
+  const page = usePaged(list, 10, p._id);
   if (!list.length && !stages.length) return null;
   return (
     <Card className="gap-3 p-4">
@@ -385,7 +386,7 @@ export function ProjectActivity({ project: p }) {
           <Text className="text-xs text-muted">{getTimeAgo(a.createdAt)}</Text>
         </View>
       ))}
-      {!!page.left && <Button title={`Show ${page.next} more`} variant="ghost" size="sm" onPress={page.more} />}
+      <Pager page={page.page} pages={page.pages} total={page.total} limit={page.limit} onChange={page.setPage} />
     </Card>
   );
 }

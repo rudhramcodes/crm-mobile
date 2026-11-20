@@ -1,17 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { FlashList } from '@shopify/flash-list';
 import { FolderKanban, Plus, Search, X } from 'lucide-react-native';
-import { Button, Chip, DashboardState, EmptyState, Input, PageHeader, Pressable, ProjectRow, Screen, Skeleton, Text, VentureChips, usePullRefresh } from '@/components';
+import { Button, Chip, DashboardState, EmptyState, Input, PageHeader, Pager, Pressable, ProjectRow, Screen, Text, VentureChips, usePullRefresh } from '@/components';
 import { PROJECT_STAGES } from '@/constants';
 import { useTheme } from '@/constants/theme';
-import { useGetProjectPagesInfiniteQuery, useGetProjectStatsQuery } from '@/services/projectApi';
+import { usePage, usePageNav } from '@/hooks/usePaged';
+import { useGetProjectStatsQuery, useGetProjectsQuery } from '@/services/projectApi';
 import { cleanParams } from '@/utils/leads';
 import { canCreateProject } from '@/utils/projects';
 
-// All projects, newest first, 20 per page from the server; the next page loads as you near the end.
+// All projects, newest first, 20 per page from the server with Previous / Next under the list.
 // Filters: search, "Mine" (projects I'm on), stage and venture.
 export default function Projects() {
   const theme = useTheme();
@@ -28,17 +29,21 @@ export default function Projects() {
     return () => clearTimeout(t);
   }, [typed]);
 
-  const q = useGetProjectPagesInfiniteQuery(cleanParams({ search, stage, brand, employeeFilter: mine ? me._id : '' }));
+  const LIMIT = 20;
+  const listRef = useRef(null);
+  const filters = cleanParams({ search, stage, brand, employeeFilter: mine ? me._id : '' });
+  const [page, setPage] = usePage(JSON.stringify(filters));
+  const q = useGetProjectsQuery({ ...filters, page, limit: LIMIT });
   const statsQ = useGetProjectStatsQuery();
   const stats = statsQ.data?.data;
   const refreshControl = usePullRefresh(() => {
     statsQ.refetch();
     return q.refetch();
   });
-  const pages = q.data?.pages || [];
-  const projects = pages.flatMap((p) => p.data || []);
-  const total = pages[0]?.pagination?.total ?? projects.length;
-  const loadMore = () => q.hasNextPage && !q.isFetching && q.fetchNextPage();
+  const projects = q.data?.data || [];
+  const meta = q.data?.pagination;
+  const total = meta?.total ?? projects.length;
+  const goTo = usePageNav(listRef, page, setPage, meta?.pages);
   const filtered = !!(search || stage || brand || mine);
   // Stage counts are company-wide, so show them only while nothing else narrows the list.
   const counts = stats && !search && !brand && !mine ? stats : null;
@@ -102,22 +107,18 @@ export default function Projects() {
   return (
     <Screen className="px-0">
       <FlashList
+        ref={listRef}
         contentInsetAdjustmentBehavior="automatic"
         keyboardShouldPersistTaps="handled"
         data={projects}
         keyExtractor={(p) => p._id}
-        renderItem={({ item }) => <View className="pb-2"><ProjectRow project={item} /></View>}
+        renderItem={({ item }) => <View className={q.isFetching ? 'pb-2 opacity-50' : 'pb-2'}><ProjectRow project={item} /></View>}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
         ListFooterComponent={
-          q.isFetchingNextPage ? <Skeleton className="h-32 rounded-3xl" />
-          : q.isError && projects.length ? <Button title="Couldn't load more. Try again" variant="ghost" size="sm" onPress={() => q.fetchNextPage()} />
-          : projects.length ? (
-            <Text className="py-2 text-center text-xs text-muted">{q.hasNextPage ? `Showing ${projects.length} of ${total}` : `All ${total} shown`}</Text>
-          ) : null
+          q.isError && projects.length ? <Button title="Couldn't load this page. Try again" variant="ghost" size="sm" onPress={q.refetch} />
+          : <Pager page={page} pages={meta?.pages} total={total} limit={LIMIT} loading={q.isFetching} onChange={goTo} />
         }
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
         refreshControl={refreshControl}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
       />

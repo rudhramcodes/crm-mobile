@@ -5,15 +5,16 @@ import { useDispatch, useSelector } from 'react-redux';
 import { MapPin } from 'lucide-react-native';
 import {
   Avatar, Button, Card, CrewCard, DashboardState, DeliverablesCard, InwardCard, MilestonesCard, PageHeader, PriorityBadge, ProjectActivity, ProjectChat,
-  ProjectFiles, QuickAddTask, Screen, ShowMore, SignOffCard, StageBar, Tabs, TaskRow, TeamCard, Text, backTo, brandLabel, usePullRefresh,
+  Pager, ProjectFiles, QuickAddTask, Screen, SignOffCard, StageBar, Tabs, TaskRow, TeamCard, Text, backTo, brandLabel, usePullRefresh,
 } from '@/components';
 import { useTheme } from '@/constants/theme';
 import { useEntityRoom } from '@/hooks/useEntityRoom';
 import { api } from '@/services/api';
 import { useGetProjectByIdQuery, useGetProjectMessagesQuery } from '@/services/projectApi';
-import { useGetTaskPagesInfiniteQuery } from '@/services/taskApi';
+import { useGetTasksQuery } from '@/services/taskApi';
+import { usePage } from '@/hooks/usePaged';
 import { canEditProject, isProjectLate, shortDate } from '@/utils/projects';
-import { idOf, isOverdue } from '@/utils/tasks';
+import { idOf } from '@/utils/tasks';
 import { cn } from '@/utils/cn';
 
 const TABS = ['overview', 'tasks', 'chat', 'more'];
@@ -31,8 +32,13 @@ const Row = ({ label, children }) => (
   </View>
 );
 
-const pagesOf = (q) => (q.data?.pages || []).flatMap((p) => p.data || []);
-const totalOf = (q) => q.data?.pages?.[0]?.pagination?.total ?? pagesOf(q).length;
+const TASK_LIMIT = 20;
+const pagesOf = (q) => q.data?.data || [];
+const totalOf = (q) => q.data?.pagination?.total ?? pagesOf(q).length;
+// Previous / Next for one paged task query.
+const TaskPager = ({ q, page, setPage }) => (
+  <Pager page={page} pages={q.data?.pagination?.pages} total={totalOf(q)} limit={TASK_LIMIT} loading={q.isFetching} onChange={setPage} />
+);
 
 // Where it stands and the facts: stage, task progress, owner, dates, brief.
 function Overview({ project: p, me, edit, openTotal, doneTotal, late, onTasks }) {
@@ -81,8 +87,8 @@ function Overview({ project: p, me, edit, openTotal, doneTotal, late, onTasks })
   );
 }
 
-// Open tasks grouped by milestone (server pages of 30), then done tasks on request (also paged by the server).
-function ProjectTasks({ project: p, openQ, doneQ }) {
+// Open tasks grouped by milestone (server pages of 20), then done tasks on request (also paged by the server).
+function ProjectTasks({ project: p, openQ, doneQ, openPage, setOpenPage, donePage, setDonePage }) {
   const [showDone, setShowDone] = useState(false);
   const open = pagesOf(openQ);
   const done = pagesOf(doneQ);
@@ -110,7 +116,7 @@ function ProjectTasks({ project: p, openQ, doneQ }) {
               {g.tasks.map((t) => <TaskRow key={t._id} task={t} />)}
             </View>
           ))}
-          <ShowMore count={openQ.hasNextPage ? Math.min(30, openTotal - open.length) : 0} label="more open" loading={openQ.isFetchingNextPage} onPress={() => openQ.fetchNextPage()} />
+          <TaskPager q={openQ} page={openPage} setPage={setOpenPage} />
           {!openTotal && <Text className="text-sm text-muted">{doneTotal ? 'All tasks are done.' : 'No tasks yet. Add the first one above.'}</Text>}
         </>
       )}
@@ -119,7 +125,7 @@ function ProjectTasks({ project: p, openQ, doneQ }) {
         <View className="gap-2 pt-2">
           <Button title={showDone ? 'Hide done tasks' : `Show ${doneTotal} done`} variant="ghost" size="sm" onPress={() => setShowDone((x) => !x)} />
           {showDone && done.map((t) => <TaskRow key={t._id} task={t} swipe={false} />)}
-          {showDone && <ShowMore count={doneQ.hasNextPage ? Math.min(30, doneTotal - done.length) : 0} label="more done" loading={doneQ.isFetchingNextPage} onPress={() => doneQ.fetchNextPage()} />}
+          {showDone && <TaskPager q={doneQ} page={donePage} setPage={setDonePage} />}
         </View>
       )}
     </View>
@@ -132,8 +138,14 @@ function ProjectTasks({ project: p, openQ, doneQ }) {
 function ProjectBody({ project: p, initialTab }) {
   const me = useSelector((s) => s.auth.user);
   const [tab, setTab] = useState(TABS.includes(initialTab) ? initialTab : 'overview');
-  const openQ = useGetTaskPagesInfiniteQuery({ project: p._id, open: 'true', sort: 'dueDate' });
-  const doneQ = useGetTaskPagesInfiniteQuery({ project: p._id, status: 'done', sort: '-updatedAt' });
+  const [openPage, setOpenPage] = usePage(p._id);
+  const [donePage, setDonePage] = usePage(p._id);
+  const openQ = useGetTasksQuery({ project: p._id, open: 'true', sort: 'dueDate', page: openPage, limit: TASK_LIMIT });
+  const doneQ = useGetTasksQuery({ project: p._id, status: 'done', sort: '-updatedAt', page: donePage, limit: TASK_LIMIT });
+  // Overdue across every open task, not just the page on screen: the server counts them (limit 1, read the total).
+  // Due before today, like the task rows' own "overdue" (tasks waiting in review are counted here too).
+  const [now] = useState(() => new Date(new Date().setHours(0, 0, 0, 0) - 1).toISOString());
+  const lateQ = useGetTasksQuery({ project: p._id, open: 'true', dueDateTo: now, page: 1, limit: 1 });
   const messages = useGetProjectMessagesQuery({ id: p._id }).data?.data || [];
   const open = pagesOf(openQ);
   const tasks = [...open, ...pagesOf(doneQ)];
@@ -155,9 +167,11 @@ function ProjectBody({ project: p, initialTab }) {
       />
 
       {tab === 'overview' && (
-        <Overview project={p} me={me} edit={edit} openTotal={openTotal} doneTotal={totalOf(doneQ)} late={open.filter(isOverdue).length} onTasks={() => setTab('tasks')} />
+        <Overview project={p} me={me} edit={edit} openTotal={openTotal} doneTotal={totalOf(doneQ)} late={lateQ.data?.pagination?.total || 0} onTasks={() => setTab('tasks')} />
       )}
-      {tab === 'tasks' && <ProjectTasks project={p} openQ={openQ} doneQ={doneQ} />}
+      {tab === 'tasks' && (
+        <ProjectTasks project={p} openQ={openQ} doneQ={doneQ} openPage={openPage} setOpenPage={setOpenPage} donePage={donePage} setDonePage={setDonePage} />
+      )}
       {tab === 'chat' && (
         <>
           <ProjectChat project={p} />

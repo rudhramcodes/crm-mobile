@@ -1,10 +1,12 @@
+import { useRef } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
 import { CalendarClock, ChevronRight, FolderOpen } from 'lucide-react-native';
-import { Button, DashboardState, EmptyState, Heading, Pressable, Screen, Skeleton, StageMeter, Text, usePullRefresh } from '@/components';
+import { Button, DashboardState, EmptyState, Heading, Pager, Pressable, Screen, StageMeter, Text, usePullRefresh } from '@/components';
 import { useTheme } from '@/constants/theme';
-import { useGetProjectPagesInfiniteQuery } from '@/services/projectApi';
+import { usePage, usePageNav } from '@/hooks/usePaged';
+import { useGetProjectsQuery } from '@/services/projectApi';
 import { shortDate, stageOf } from '@/utils/projects';
 
 // One project card for the client: name, where it stands, the target date. Tap to open.
@@ -38,17 +40,22 @@ function PortalProjectRow({ project: p }) {
   );
 }
 
-// A client's projects (the server only returns their own), 20 per page, newest first.
+const LIMIT = 10;
+
+// A client's projects (the server only returns their own), 10 per page, newest first, Previous / Next below.
 export default function PortalProjects() {
-  const q = useGetProjectPagesInfiniteQuery({});
+  const listRef = useRef(null);
+  const [page, setPage] = usePage('');
+  const q = useGetProjectsQuery({ page, limit: LIMIT });
   const refreshControl = usePullRefresh(q.refetch);
-  const pages = q.data?.pages || [];
-  const projects = pages.flatMap((p) => p.data || []);
-  const total = pages[0]?.pagination?.total ?? projects.length;
+  const projects = q.data?.data || [];
+  const meta = q.data?.pagination;
+  const goTo = usePageNav(listRef, page, setPage, meta?.pages);
 
   return (
     <Screen className="px-0">
       <FlashList
+        ref={listRef}
         contentInsetAdjustmentBehavior="automatic"
         data={projects}
         keyExtractor={(p) => p._id}
@@ -58,12 +65,9 @@ export default function PortalProjects() {
           <EmptyState icon={FolderOpen} title="No projects yet" message="When the team sets up your project, it shows up here." />
         )}
         ListFooterComponent={
-          q.isFetchingNextPage ? <Skeleton className="h-28 rounded-3xl" />
-          : q.isError && projects.length ? <Button title="Couldn't load more. Try again" variant="ghost" size="sm" onPress={() => q.fetchNextPage()} />
-          : q.hasNextPage ? <Text className="py-2 text-center text-xs text-muted">Showing {projects.length} of {total}</Text> : null
+          q.isError && projects.length ? <Button title="Couldn't load this page. Try again" variant="ghost" size="sm" onPress={q.refetch} />
+          : <Pager page={page} pages={meta?.pages} total={meta?.total} limit={LIMIT} loading={q.isFetching} onChange={goTo} />
         }
-        onEndReached={() => q.hasNextPage && !q.isFetching && q.fetchNextPage()}
-        onEndReachedThreshold={0.5}
         refreshControl={refreshControl}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
       />

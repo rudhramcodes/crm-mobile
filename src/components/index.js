@@ -38,3 +38,4 @@ export * from './ConfirmDialog';
 export * from './ClientParts';
 export * from './ProjectParts';
 export * from './ProjectEditParts';
+export * from './Pager';

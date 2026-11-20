@@ -255,9 +255,3 @@ export function Tabs({ tabs, value, onChange }) {
     </View>
   );
 }
-
-// "Show N more" under a list that pages (client side via usePaged, or the server's next page).
-export function ShowMore({ count, onPress, loading, label = 'more' }) {
-  if (!count) return null;
-  return <Button title={`Show ${count} ${label}`} variant="ghost" size="sm" loading={loading} onPress={onPress} />;
-}

@@ -1,11 +1,12 @@
 import { View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import {
-  Card, ClientTaskRow, DashboardState, DeliverablesCard, MilestonesCard, PageHeader, ProjectChat, ProjectFiles, Screen, ShowMore, StageMeter, Text, backTo, usePullRefresh,
+  Card, ClientTaskRow, DashboardState, DeliverablesCard, MilestonesCard, PageHeader, ProjectChat, ProjectFiles, Pager, Screen, StageMeter, Text, backTo, usePullRefresh,
 } from '@/components';
 import { useEntityRoom } from '@/hooks/useEntityRoom';
 import { useGetProjectByIdQuery } from '@/services/projectApi';
-import { useGetTaskPagesInfiniteQuery } from '@/services/taskApi';
+import { useGetTasksQuery } from '@/services/taskApi';
+import { usePage } from '@/hooks/usePaged';
 import { shortDate, stageOf } from '@/utils/projects';
 
 // A client's project: where it stands, the work, what they'll receive, and the chat with the team.
@@ -13,13 +14,14 @@ import { shortDate, stageOf } from '@/utils/projects';
 export default function PortalProject() {
   const { id } = useLocalSearchParams();
   const { data, isLoading, isError, error, refetch } = useGetProjectByIdQuery(id);
-  // The work, 30 at a time from the server (the server only returns tasks on the client's own projects).
-  const tq = useGetTaskPagesInfiniteQuery({ project: id, sort: '-updatedAt' });
+  // The work, 20 per page from the server (the server only returns tasks on the client's own projects).
+  const [page, setPage] = usePage(id);
+  const tq = useGetTasksQuery({ project: id, sort: '-updatedAt', page, limit: 20 });
   useEntityRoom('project', id, 'Project');
   const refreshControl = usePullRefresh(() => Promise.all([refetch(), tq.refetch()]));
   const p = data?.data?.project;
-  const tasks = (tq.data?.pages || []).flatMap((pg) => pg.data || []);
-  const taskTotal = tq.data?.pages?.[0]?.pagination?.total ?? tasks.length;
+  const tasks = tq.data?.data || [];
+  const taskTotal = tq.data?.pagination?.total ?? tasks.length;
 
   if (!p) {
     return (
@@ -50,7 +52,7 @@ export default function PortalProject() {
             <Text className="text-sm text-muted tabular-nums">{taskTotal} {taskTotal === 1 ? 'task' : 'tasks'}</Text>
           </View>
           <Card className="gap-0 p-0">{tasks.map((t, i) => <ClientTaskRow key={t._id} task={t} first={!i} />)}</Card>
-          <ShowMore count={tq.hasNextPage ? Math.min(30, taskTotal - tasks.length) : 0} loading={tq.isFetchingNextPage} onPress={() => tq.fetchNextPage()} />
+          <Pager page={page} pages={tq.data?.pagination?.pages} total={taskTotal} limit={20} loading={tq.isFetching} onChange={setPage} />
         </View>
       )}
       <ProjectChat project={p} />

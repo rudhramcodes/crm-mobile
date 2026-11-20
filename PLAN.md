@@ -206,17 +206,19 @@ Admin/manager:
 
 ### M6 — Projects
 
-- [ ] List + Kanban by SOP stage (brief → planning → execution → review → delivered, progress 0/20/50/80/100), filters (stage, priority, venture, search), stats **[Port]**
-- [ ] Create/edit: title, client (create a client inline), venture, priority, status, budget + currency, start/deadline (deadline change needs a reason), team members, tags, description **[Port]**
-- [ ] Stage bar: move stage with a reason sheet, stage history, revert handling, legacy "needs SOP migration" notice **[Port]**
-- [ ] Quality Check (admin): scope complete, files correct, client commitments met, no open blockers **[Port]**
-- [ ] Closing note (delivered what, pending items); Delivered needs QC + closing note + all deliverables **[Port]**
-- [ ] Milestones (add, status, due), project tasks (add/edit/remove, "Open in Tasks Hub")
-- [ ] Deliverables tracker: title, category (photo/video/others), details, status (pending → in_progress → ready → delivered), Google Drive link (opens in app) **[Port]**
-- [ ] Inward data tracking: raw photos/videos received, source, storage location (e.g. HDD 02), status (pending / received / partially_received / verified), custom fields **[Port]**
-- [ ] Team deployment: crew counts (photographers, videographers, cinematographers, drone pilots, same-day editors, editors, others), crew members incl. **freelancers**, custom details **[Port]**
-- [ ] Project chat: text, **images from camera/gallery** (≤5, 10 MB), **@mentions**, delete own message; realtime **[Native]**
-- [ ] Activity log, image viewer (pinch zoom, rotate) **[Native]**
+- [x] List by SOP stage (Kanban not yet) (brief → planning → execution → review → delivered, progress 0/20/50/80/100), filters (stage, priority, venture, search), stats **[Port]**
+- [ ] Create is done; **edit (basics, deadline with reason, budget, tags) and create-client-inline still to do**. Create/edit: title, client (create a client inline), venture, priority, status, budget + currency, start/deadline (deadline change needs a reason), team members, tags, description **[Port]**
+- [x] Stage bar: move stage with a reason sheet, stage history, revert handling, legacy "needs SOP migration" notice **[Port]**
+- [x] Quality Check (admin): scope complete, files correct, client commitments met, no open blockers **[Port]**
+- [x] Closing note (delivered what, pending items); Delivered needs QC + closing note + all deliverables **[Port]**
+- [x] Milestones (add, status; due dates stay as set on web), project tasks (add/edit/remove, "Open in Tasks Hub")
+- [x] Deliverables tracker: title, category (photo/video/others), details, status (pending → in_progress → ready → delivered), Google Drive link (opens in app) **[Port]**
+- [x] Inward data tracking (custom fields: web only): raw photos/videos received, source, storage location (e.g. HDD 02), status (pending / received / partially_received / verified), custom fields **[Port]**
+- [x] Team deployment (crew counts; named crew and custom details: view only): crew counts (photographers, videographers, cinematographers, drone pilots, same-day editors, editors, others), crew members incl. **freelancers**, custom details **[Port]**
+- [x] Project chat: text, **images from camera/gallery** (≤5, 10 MB), **@mentions**, delete own message; realtime **[Native]**
+- [x] Activity log, image viewer (pinch zoom, rotate) **[Native]**
+
+- Pagination (Nov 2026): projects, clients, notifications and project tasks use numbered pages (Previous · Page X of Y · Next) from the server; the activity log pages on the device. Chat keeps "Show earlier".
 
 ### M7 — Meetings
 
@@ -307,7 +309,7 @@ Admin/manager:
 - [ ] Home: venture-branded header, previous/next venture switch, totals (invoiced, paid, outstanding), active projects, upcoming meetings, recent invoices **[Port]**
 - [x] Home: hello + the 5 most recently updated tasks (the rest of Home below is still to do)
 - [x] Projects (tasks part): the client's tasks grouped by project with progress and due date; task page read-only with checklist, files and the **task chat** (photos/PDFs). The server hides internal history, time logs, review notes and staff emails; staff see "The client can read this chat". Task notifications open the portal's task page.
-- [ ] Projects (rest): detail with milestone journey, deliverables & asset hub (drive links), crew summary, **project team chat** **[Native]**
+- [x] Projects (rest): detail with milestone journey, deliverables & asset hub (drive links), crew summary, **project team chat** **[Native]**
 - [ ] Meetings: list, request new (title, date, time, agenda, link), detail, cancel **[Port]**
 - [ ] Invoices: list, detail, PDF download/share **[Native]**
 - [ ] Profile, change password, push notifications **[Native]**
