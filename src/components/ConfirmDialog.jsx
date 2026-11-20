@@ -6,7 +6,8 @@ import { Text } from './Text';
 import { useTheme } from '@/constants/theme';
 
 // Centered confirm for destructive actions. Tapping the backdrop or Android back cancels (unless busy).
-export function ConfirmDialog({ visible, title, message, confirmLabel = 'Delete', loading, onConfirm, onCancel }) {
+// secondaryLabel/onSecondary add a second destructive choice (e.g. "Delete entire series"); buttons then stack.
+export function ConfirmDialog({ visible, title, message, confirmLabel = 'Delete', loading, onConfirm, onCancel, secondaryLabel, onSecondary }) {
   const theme = useTheme();
   const cancel = () => !loading && onCancel();
   return (
@@ -21,10 +22,18 @@ export function ConfirmDialog({ visible, title, message, confirmLabel = 'Delete'
             <Text accessibilityRole="header" className="font-body-semibold text-lg">{title}</Text>
             {!!message && <Text className="text-sm text-muted">{message}</Text>}
           </View>
-          <View className="flex-row gap-3">
-            <Button title="Cancel" variant="secondary" className="flex-1" disabled={loading} onPress={onCancel} />
-            <Button title={confirmLabel} variant="danger" className="flex-1" loading={loading} onPress={onConfirm} />
-          </View>
+          {secondaryLabel ? (
+            <View className="gap-2">
+              <Button title={confirmLabel} variant="danger" loading={loading} onPress={onConfirm} />
+              <Button title={secondaryLabel} variant="ghost" className="bg-danger/10" textClassName="text-danger" disabled={loading} onPress={onSecondary} />
+              <Button title="Cancel" variant="secondary" disabled={loading} onPress={onCancel} />
+            </View>
+          ) : (
+            <View className="flex-row gap-3">
+              <Button title="Cancel" variant="secondary" className="flex-1" disabled={loading} onPress={onCancel} />
+              <Button title={confirmLabel} variant="danger" className="flex-1" loading={loading} onPress={onConfirm} />
+            </View>
+          )}
         </View>
       </View>
     </Modal>

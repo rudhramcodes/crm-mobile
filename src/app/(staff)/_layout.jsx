@@ -27,6 +27,8 @@ export default function StaffLayout() {
       <Stack.Screen name="tasks/review-note" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
       <Stack.Screen name="leads/new" options={modal} />
       <Stack.Screen name="clients/new" options={modal} />
+      <Stack.Screen name="meetings/new" options={modal} />
+      <Stack.Screen name="meetings/convert" options={modal} />
       <Stack.Screen name="leads/lost" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
       <Stack.Screen name="leads/community" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
     </Stack>
