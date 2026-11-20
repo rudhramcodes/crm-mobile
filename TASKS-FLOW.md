@@ -226,3 +226,80 @@ T1 first because it is small and stops spam today. T2 next because review speed 
 4. Daily email time: **9 am**, and **on by default** (each person can turn it off)?
 5. Can helpers submit for review, or only the owner? **Anyone on the task**.
 6. Migrating project tasks (T6) touches the web app too — **do it in T6, after a DB backup**.
+
+---
+
+## 6. Who can do what
+
+One set of rules, enforced by the server (`CRM/server/src/modules/tasks/taskRules.js`) and mirrored in the app (`src/utils/tasks.js`). The app hides what you can't do; the server refuses it anyway.
+
+### 6.1 The roles on a task
+
+Your **role on a task** matters more than your job title:
+
+| Who | What they are |
+|---|---|
+| **Owner** | The person it's assigned to. |
+| **Helpers** | People helping the owner. They can do everything the owner can. |
+| **Creator** | Whoever made the task. Reviews it unless review was handed to someone else. |
+| **Reviewer** | Checks the work and marks it Done. The creator, unless handed over. |
+| **Task managers** | The creator, the reviewer, and anyone with the **Manager**, **Admin** or **Super admin** role. |
+| **Other staff** | Employees who aren't on the task. |
+| **Client** | The client user linked to the task's project. |
+
+### 6.2 What each can do
+
+| Action | Owner / helpers | Task managers | Other staff | Client |
+|---|---|---|---|---|
+| See the task | ✅ | ✅ | ✅ | ✅ own projects only, without internal history, time logs, review notes or emails |
+| Chat, photos, PDFs | ✅ | ✅ | ✅ | ✅ (staff see "The client can read this chat") |
+| Delete a chat message | own | own (admins: any) | own | own |
+| Follow (get updates) | already get them | already get them | ✅ | — |
+| Start, progress %, move back to To do | ✅ | ✅ | — | — |
+| Checklist: add and tick | ✅ | ✅ | — | — |
+| Checklist: remove an item | — | ✅ | — | — |
+| Description, tags, start date, estimate | ✅ | ✅ | — | — |
+| Log time (today or yesterday) | ✅ | ✅ | — | — |
+| Remove a time entry | own | anyone's | — | — |
+| Move the due date | ✅ with a reason; creator, reviewer and owner are told | ✅ with a reason | — | — |
+| Add a subtask | ✅ | ✅ | — | — |
+| Title, priority, assignee, helpers, project, repeat | — | ✅ | — | — |
+| Dependencies (link / unlink) | — | ✅ | — | — |
+| Hand review to someone else | — | ✅ | — | — |
+| Send for review | ✅ | ✅ | — | — |
+| **Approve / mark Done** | only if they're the reviewer | **reviewer only** | — | — |
+| Reopen a Done task | ✅ | ✅ | — | — |
+| Delete a task | — | **Admin / Super admin only** | — | — |
+
+Same rules apply to every way of changing a task: the task screen, swipes, the Board arrows, bulk select and notification buttons. Bulk changes skip the tasks you can't change and say how many were skipped.
+
+**Good to know**
+- A task can't be sent for review or approved while a task it depends on is still open.
+- Changing the **title, description or due date** of a Done task reopens it (Working). Tags, priority, estimate, start date and people don't.
+- Adding a subtask or checklist item to a task in Review or Done reopens it.
+- New tasks start in To do or Working, never straight in Review or Done.
+- Work can only be assigned to active staff, never to clients or deactivated accounts.
+
+### 6.3 Who gets notified
+
+Never the person who did the action.
+
+| When | Who hears | Buttons |
+|---|---|---|
+| Task assigned to you | the new owner | Start work · Open |
+| Added as a helper | each new helper | Start work · Open |
+| Reassigned away from you | the old owner ("now with X") | Open |
+| Started, moved back, reopened | owner, helpers, creator, reviewer, followers | Open |
+| Sent for review | the reviewer, with the 1-office-hour clock | Approve · Open |
+| 15 min before the review is due | the reviewer | Approve · Open |
+| Review is late | the reviewer and all admins | Approve · Open |
+| Changes asked | owner and helpers, with the note | Open |
+| Approved | owner, helpers, creator, followers | Open |
+| A task you were waiting on is done | owner of each task it unblocks | Open |
+| Due date moved | creator, reviewer and owner, with the reason | Open |
+| Due in the next 24 h (9 am daily, once per due date) | owner and helpers (not while in Review) | Open |
+| Chat message | people on the task and followers; on a client project the client hears staff and the team hears the client | Reply |
+| @mention or reply to you | that person | Reply |
+| Task deleted | everyone who was on it | — |
+
+Tapping any of these opens the task itself (clients: the portal's task page). A task you're already looking at doesn't buzz.

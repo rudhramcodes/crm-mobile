@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { Calendar } from 'react-native-calendars';
-import { AlertCircle, CalendarDays } from 'lucide-react-native';
+import { AlertCircle, CalendarDays, X } from 'lucide-react-native';
 import { Pressable } from './Pressable';
 import { Text } from './Text';
 import { useTheme } from '@/constants/theme';
@@ -11,8 +11,8 @@ import { cn } from '@/utils/cn';
 export const fromYmd = (s) => (s ? new Date(`${s.slice(0, 10)}T00:00:00`) : null);
 export const longDate = (s) => (s ? new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(fromYmd(s)) : '');
 
-// Field that opens a month calendar inline; value and onChange use "YYYY-MM-DD".
-export function DateField({ label, value, onChange, minDate, maxDate, error, disabled, placeholder = 'Pick a date' }) {
+// Field that opens a month calendar inline; value and onChange use "YYYY-MM-DD". Pass onClear to allow "not set".
+export function DateField({ label, value, onChange, onClear, minDate, maxDate, error, disabled, placeholder = 'Pick a date' }) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   return (
@@ -27,6 +27,11 @@ export function DateField({ label, value, onChange, minDate, maxDate, error, dis
       >
         <CalendarDays size={18} color={theme.muted} />
         <Text className={cn('flex-1 text-[15px]', !value && 'text-muted')}>{value ? longDate(value) : placeholder}</Text>
+        {!!value && !!onClear && !disabled && (
+          <Pressable onPress={() => { onClear(); setOpen(false); }} hitSlop={10} accessibilityLabel={`Clear ${label || 'date'}`} className="-mr-2 h-11 w-11 items-center justify-center">
+            <X size={18} color={theme.muted} />
+          </Pressable>
+        )}
       </Pressable>
       {open && (
         <View className="overflow-hidden rounded-2xl border border-line">

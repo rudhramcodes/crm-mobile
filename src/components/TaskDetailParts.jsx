@@ -184,6 +184,7 @@ export function TimeTracker({ task }) {
   const [now, setNow] = useState(() => Date.now());
   const [hours, setHours] = useState('');
   const [note, setNote] = useState('');
+  const [yesterday, setYesterday] = useState(false); // manual entries: forgot to log yesterday's work
 
   useEffect(() => { getStopwatch().then(setWatch); }, []);
   const mine = watch?.taskId === task._id;
@@ -213,7 +214,8 @@ export function TimeTracker({ task }) {
   const h = Number(hours);
   const badHours = !!hours.trim() && !(h >= 0.25 && h <= 24);
   const addManual = async () => {
-    if (await runAction(log({ id: task._id, date: new Date().toISOString(), hours: h, description: note.trim() }), `Logged ${formatHours(h)}`, "Couldn't log time")) { setHours(''); setNote(''); }
+    const date = new Date(Date.now() - (yesterday ? 864e5 : 0)).toISOString();
+    if (await runAction(log({ id: task._id, date, hours: h, description: note.trim() }), `Logged ${formatHours(h)}${yesterday ? ' for yesterday' : ''}`, "Couldn't log time")) { setHours(''); setNote(''); setYesterday(false); }
   };
   const entries = [...(task.timeEntries || [])].reverse();
 
@@ -233,6 +235,10 @@ export function TimeTracker({ task }) {
       <View className="flex-row gap-2">
         <Input className="w-28" value={hours} onChangeText={setHours} keyboardType="decimal-pad" placeholder="Hours" accessibilityLabel="Hours" error={badHours ? '0.25 – 24' : undefined} />
         <Input className="flex-1" value={note} onChangeText={setNote} placeholder="What did you work on?" accessibilityLabel="Time note" maxLength={500} />
+      </View>
+      <View className="flex-row gap-2">
+        <Chip label="Today" active={!yesterday} onPress={() => setYesterday(false)} />
+        <Chip label="Yesterday" active={yesterday} onPress={() => setYesterday(true)} />
       </View>
       <Button title="Log time" variant="secondary" size="sm" disabled={!hours.trim() || badHours} loading={isLoading && !mine} onPress={addManual} />
       </>)}

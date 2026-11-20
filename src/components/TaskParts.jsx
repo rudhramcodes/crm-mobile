@@ -14,7 +14,7 @@ import { Text } from './Text';
 import { useUpdateTaskMutation } from '@/services/taskApi';
 import { useTheme } from '@/constants/theme';
 import { runAction, ymd } from '@/utils/attendance';
-import { canReview, canWorkTask, dueLabel, finishStatus, isOverdue, reviewClock, reviewerOf, taskPriority, taskStatus } from '@/utils/tasks';
+import { canReview, canWorkTask, dueLabel, finishStatus, isOverdue, reviewClock, reviewerOf, taskPriority, taskProgress, taskStatus } from '@/utils/tasks';
 import { showToast } from './Toast';
 import { cn } from '@/utils/cn';
 import { getPref, setPref } from '@/utils/prefs';
@@ -220,5 +220,30 @@ export function SwipeIntro() {
       </View>
       <Button title="Got it" size="sm" onPress={dismiss} />
     </View>
+  );
+}
+
+// A client's task row: title, status, progress and due date; opens the portal's task page.
+export function ClientTaskRow({ task: t, first }) {
+  const pct = taskProgress(t);
+  return (
+    <Pressable
+      onPress={() => router.push(`/portal/tasks/${t._id}`)}
+      accessibilityRole="button"
+      accessibilityLabel={`${t.title}, ${t.status === 'done' ? 'done' : `${pct}% done, due ${dueLabel(t.dueDate)}`}`}
+      className={first ? 'gap-2 p-4' : 'gap-2 border-t border-line p-4'}
+    >
+      <View className="flex-row items-start gap-3">
+        <Text numberOfLines={2} className="flex-1 font-body-semibold">{t.title}</Text>
+        <TaskStatusBadge status={t.status} />
+      </View>
+      {t.status !== 'done' && (
+        <View className="flex-row items-center gap-3">
+          <View className="h-1.5 flex-1 overflow-hidden rounded-full bg-sand"><View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} /></View>
+          <Text className="text-xs text-muted tabular-nums">{t.dueDate ? `Due ${dueLabel(t.dueDate)}` : `${pct}%`}</Text>
+        </View>
+      )}
+      {!!t.comments?.length && <Text className="text-xs text-muted">{t.comments.length} {t.comments.length === 1 ? 'message' : 'messages'}</Text>}
+    </Pressable>
   );
 }

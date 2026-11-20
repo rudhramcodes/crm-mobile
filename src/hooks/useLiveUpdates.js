@@ -17,7 +17,8 @@ export const openNotification = (n, { dispatch, client }) => {
   const id = n._id ?? n.id;
   if (id && !n.read) dispatch(notificationApi.endpoints.markNotificationRead.initiate(id));
   const path = notificationRoute(n);
-  router.push(client && !path.startsWith('/portal') ? '/portal' : path);
+  // Clients have their own screens: task alerts open the portal's task page, anything else the portal home.
+  router.push(!client || path.startsWith('/portal') ? path : path.startsWith('/tasks/') ? `/portal${path}` : '/portal');
 };
 
 // Buttons under a notification (see CATEGORIES in services/push.js). If the quick action fails, open the item instead.

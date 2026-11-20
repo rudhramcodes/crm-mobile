@@ -33,6 +33,12 @@ export const reviewClock = (task, now = Date.now()) => {
   return { late: false, label: `Review due ${due.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}, ${due.toLocaleDateString('en-IN', { weekday: 'short' })}` };
 };
 // Late only while it's still with the doer: in review it waits on the reviewer (who has their own clock).
+// How far along, 0-100: the checklist when there is one, else the doer's own estimate.
+export const taskProgress = (t) => {
+  if (t.status === 'done') return 100;
+  const total = t.checklists?.length || 0;
+  return total ? Math.round((t.checklists.filter((c) => c.checked).length / total) * 100) : t.status === 'todo' ? 0 : t.progress || 0;
+};
 export const isOverdue = (t) => !!t.dueDate && !['done', 'review'].includes(t.status) && ymd(t.dueDate) < ymd();
 export const dueLabel = (d) => {
   if (!d) return 'No due date';

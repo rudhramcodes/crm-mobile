@@ -12,13 +12,16 @@ import { shareCsv } from '@/utils/tasks';
 
 const VIEWS = [['day', 'My Day'], ['list', 'List'], ['board', 'Board'], ['calendar', 'Calendar']];
 const EMPTY = { status: '', priority: '', project: '', assignedTo: '', assigneeName: '', watching: false };
+// Start on what still needs doing; employees start on their own work, managers and admins on everyone's.
+const startFilters = (me) => ({ ...EMPTY, status: 'open', ...(me.role === 'employee' && { assignedTo: me._id, assigneeName: 'Me' }) });
 
 // Tasks hub: four views over one filtered list, plus search, filters, bulk select, insights and CSV export.
 export default function TasksTab() {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
   const [view, setView] = useState('day');
-  const [f, setF] = useState(EMPTY);
+  const [f, setF] = useState(() => startFilters(me));
+  const start = startFilters(me);
   const [showFilters, setShowFilters] = useState(false);
   const [typed, setTyped] = useState('');
   const [search, setSearch] = useState('');
@@ -32,7 +35,8 @@ export default function TasksTab() {
   const params = day
     ? { page: 1, limit: 100, assignedTo: me._id, open: 'true', sort: 'dueDate', search: search || undefined }
     : {
-      page: 1, limit: 100, search: search || undefined, status: f.status || undefined, priority: f.priority || undefined,
+      page: 1, limit: 100, search: search || undefined, priority: f.priority || undefined,
+      status: f.status === 'open' ? undefined : f.status || undefined, open: f.status === 'open' ? 'true' : undefined,
       project: f.project || undefined, assignedTo: f.assignedTo || undefined,
     };
   const watchingNow = !day && f.watching;
@@ -44,7 +48,7 @@ export default function TasksTab() {
   const refreshControl = usePullRefresh(() => Promise.all([q.refetch(), day && doneToday.refetch()]));
   const tasks = [...(q.data?.data || []), ...(day ? doneToday.data?.data || [] : [])];
   const total = q.data?.pagination?.total ?? tasks.length;
-  const active = day ? 0 : ['status', 'priority', 'project', 'assignedTo', 'watching'].filter((k) => f[k]).length;
+  const active = day ? 0 : ['status', 'priority', 'project', 'assignedTo', 'watching'].filter((k) => f[k] !== start[k]).length;
   const round = 'h-11 w-11 items-center justify-center rounded-full bg-surface-2';
 
   // A new filter or search clears any selection, so hidden tasks are never bulk-changed.
@@ -111,10 +115,10 @@ export default function TasksTab() {
           {view === 'list' && (tasks.length ? <ListView tasks={tasks} selecting={selecting} selected={selected} onToggle={toggle} /> : (
             <EmptyState
               icon={ListTodo}
-              title={search || active ? 'No tasks match' : 'No tasks yet'}
-              message={search || active ? 'Try another search or clear the filters.' : 'Create the first one.'}
+              title={search || active ? 'No tasks match' : 'Nothing open'}
+              message={search || active ? 'Try another search or clear the filters.' : 'All caught up. Filters show finished tasks too.'}
               actionTitle={search || active ? 'Clear filters' : 'New task'}
-              onAction={() => (search || active ? (setF(EMPTY), setTyped(''), setSearch('')) : router.push('/tasks/new'))}
+              onAction={() => (search || active ? (setF(start), setTyped(''), setSearch('')) : router.push('/tasks/new'))}
             />
           ))}
         </>

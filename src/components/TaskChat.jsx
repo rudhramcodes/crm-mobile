@@ -13,6 +13,7 @@ import { Camera, CornerUpLeft, FileText, ImagePlus, Paperclip, Trash2, X } from 
 import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { Card } from './Card';
+import { ConfirmDialog } from './ConfirmDialog';
 import { Input } from './Input';
 import { Pressable } from './Pressable';
 import { Text } from './Text';
@@ -286,14 +287,17 @@ export function TaskChat({ task }) {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
   const [add, { isLoading }] = useAddTaskCommentMutation();
-  const [remove] = useDeleteTaskCommentMutation();
+  const [remove, r] = useDeleteTaskCommentMutation();
+  const [deleting, setDeleting] = useState(null); // the message waiting for "Delete?" confirmation
+  const [shown, setShown] = useState(10); // newest messages first on screen; older ones on request
   const [text, setText] = useState('');
   const att = useAttachments();
   const { files, setFiles } = att;
   const [replyTo, setReplyTo] = useState(null);
   const [viewing, setViewing] = useState(null);
   const mention = text.match(/@(\w{1,20})$/)?.[1];
-  const users = useGetUsersQuery({ search: mention, isActive: true, limit: 5 }, { skip: !mention });
+  const client = me.role === 'client'; // clients chat with the team but can't look up staff to @mention
+  const users = useGetUsersQuery({ search: mention, isActive: true, limit: 5 }, { skip: !mention || client });
   const people = (mention ? users.data?.data?.users || [] : []).filter((u) => u.role !== 'client');
   const pick = (u) => setText((t) => t.replace(/@\w{1,20}$/, `@[${u.name}](${u._id}) `));
   const comments = task.comments || [];
@@ -310,8 +314,12 @@ export function TaskChat({ task }) {
         <Text className="flex-1 font-display text-title">Chat</Text>
         <Text className="text-sm text-muted tabular-nums">{comments.length}</Text>
       </View>
+      {!client && !!task.project?.client && <Text className="-mt-2 text-xs text-muted">The client can read this chat.</Text>}
 
-      {comments.map((c) => {
+      {comments.length > shown && (
+        <Button title={`Show ${Math.min(20, comments.length - shown)} earlier`} variant="ghost" size="sm" onPress={() => setShown((n) => n + 20)} />
+      )}
+      {comments.slice(-shown).map((c) => {
         const parent = c.replyTo && byId[c.replyTo];
         const mine = idOf(c.createdBy) === me._id;
         return (
@@ -332,7 +340,7 @@ export function TaskChat({ task }) {
                   <Text className="text-xs font-body-semibold text-muted">Reply</Text>
                 </Pressable>
                 {(mine || isAdmin(me)) && (
-                  <Pressable onPress={() => runAction(remove({ id: task._id, commentId: c._id }), 'Message deleted', "Couldn't delete")} accessibilityLabel="Delete message" className="h-9 flex-row items-center gap-1 px-2">
+                  <Pressable onPress={() => setDeleting(c)} accessibilityLabel="Delete message" className="h-9 flex-row items-center gap-1 px-2">
                     <Trash2 size={14} color={theme.muted} />
                     <Text className="text-xs font-body-semibold text-muted">Delete</Text>
                   </Pressable>
@@ -342,7 +350,15 @@ export function TaskChat({ task }) {
           </View>
         );
       })}
-      {!comments.length && <Text className="text-sm text-muted">No messages yet. Share an update, a photo or a PDF.</Text>}
+      {!comments.length && <Text className="text-sm text-muted">{client ? 'No messages yet. Ask the team anything here.' : 'No messages yet. Share an update, a photo or a PDF.'}</Text>}
+      <ConfirmDialog
+        visible={!!deleting}
+        title="Delete this message?"
+        message={deleting?.files?.length ? 'Its photos and files are deleted too. This can’t be undone.' : 'This can’t be undone.'}
+        loading={r.isLoading}
+        onCancel={() => setDeleting(null)}
+        onConfirm={async () => { await runAction(remove({ id: task._id, commentId: deleting?._id }), 'Message deleted', "Couldn't delete"); setDeleting(null); }}
+      />
 
       <View className="gap-2 border-t border-line pt-4">
         {replyTo && (
@@ -352,7 +368,7 @@ export function TaskChat({ task }) {
           </View>
         )}
         <PendingFiles files={files} remove={att.remove} />
-        <Input value={text} onChangeText={setText} placeholder="Write a message. Type @ to mention." accessibilityLabel="Message" multiline maxLength={5000} style={{ minHeight: 52, height: undefined, paddingTop: 14, paddingBottom: 14, textAlignVertical: 'top' }} />
+        <Input value={text} onChangeText={setText} placeholder={client ? 'Write a message' : 'Write a message. Type @ to mention.'} accessibilityLabel="Message" multiline maxLength={5000} style={{ minHeight: 52, height: undefined, paddingTop: 14, paddingBottom: 14, textAlignVertical: 'top' }} />
         {people.map((u) => (
           <Pressable key={u._id} onPress={() => pick(u)} accessibilityLabel={`Mention ${u.name}`} className="flex-row items-center gap-3 rounded-2xl bg-surface-2 px-3 py-2">
             <Avatar name={u.name} uri={u.avatar} size={28} />

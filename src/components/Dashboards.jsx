@@ -44,7 +44,11 @@ export function usePullRefresh(refetch) {
 }
 
 // Loading skeleton or an error with retry; null once data is in.
-export function DashboardState({ isLoading, isError, refetch }) {
+// `gone` (e.g. a 404 from an old notification): say it was deleted and offer a way back instead of a useless retry.
+export function DashboardState({ isLoading, isError, refetch, gone, onBack }) {
+  if (gone) {
+    return <EmptyState icon={CloudOff} title={gone} message="It may have been deleted, or you no longer have access." actionTitle="Go back" onAction={onBack} />;
+  }
   if (isLoading) {
     return (
       <View className="gap-3">
@@ -54,7 +58,7 @@ export function DashboardState({ isLoading, isError, refetch }) {
     );
   }
   if (isError) {
-    return <EmptyState icon={CloudOff} title="Couldn't load the dashboard" message="Check your connection and try again." actionTitle="Try again" onAction={refetch} />;
+    return <EmptyState icon={CloudOff} title="Couldn't load this" message="Check your connection and try again." actionTitle="Try again" onAction={refetch} />;
   }
   return null;
 }

@@ -145,6 +145,7 @@ function TaskBody({ task: t }) {
           multiline
           maxLength={5000}
           style={{ minHeight: 96, height: undefined, paddingTop: 14, paddingBottom: 14, textAlignVertical: 'top' }}
+          hint={t.status === 'done' ? 'Changing the description reopens this task.' : undefined}
         />
       ) : !!t.description && (
         <View className="gap-1.5">
@@ -165,7 +166,7 @@ function TaskBody({ task: t }) {
       {more && (
         <>
           <Card className="gap-4 p-4">
-            <DateField label="Start date" disabled={!work} value={t.startDate ? ymd(t.startDate) : ''} onChange={(v) => save({ startDate: v }, 'Start date saved')} placeholder="Not set" />
+            <DateField label="Start date" disabled={!work} value={t.startDate ? ymd(t.startDate) : ''} onChange={(v) => save({ startDate: v }, 'Start date saved')} onClear={() => save({ startDate: null }, 'Start date cleared')} placeholder="Not set" />
             <Input label="Estimated hours" editable={work} value={hours} onChangeText={setHours} onFocus={hoursFocus} keyboardType="decimal-pad" placeholder="0" onBlur={() => { const n = Number(hours || 0); if (hoursDone() && n >= 0 && n !== (t.estimatedHours || 0)) save({ estimatedHours: n }, 'Estimate saved'); }} />
             <View className="gap-2">
               <Label>TAGS</Label>
@@ -197,17 +198,18 @@ function TaskBody({ task: t }) {
 
 export default function TaskDetail() {
   const { id } = useLocalSearchParams();
-  const { data, isLoading, isError, refetch } = useGetTaskByIdQuery(id);
+  const { data, isLoading, isError, error, refetch } = useGetTaskByIdQuery(id);
   useEntityRoom('task', id, 'Task');
   useFocusEffect(useCallback(() => { setViewing(id); return () => setViewing(null); }, [id]));
   const refreshControl = usePullRefresh(refetch);
   const task = data?.data?.task;
+  const gone = [403, 404].includes(error?.status) && 'This task is gone';
   return (
     <Screen scroll className="gap-5 pt-2" refreshControl={refreshControl}>
       {task ? <TaskBody key={task._id} task={task} /> : (
         <>
           <PageHeader caption="TASK" title="" fallback="/tasks" />
-          <DashboardState isLoading={isLoading} isError={isError || (!isLoading && !task)} refetch={refetch} />
+          <DashboardState isLoading={isLoading} isError={isError || (!isLoading && !task)} refetch={refetch} gone={gone} onBack={() => backTo('/tasks')} />
         </>
       )}
     </Screen>

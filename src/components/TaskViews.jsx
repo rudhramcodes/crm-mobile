@@ -298,7 +298,7 @@ export function FilterPanel({ f, set }) {
   return (
     <Card className="gap-3 p-4">
       <Text className="text-caption text-muted">STATUS</Text>
-      {row([{ value: '', label: 'All' }, ...TASK_STATUS].map((s) => <Chip key={s.value || 'all'} label={s.label} active={f.status === s.value} onPress={() => set({ status: s.value })} />))}
+      {row([{ value: '', label: 'All' }, { value: 'open', label: 'Not done' }, ...TASK_STATUS].map((s) => <Chip key={s.value || 'all'} label={s.label} active={f.status === s.value} onPress={() => set({ status: s.value })} />))}
       <Text className="text-caption text-muted">PRIORITY</Text>
       {row([{ value: '', label: 'All' }, ...TASK_PRIORITY].map((p) => <Chip key={p.value || 'all'} label={p.label} active={f.priority === p.value} onPress={() => set({ priority: p.value })} />))}
       {!!projects.length && (

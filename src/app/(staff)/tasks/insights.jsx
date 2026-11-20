@@ -25,12 +25,15 @@ export default function TaskInsights() {
   const done = count((t) => t.status === 'done');
   const est = tasks.reduce((s, t) => s + (Number(t.estimatedHours) || 0), 0);
   const actual = tasks.reduce((s, t) => s + (Number(t.actualHours) || Number(t.totalLoggedHours) || 0), 0);
+  // Owners and helpers both carry the task; logged hours count once, for the owner.
   const people = Object.values(tasks.reduce((m, t) => {
-    const k = t.assignedTo?._id || 'none';
-    m[k] ||= { key: k, label: t.assignedTo?.name || 'Unassigned', total: 0, open: 0, hours: 0 };
-    m[k].total += 1;
-    if (t.status !== 'done') m[k].open += 1;
-    m[k].hours += Number(t.actualHours) || Number(t.totalLoggedHours) || 0;
+    [t.assignedTo || null, ...(t.helpers || [])].forEach((p, i) => {
+      const k = p?._id || 'none';
+      m[k] ||= { key: k, label: p?.name || 'Unassigned', total: 0, open: 0, hours: 0 };
+      m[k].total += 1;
+      if (t.status !== 'done') m[k].open += 1;
+      if (!i) m[k].hours += Number(t.actualHours) || Number(t.totalLoggedHours) || 0;
+    });
     return m;
   }, {})).sort((a, b) => b.open - a.open);
 
