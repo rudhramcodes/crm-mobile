@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useDispatch, useStore } from 'react-redux';
 import { api } from '@/services/api';
@@ -49,7 +49,8 @@ export function useLiveUpdates({ client = false } = {}) {
   useEffect(() => {
     const socket = connectSocket(store);
     socket.on('notification:new', (n) => {
-      dispatch(api.util.invalidateTags(['Notification']));
+      // A task alert means a task changed: refresh task lists too, not just the inbox.
+      dispatch(api.util.invalidateTags(n.referenceModel === 'Task' ? ['Notification', 'Task'] : ['Notification']));
       // Phones show the system banner: the server's push, or one posted here when this phone has no push.
       // The web has no system notifications, so it keeps the in-app toast and sound.
       if (Platform.OS !== 'web') {
@@ -63,7 +64,9 @@ export function useLiveUpdates({ client = false } = {}) {
     socket.on('notification:updated', () => dispatch(api.util.invalidateTags(['Notification'])));
     socket.on('notification:unread', ({ count }) => dispatch(notificationApi.util.upsertQueryData('getUnreadCount', undefined, count)));
     registerPush(dispatch).catch((e) => console.warn('[push]', e.message));
-    return disconnectSocket;
+    // Back from the background: anything may have changed while the socket slept.
+    const sub = AppState.addEventListener('change', (state) => state === 'active' && dispatch(api.util.invalidateTags(['Task', 'Notification'])));
+    return () => { sub.remove(); disconnectSocket(); };
   }, [store, dispatch, client]);
 
   usePushTaps(useCallback((data, action, text) => runQuick(data, action, text, { dispatch, client }), [dispatch, client]));

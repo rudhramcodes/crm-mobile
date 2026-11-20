@@ -12,7 +12,7 @@ export const fromYmd = (s) => (s ? new Date(`${s.slice(0, 10)}T00:00:00`) : null
 export const longDate = (s) => (s ? new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(fromYmd(s)) : '');
 
 // Field that opens a month calendar inline; value and onChange use "YYYY-MM-DD".
-export function DateField({ label, value, onChange, minDate, maxDate, error, placeholder = 'Pick a date' }) {
+export function DateField({ label, value, onChange, minDate, maxDate, error, disabled, placeholder = 'Pick a date' }) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   return (
@@ -20,6 +20,7 @@ export function DateField({ label, value, onChange, minDate, maxDate, error, pla
       {!!label && <Text className="font-body-medium text-sm">{label}</Text>}
       <Pressable
         onPress={() => setOpen((o) => !o)}
+        disabled={disabled}
         accessibilityLabel={`${label || 'Date'}: ${value ? longDate(value) : 'not set'}`}
         accessibilityState={{ expanded: open }}
         className={cn('h-[52px] flex-row items-center gap-3 rounded-2xl border-[1.5px] bg-surface-2 px-4', error ? 'border-danger' : open ? 'border-accent' : 'border-transparent')}

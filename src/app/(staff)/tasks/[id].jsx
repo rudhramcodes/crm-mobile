@@ -1,8 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSelector } from 'react-redux';
-import { CalendarClock, ChevronDown, ChevronLeft, ChevronUp, Eye, EyeOff, Repeat, X } from 'lucide-react-native';
+import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronUp, Eye, Repeat, X } from 'lucide-react-native';
 import {
   ActivityLog, Avatar, Card, Checklist, Chip, ConfirmDelete, FilesStrip, DashboardState, DateField, Dependencies, Input, PageHeader, Pressable, Screen,
   Subtasks, TaskChat, TaskFlow, Text, TimeTracker, UserPicker, backTo, openReschedule, showToast, usePullRefresh,
@@ -13,10 +13,21 @@ import { useEntityRoom } from '@/hooks/useEntityRoom';
 import { setViewing } from '@/services/push';
 import { useTheme } from '@/constants/theme';
 import { isAdmin, runAction, ymd } from '@/utils/attendance';
-import { dueLabel, idOf, isOverdue } from '@/utils/tasks';
+import { canManageTask, dueLabel, idOf, isOnTask, isOverdue, reviewerOf, taskPriority } from '@/utils/tasks';
 import { cn } from '@/utils/cn';
 
 const Label = ({ children }) => <Text className="text-caption text-muted">{children}</Text>;
+
+// An edit field that follows the server's value (live updates from colleagues) except while you're in it.
+// changed() is true only if you edited it, so leaving a field never writes back an old copy.
+function useSynced(value) {
+  const [v, setV] = useState(value);
+  const at = useRef(null); // the value when you started editing; null when not editing
+  useEffect(() => { if (at.current === null) setV(value); }, [value]);
+  const onFocus = () => { at.current = value; };
+  const done = () => { const edited = at.current !== null && v !== at.current; at.current = null; return edited; };
+  return [v, setV, onFocus, done];
+}
 
 // One task on one scroll, in the order people use it: what and where it stands, who and when, the work itself
 // (description, checklist, subtasks, files, chat), then rarely-needed fields behind "More details".
@@ -28,20 +39,25 @@ function TaskBody({ task: t }) {
   const [watch] = useWatchTaskMutation();
   const [unwatch] = useUnwatchTaskMutation();
   const [del, d] = useDeleteTaskMutation();
-  const [title, setTitle] = useState(t.title);
-  const [description, setDescription] = useState(t.description || '');
-  const [hours, setHours] = useState(t.estimatedHours ? String(t.estimatedHours) : '');
+  const [title, setTitle, titleFocus, titleDone] = useSynced(t.title);
+  const [description, setDescription, descFocus, descDone] = useSynced(t.description || '');
+  const [hours, setHours, hoursFocus, hoursDone] = useSynced(t.estimatedHours ? String(t.estimatedHours) : '');
   const [tag, setTag] = useState('');
   const [picking, setPicking] = useState(false);
   const [more, setMore] = useState(false);
   const watching = (t.watchers || []).some((w) => idOf(w) === me._id);
+  const manage = canManageTask(t, me); // plan it: title, priority, people
+  const work = manage || isOnTask(t, me); // move it along: status, dates, details
+  // Follow is for people outside the task (a manager keeping an eye on it, say): the owner, helpers,
+  // creator and reviewer already get all its updates.
+  const outsider = !isOnTask(t, me) && ![idOf(t.createdBy), idOf(reviewerOf(t))].includes(me._id);
   const save = (body, done) => runAction(update({ id: t._id, ...body }), done, "Couldn't save");
 
-  const saveTitle = () => {
+  const saveTitle = async () => {
     const v = title.trim();
-    if (v === t.title) return;
+    if (!titleDone() || v === t.title) return;
     if (v.length < 2) { setTitle(t.title); return showToast({ title: 'Title needs 2 or more characters' }); }
-    save({ title: v }, 'Title saved');
+    if (!(await save({ title: v }, 'Title saved'))) setTitle(t.title); // refused: show the real title again
   };
   const addTag = () => {
     const v = tag.trim().replace(/^#/, '');
@@ -55,10 +71,18 @@ function TaskBody({ task: t }) {
         <Pressable onPress={() => backTo('/tasks')} accessibilityLabel="Back" className="-ml-2 h-11 w-11 items-center justify-center">
           <ChevronLeft size={26} color={theme.ink} />
         </Pressable>
-        <Pressable onPress={() => runAction(watching ? unwatch(t._id) : watch(t._id), watching ? 'Stopped watching' : 'Watching: you\'ll get its updates')} accessibilityLabel={watching ? 'Stop watching' : 'Watch'} className="h-11 flex-row items-center gap-1.5 rounded-full bg-surface-2 px-4">
-          {watching ? <EyeOff size={16} color={theme.ink} /> : <Eye size={16} color={theme.ink} />}
-          <Text className="font-body-semibold text-sm">{watching ? 'Watching' : 'Watch'}</Text>
-        </Pressable>
+        {outsider && (
+          <Pressable
+            onPress={() => runAction(watching ? unwatch(t._id) : watch(t._id), watching ? 'Unfollowed' : "Following: you'll get its updates")}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: watching }}
+            accessibilityLabel="Follow this task"
+            className={cn('h-11 flex-row items-center gap-1.5 rounded-full px-4', watching ? 'bg-ink' : 'bg-surface-2')}
+          >
+            {watching ? <Check size={16} color={theme.bg} /> : <Eye size={16} color={theme.ink} />}
+            <Text className={cn('font-body-semibold text-sm', watching && 'text-bg')}>{watching ? 'Following' : 'Follow'}</Text>
+          </Pressable>
+        )}
       </View>
       <View className="-mt-3 gap-1">
         {!!t.parent && (
@@ -66,49 +90,68 @@ function TaskBody({ task: t }) {
             <Text className="text-sm text-accent-ink">Subtask of {t.parent.title || 'parent task'}</Text>
           </Pressable>
         )}
-        <Input value={title} onChangeText={setTitle} onBlur={saveTitle} onSubmitEditing={saveTitle} maxLength={200} accessibilityLabel="Title" style={{ fontFamily: 'Goldenbook-Regular', fontSize: 24, height: undefined, minHeight: 52, paddingVertical: 10 }} multiline submitBehavior="blurAndSubmit" />
+        <Input editable={manage} value={title} onChangeText={setTitle} onFocus={titleFocus} onBlur={saveTitle} onSubmitEditing={saveTitle} maxLength={200} accessibilityLabel="Title" style={{ fontFamily: 'Goldenbook-Regular', fontSize: 24, height: undefined, minHeight: 52, paddingVertical: 10 }} multiline submitBehavior="blurAndSubmit" />
         {!!t.project && <Text className="text-sm text-muted">{t.project.title}</Text>}
       </View>
 
-      <TaskFlow task={t} />
+      {work ? <TaskFlow task={t} /> : (
+        <Text className="text-sm text-muted">Only the people on this task can change it. You can follow it and chat on it.</Text>
+      )}
 
       <Card className="gap-4 p-4">
         <View className="gap-1.5">
           <Label>ASSIGNEE</Label>
-          {picking ? <UserPicker label="Reassign to" onPick={(u) => { setPicking(false); if (u._id !== idOf(t.assignedTo)) save({ assignedTo: u._id }, `Assigned to ${u.name}`); }} /> : (
-            <Pressable onPress={() => setPicking(true)} accessibilityLabel={`Assignee ${t.assignedTo?.name || 'none'}. Change`} className="flex-row items-center gap-3">
+          {picking ? <UserPicker label="Reassign to" onPick={(u) => { setPicking(false); if (u._id !== idOf(t.assignedTo)) save({ assignedTo: u._id }, `Assigned to ${u.name}`); }} onCancel={() => setPicking(false)} /> : (
+            <Pressable onPress={() => setPicking(true)} disabled={!manage} accessibilityLabel={`Assignee ${t.assignedTo?.name || 'none'}${manage ? '. Change' : ''}`} className="flex-row items-center gap-3">
               <Avatar name={t.assignedTo?.name || '?'} uri={t.assignedTo?.avatar} size={32} />
               <Text className="flex-1 font-body-medium">{t.assignedTo?._id === me._id ? 'You' : t.assignedTo?.name || 'Unassigned'}</Text>
-              <Text className="font-body-semibold text-accent-ink">Change</Text>
+              {manage && <Text className="font-body-semibold text-accent-ink">Change</Text>}
             </Pressable>
+          )}
+          {!!t.helpers?.length && (
+            <View className="flex-row items-center gap-2 pt-1" accessible accessibilityLabel={`Helpers: ${t.helpers.map((h) => h.name).join(', ')}`}>
+              <View className="flex-row">{t.helpers.slice(0, 4).map((h, i) => <View key={idOf(h)} style={{ marginLeft: i ? -8 : 0 }}><Avatar name={h.name} uri={h.avatar} size={24} /></View>)}</View>
+              <Text numberOfLines={1} className="flex-1 text-sm text-muted">Helping: {t.helpers.map((h) => (idOf(h) === me._id ? 'you' : h.name?.split(' ')[0])).join(', ')}</Text>
+            </View>
           )}
         </View>
         <View className="gap-1.5">
           <Label>DUE</Label>
-          <Pressable onPress={() => openReschedule(t)} accessibilityLabel={`Due ${dueLabel(t.dueDate)}. Reschedule`} className="flex-row items-center gap-3">
+          <Pressable onPress={() => openReschedule(t)} disabled={!work} accessibilityLabel={`Due ${dueLabel(t.dueDate)}${work ? '. Reschedule' : ''}`} className="flex-row items-center gap-3">
             <CalendarClock size={20} color={isOverdue(t) ? theme.danger : theme.muted} />
             <Text className={cn('flex-1 font-body-medium', isOverdue(t) && 'text-danger')}>{t.dueDate ? new Date(t.dueDate).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }) : 'No due date'}{isOverdue(t) ? ', overdue' : ''}</Text>
-            <Text className="font-body-semibold text-accent-ink">Change</Text>
+            {work && <Text className="font-body-semibold text-accent-ink">Change</Text>}
           </Pressable>
+          {work && !manage && <Text className="text-xs text-muted">Moving the date needs a reason. {t.createdBy?.name || 'The creator'} gets told.</Text>}
         </View>
         <View className="gap-1.5">
           <Label>PRIORITY</Label>
-          <View className="flex-row flex-wrap gap-2">
-            {TASK_PRIORITY.map((p) => <Chip key={p.value} label={p.label} active={t.priority === p.value} onPress={() => p.value !== t.priority && save({ priority: p.value }, `Priority ${p.label}`)} />)}
-          </View>
+          {manage ? (
+            <View className="flex-row flex-wrap gap-2">
+              {TASK_PRIORITY.map((p) => <Chip key={p.value} label={p.label} active={t.priority === p.value} onPress={() => p.value !== t.priority && save({ priority: p.value }, `Priority ${p.label}`)} />)}
+            </View>
+          ) : <Text className="font-body-medium">{taskPriority(t.priority).label}</Text>}
         </View>
       </Card>
 
-      <Input
-        label="Description"
-        value={description}
-        onChangeText={setDescription}
-        onBlur={() => description.trim() !== (t.description || '') && save({ description: description.trim() }, 'Description saved')}
-        placeholder="Add details, links, the brief"
-        multiline
-        maxLength={5000}
-        style={{ minHeight: 96, height: undefined, paddingTop: 14, paddingBottom: 14, textAlignVertical: 'top' }}
-      />
+      {work ? (
+        <Input
+          label="Description"
+          value={description}
+          onChangeText={setDescription}
+          onFocus={descFocus}
+          onBlur={() => descDone() && description.trim() !== (t.description || '') && save({ description: description.trim() }, 'Description saved')}
+          placeholder="Add details, links, the brief"
+          multiline
+          maxLength={5000}
+          style={{ minHeight: 96, height: undefined, paddingTop: 14, paddingBottom: 14, textAlignVertical: 'top' }}
+        />
+      ) : !!t.description && (
+        <View className="gap-1.5">
+          <Label>DESCRIPTION</Label>
+          <Text selectable>{t.description}</Text>
+        </View>
+      )}
       <Checklist task={t} />
       <Subtasks task={t} />
       <FilesStrip task={t} />
@@ -122,21 +165,21 @@ function TaskBody({ task: t }) {
       {more && (
         <>
           <Card className="gap-4 p-4">
-            <DateField label="Start date" value={t.startDate ? ymd(t.startDate) : ''} onChange={(v) => save({ startDate: v }, 'Start date saved')} placeholder="Not set" />
-            <Input label="Estimated hours" value={hours} onChangeText={setHours} keyboardType="decimal-pad" placeholder="0" onBlur={() => { const n = Number(hours || 0); if (n >= 0 && n !== (t.estimatedHours || 0)) save({ estimatedHours: n }, 'Estimate saved'); }} />
+            <DateField label="Start date" disabled={!work} value={t.startDate ? ymd(t.startDate) : ''} onChange={(v) => save({ startDate: v }, 'Start date saved')} placeholder="Not set" />
+            <Input label="Estimated hours" editable={work} value={hours} onChangeText={setHours} onFocus={hoursFocus} keyboardType="decimal-pad" placeholder="0" onBlur={() => { const n = Number(hours || 0); if (hoursDone() && n >= 0 && n !== (t.estimatedHours || 0)) save({ estimatedHours: n }, 'Estimate saved'); }} />
             <View className="gap-2">
               <Label>TAGS</Label>
               {!!t.tags?.length && (
                 <View className="flex-row flex-wrap items-center gap-2">
                   {t.tags.map((g) => (
-                    <Pressable key={g} onPress={() => save({ tags: t.tags.filter((x) => x !== g) })} accessibilityLabel={`Remove tag ${g}`} className="h-9 flex-row items-center gap-1 rounded-full bg-sand px-3">
+                    <Pressable key={g} disabled={!work} onPress={() => save({ tags: t.tags.filter((x) => x !== g) })} accessibilityLabel={`Remove tag ${g}`} className="h-9 flex-row items-center gap-1 rounded-full bg-sand px-3">
                       <Text className="text-sm text-brown">#{g}</Text>
-                      <X size={14} color={theme.ink} />
+                      {work && <X size={14} color={theme.ink} />}
                     </Pressable>
                   ))}
                 </View>
               )}
-              <Input value={tag} onChangeText={setTag} onSubmitEditing={addTag} submitBehavior="submit" placeholder="Add a tag" accessibilityLabel="Add a tag" autoCapitalize="none" maxLength={40} returnKeyType="done" />
+              {work && <Input value={tag} onChangeText={setTag} onSubmitEditing={addTag} submitBehavior="submit" placeholder="Add a tag" accessibilityLabel="Add a tag" autoCapitalize="none" maxLength={40} returnKeyType="done" />}
             </View>
             {t.recurring?.enabled && (
               <View className="flex-row items-center gap-2"><Repeat size={14} color={theme.muted} /><Text className="text-sm text-muted">Repeats {t.recurring.interval > 1 ? `every ${t.recurring.interval} ` : ''}{t.recurring.frequency}</Text></View>

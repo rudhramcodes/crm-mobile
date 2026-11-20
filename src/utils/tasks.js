@@ -10,11 +10,17 @@ export const taskStatus = (v) => TASK_STATUS.find((s) => s.value === v) || TASK_
 export const taskPriority = (v) => TASK_PRIORITY.find((p) => p.value === v) || TASK_PRIORITY[1];
 export const idOf = (x) => String(x?._id || x || '');
 
-// Server rule: only the reviewer (the creator unless handed over) may set Done; everyone else sends it for review.
+// Same rules as the server (server/src/modules/tasks/taskRules.js; the table is in TASKS-FLOW.md "Who can do what"):
+// - managers of a task (creator, reviewer, manager/admin roles) plan it: title, priority, people, dependencies
+// - the owner and helpers work it: status, progress, checklist, time, details, due date with a reason
+// - everyone else follows and chats; only the reviewer marks Done (the creator unless review was handed over)
 export const isCreator = (task, user) => !!user?._id && idOf(task?.createdBy) === String(user._id);
-export const canReview = (task, user) => isCreator(task, user) || (!!user?._id && idOf(task?.reviewer) === String(user._id));
 export const reviewerOf = (task) => task?.reviewer || task?.createdBy;
+export const canReview = (task, user) => !!user?._id && idOf(reviewerOf(task)) === String(user._id);
 export const finishStatus = (task, user) => (canReview(task, user) ? 'done' : 'review');
+export const canManageTask = (task, user) => !!user?._id && (isCreator(task, user) || idOf(task?.reviewer) === String(user._id) || ['manager', 'admin', 'super_admin'].includes(user?.role));
+export const isOnTask = (task, user) => !!user?._id && [task?.assignedTo, ...(task?.helpers || [])].some((p) => idOf(p) === String(user._id));
+export const canWorkTask = (task, user) => canManageTask(task, user) || isOnTask(task, user);
 
 // The 1-office-hour review clock, as words: "32 min left", "late by 1h 5m", "due 10:30 am, Tue".
 export const reviewClock = (task, now = Date.now()) => {

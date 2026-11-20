@@ -21,9 +21,9 @@ import {
   useRemoveDependencyMutation, useRemoveTimeEntryMutation, useUpdateChecklistItemMutation, useUpdateTaskMutation,
 } from '@/services/taskApi';
 import { useTheme } from '@/constants/theme';
-import { hms, isAdmin, runAction } from '@/utils/attendance';
+import { hms, runAction } from '@/utils/attendance';
 import { formatHours, getTimeAgo } from '@/utils/formatters';
-import { canReview, getStopwatch, idOf, isCreator, reviewClock, reviewerOf, setStopwatch, taskStatus } from '@/utils/tasks';
+import { canManageTask, canReview, canWorkTask, getStopwatch, idOf, reviewClock, reviewerOf, setStopwatch, taskStatus } from '@/utils/tasks';
 import { cn } from '@/utils/cn';
 
 const Title = ({ children, right }) => (
@@ -55,6 +55,7 @@ function AddLine({ placeholder, onAdd, loading, maxLength = 200 }) {
 
 // Subtasks inherit the parent's assignee, deadline and project, so the parent needs the first two set.
 export function Subtasks({ task }) {
+  const me = useSelector((s) => s.auth.user);
   const { data } = useGetSubtasksQuery(task._id);
   const [create, { isLoading }] = useCreateTaskMutation();
   const subs = data?.data?.subtasks || [];
@@ -66,12 +67,14 @@ export function Subtasks({ task }) {
     <Card className="gap-3 p-4">
       <Title right={<Text className="text-sm text-muted tabular-nums">{subs.filter((s) => s.status === 'done').length}/{subs.length}</Text>}>Subtasks</Title>
       {subs.map((s) => <TaskRow key={s._id} task={s} swipe={false} />)}
-      {ready ? <AddLine placeholder="Add a subtask" onAdd={add} loading={isLoading} /> : <Text className="text-sm text-muted">Set an assignee and due date on this task first.</Text>}
+      {!canWorkTask(task, me) ? (!subs.length && <Text className="text-sm text-muted">No subtasks.</Text>)
+        : ready ? <AddLine placeholder="Add a subtask" onAdd={add} loading={isLoading} />
+          : <Text className="text-sm text-muted">{canManageTask(task, me) ? 'Set an assignee and due date on this task first.' : 'Ask the creator to set an assignee and due date first.'}</Text>}
     </Card>
   );
 }
 
-// Anyone on staff adds and ticks; only admins remove. The server recalculates progress.
+// People on the task add and tick; the task's managers remove. Others just see it. The server recalculates progress.
 export function Checklist({ task }) {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
@@ -80,6 +83,7 @@ export function Checklist({ task }) {
   const [remove] = useRemoveChecklistItemMutation();
   const items = task.checklists || [];
   const done = items.filter((c) => c.checked).length;
+  const work = canWorkTask(task, me);
   const tick = (c) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     runAction(update({ id: task._id, itemId: c._id, checked: !c.checked }), null, "Couldn't update the item");
@@ -92,18 +96,19 @@ export function Checklist({ task }) {
       )}
       {items.map((c) => (
         <View key={c._id} className="flex-row items-center gap-1">
-          <Pressable onPress={() => tick(c)} haptic={false} accessibilityRole="checkbox" accessibilityState={{ checked: c.checked }} accessibilityLabel={c.text} className="min-h-[44px] flex-1 flex-row items-center gap-3">
+          <Pressable onPress={() => tick(c)} disabled={!work} haptic={false} accessibilityRole="checkbox" accessibilityState={{ checked: c.checked }} accessibilityLabel={c.text} className="min-h-[44px] flex-1 flex-row items-center gap-3">
             {c.checked ? <CheckSquare size={22} color={theme.success} /> : <Square size={22} color={theme.muted} />}
             <Text className={cn('flex-1', c.checked && 'text-muted line-through')}>{c.text}</Text>
           </Pressable>
-          {isAdmin(me) && (
+          {canManageTask(task, me) && (
             <Pressable onPress={() => runAction(remove({ id: task._id, itemId: c._id }), 'Item removed', "Couldn't remove")} accessibilityLabel={`Remove ${c.text}`} className="h-11 w-11 items-center justify-center">
               <X size={18} color={theme.muted} />
             </Pressable>
           )}
         </View>
       ))}
-      <AddLine placeholder="Add an item" maxLength={500} onAdd={(text) => runAction(add({ id: task._id, text }), null, "Couldn't add the item")} loading={a.isLoading} />
+      {!items.length && !work && <Text className="text-sm text-muted">No checklist.</Text>}
+      {work && <AddLine placeholder="Add an item" maxLength={500} onAdd={(text) => runAction(add({ id: task._id, text }), null, "Couldn't add the item")} loading={a.isLoading} />}
     </Card>
   );
 }
@@ -111,13 +116,15 @@ export function Checklist({ task }) {
 // "Blocked by" tasks must be done before this one can start or finish; "Blocking" is the other direction.
 export function Dependencies({ task }) {
   const theme = useTheme();
+  const me = useSelector((s) => s.auth.user);
+  const manage = canManageTask(task, me); // linking work is planning
   const { data } = useGetDependenciesQuery(task._id);
   const [link, l] = useAddDependencyMutation();
   const [unlink] = useRemoveDependencyMutation();
   const [q, setQ] = useState('');
   const deps = data?.data?.dependsOn || [];
   const blocking = data?.data?.blockedBy || [];
-  const found = useGetTasksQuery({ search: q.trim(), page: 1, limit: 8 }, { skip: q.trim().length < 2 });
+  const found = useGetTasksQuery({ search: q.trim(), page: 1, limit: 8, open: 'true', sort: '-createdAt' }, { skip: !manage || q.trim().length < 2 });
   const options = (found.data?.data || []).filter((t) => t._id !== task._id && !deps.some((d) => d._id === t._id));
 
   return (
@@ -131,13 +138,15 @@ export function Dependencies({ task }) {
             <Text numberOfLines={1} className="flex-1">{d.title}</Text>
             <TaskStatusBadge status={d.status} />
           </Pressable>
-          <Pressable onPress={() => runAction(unlink({ id: task._id, depId: d._id }), 'Unlinked', "Couldn't unlink")} accessibilityLabel={`Unlink ${d.title}`} className="h-11 w-11 items-center justify-center">
-            <X size={18} color={theme.muted} />
-          </Pressable>
+          {manage && (
+            <Pressable onPress={() => runAction(unlink({ id: task._id, depId: d._id }), 'Unlinked', "Couldn't unlink")} accessibilityLabel={`Unlink ${d.title}`} className="h-11 w-11 items-center justify-center">
+              <X size={18} color={theme.muted} />
+            </Pressable>
+          )}
         </View>
       ))}
       {!deps.length && <Text className="text-sm text-muted">Nothing blocks this task.</Text>}
-      <Input value={q} onChangeText={setQ} placeholder="Search a task to link" accessibilityLabel="Search a task to link" />
+      {manage && <Input value={q} onChangeText={setQ} placeholder="Search a task to link" accessibilityLabel="Search a task to link" />}
       {options.map((t) => (
         <Pressable
           key={t._id}
@@ -211,6 +220,7 @@ export function TimeTracker({ task }) {
   return (
     <Card className="gap-3 p-4">
       <Title right={<Text className="text-sm text-muted tabular-nums">{formatHours(task.totalLoggedHours || 0)}{task.estimatedHours ? ` of ${formatHours(task.estimatedHours)}` : ''}</Text>}>Time</Title>
+      {canWorkTask(task, me) && (<>
       <View className="flex-row items-center gap-3 rounded-2xl bg-surface-2 p-3">
         <Text className="flex-1 font-display text-title tabular-nums" accessibilityLabel={`Stopwatch ${hms(secs)}`}>{hms(secs)}</Text>
         {mine ? (
@@ -225,13 +235,15 @@ export function TimeTracker({ task }) {
         <Input className="flex-1" value={note} onChangeText={setNote} placeholder="What did you work on?" accessibilityLabel="Time note" maxLength={500} />
       </View>
       <Button title="Log time" variant="secondary" size="sm" disabled={!hours.trim() || badHours} loading={isLoading && !mine} onPress={addManual} />
+      </>)}
+      {!entries.length && !canWorkTask(task, me) && <Text className="text-sm text-muted">No time logged yet.</Text>}
       {entries.slice(0, 10).map((e) => (
         <View key={e._id} className="flex-row items-center gap-3 border-t border-line pt-2">
           <View className="flex-1">
             <Text className="font-body-semibold tabular-nums">{formatHours(e.hours)}<Text className="font-body text-sm text-muted"> · {e.createdBy?.name || 'Someone'} · {new Date(e.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</Text></Text>
             {!!e.description && <Text numberOfLines={2} className="text-sm text-muted">{e.description}</Text>}
           </View>
-          {(idOf(e.createdBy) === me._id || isAdmin(me)) && (
+          {(idOf(e.createdBy) === me._id || canManageTask(task, me)) && (
             <Pressable onPress={() => runAction(removeEntry({ id: task._id, entryId: e._id }), 'Entry removed', "Couldn't remove")} accessibilityLabel="Remove time entry" className="h-11 w-11 items-center justify-center">
               <Trash2 size={18} color={theme.muted} />
             </Pressable>
@@ -359,7 +371,7 @@ export function ReviewPanel({ task: t }) {
       ) : (
         <Text className="text-sm text-muted">You&apos;ll get a notification when {reviewer?.name?.split(' ')[0] || 'they'} replies.</Text>
       )}
-      {(isCreator(t, me) || isAdmin(me)) && (handing ? <UserPicker label="Hand review to" onPick={handTo} /> : (
+      {canManageTask(t, me) && (handing ? <UserPicker label="Hand review to" onPick={handTo} onCancel={() => setHanding(false)} /> : (
         <Pressable onPress={() => setHanding(true)} accessibilityRole="button" className="self-start py-1">
           <Text className="text-sm font-body-semibold text-accent-ink">Hand review to someone else</Text>
         </Pressable>
@@ -427,8 +439,18 @@ export function TaskFlow({ task: t }) {
               </View>
             )}
           </View>
-          <Button title={reviewer ? 'Mark done' : 'Done, send for review'} icon={reviewer ? Check : Send} loading={u.isLoading} onPress={finish} />
-          {!reviewer && <Text className="-mt-2 text-xs text-muted">{reviewerOf(t)?.name || 'The creator'} checks it and marks it Done.</Text>}
+          {blockers.length ? (
+            // It can't be finished (or approved) before the tasks it depends on are done.
+            <View className="flex-row items-center gap-3 rounded-2xl bg-surface-2 p-3">
+              <Lock size={18} color={theme.muted} />
+              <Text className="flex-1 text-sm">Finish {blockers.map((x) => `"${x.title}"`).join(', ')} first. This task depends on it.</Text>
+            </View>
+          ) : (
+            <>
+              <Button title={reviewer ? 'Mark done' : 'Done, send for review'} icon={reviewer ? Check : Send} loading={u.isLoading} onPress={finish} />
+              {!reviewer && <Text className="-mt-2 text-xs text-muted">{reviewerOf(t)?.name || 'The creator'} checks it and marks it Done.</Text>}
+            </>
+          )}
         </>
       )}
 

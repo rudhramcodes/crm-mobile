@@ -43,7 +43,7 @@ export default function NewTask() {
   const [startDate, setStart] = useState('');
   const [hours, setHours] = useState('');
   const [priority, setPriority] = useState('medium');
-  const [status, setStatus] = useState(p.status || 'todo');
+  const [status, setStatus] = useState(['todo', 'in_progress'].includes(p.status) ? p.status : 'todo');
   const [tags, setTags] = useState('');
   const [recurring, setRecurring] = useState(false);
   const [frequency, setFrequency] = useState('weekly');
@@ -82,7 +82,7 @@ export default function NewTask() {
 
       <View className="gap-1.5">
         <Text className="font-body-medium text-sm">Who does it?</Text>
-        {picking ? <UserPicker label="Search people" onPick={(u) => { setAssignee(u); setPicking(false); }} /> : (
+        {picking ? <UserPicker label="Search people" onPick={(u) => { setAssignee(u); setPicking(false); }} onCancel={() => setPicking(false)} /> : (
           <Pressable onPress={() => setPicking(true)} accessibilityLabel={`Assignee: ${assignee.name}. Change`} className="flex-row items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3">
             <Avatar name={assignee.name} uri={assignee.avatar} size={32} />
             <Text className="flex-1 font-body-medium">{assignee._id === me._id ? `${assignee.name} (me)` : assignee.name}</Text>
@@ -103,7 +103,7 @@ export default function NewTask() {
         <>
           <Input label="Description" value={description} onChangeText={setDescription} multiline maxLength={5000} style={{ height: 96, paddingTop: 14, textAlignVertical: 'top' }} error={err('description')} />
           <DateField label="Start date" value={startDate} onChange={(d) => { setStart(d); if (dueDate && d > dueDate) setDue(d); }} error={err('startDate')} />
-          <Chips label="Status" items={TASK_STATUS.map((x) => [x.value, x.label])} value={status} onChange={setStatus} />
+          <Chips label="Status" items={TASK_STATUS.filter((x) => ['todo', 'in_progress'].includes(x.value)).map((x) => [x.value, x.label])} value={status} onChange={setStatus} />
           {!!projects.length && <Chips label="Project" items={[['', 'None'], ...projects.map((x) => [x._id, x.title])]} value={project} onChange={(v) => { setProject(v); setMilestone(''); }} />}
           {!!milestones.length && <Chips label="Milestone" items={[['', 'None'], ...milestones.map((x) => [x._id, x.title])]} value={milestone} onChange={setMilestone} />}
           <Input label="Estimated hours" value={hours} onChangeText={setHours} keyboardType="decimal-pad" placeholder="4" error={badHours ? 'Enter a number of hours' : err('estimatedHours')} />

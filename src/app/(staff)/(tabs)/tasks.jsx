@@ -25,23 +25,30 @@ export default function TasksTab() {
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState([]);
 
-  // shortcut: first 100 tasks for the filters (server max); add paging when a filtered list routinely holds more.
-  // My Day is personal: always my tasks (owner or helper), whatever the assignee filter says.
+  // shortcut: up to 100 tasks per view, newest first (server max); add paging when a view routinely holds more.
+  // My Day is personal and ignores the List filters: my open tasks (owner or helper), soonest due first,
+  // plus what I finished today, so years of done tasks never crowd out today's work.
   const day = view === 'day';
-  const params = {
-    page: 1, limit: 100, search: search || undefined, status: f.status || undefined, priority: f.priority || undefined,
-    project: f.project || undefined, assignedTo: (day ? me._id : f.assignedTo) || undefined,
-  };
-  const all = useGetTasksQuery(params, { skip: f.watching });
-  const watched = useGetWatchedTasksQuery(params, { skip: !f.watching });
-  const q = f.watching ? watched : all;
-  const refreshControl = usePullRefresh(q.refetch);
-  const tasks = q.data?.data || [];
+  const params = day
+    ? { page: 1, limit: 100, assignedTo: me._id, open: 'true', sort: 'dueDate', search: search || undefined }
+    : {
+      page: 1, limit: 100, search: search || undefined, status: f.status || undefined, priority: f.priority || undefined,
+      project: f.project || undefined, assignedTo: f.assignedTo || undefined,
+    };
+  const watchingNow = !day && f.watching;
+  const all = useGetTasksQuery(params, { skip: watchingNow });
+  const watched = useGetWatchedTasksQuery(params, { skip: !watchingNow });
+  const [startOfToday] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.toISOString(); });
+  const doneToday = useGetTasksQuery({ page: 1, limit: 100, assignedTo: me._id, doneSince: startOfToday }, { skip: !day });
+  const q = watchingNow ? watched : all;
+  const refreshControl = usePullRefresh(() => Promise.all([q.refetch(), day && doneToday.refetch()]));
+  const tasks = [...(q.data?.data || []), ...(day ? doneToday.data?.data || [] : [])];
   const total = q.data?.pagination?.total ?? tasks.length;
-  const active = ['status', 'priority', 'project', 'assignedTo', 'watching'].filter((k) => f[k]).length;
+  const active = day ? 0 : ['status', 'priority', 'project', 'assignedTo', 'watching'].filter((k) => f[k]).length;
   const round = 'h-11 w-11 items-center justify-center rounded-full bg-surface-2';
 
-  const set = (patch) => setF((x) => ({ ...x, ...patch }));
+  // A new filter or search clears any selection, so hidden tasks are never bulk-changed.
+  const set = (patch) => { setF((x) => ({ ...x, ...patch })); setSelecting(false); setSelected([]); };
   const toggle = (id) => {
     setSelecting(true);
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -70,23 +77,23 @@ export default function TasksTab() {
           className="flex-1"
           value={typed}
           onChangeText={setTyped}
-          onSubmitEditing={() => setSearch(typed.trim())}
-          onBlur={() => setSearch(typed.trim())}
-          placeholder="Search title, description, tags"
+          onSubmitEditing={() => { setSearch(typed.trim()); setSelected([]); }}
+          onBlur={() => { setSearch(typed.trim()); setSelected([]); }}
+          placeholder={day ? 'Search my tasks' : 'Search title, description, tags'}
           accessibilityLabel="Search tasks"
           returnKeyType="search"
           right={<Search size={18} color={theme.muted} />}
         />
-        <Pressable
+        {!day && <Pressable
           onPress={() => setShowFilters((s) => !s)}
           accessibilityLabel={`Filters${active ? `, ${active} on` : ''}`}
           accessibilityState={{ expanded: showFilters }}
           className={showFilters || active ? 'h-[52px] w-[52px] items-center justify-center rounded-2xl bg-ink' : 'h-[52px] w-[52px] items-center justify-center rounded-2xl bg-surface-2'}
         >
           <SlidersHorizontal size={20} color={showFilters || active ? theme.bg : theme.ink} />
-        </Pressable>
+        </Pressable>}
       </View>
-      {showFilters && <FilterPanel f={f} set={set} />}
+      {showFilters && !day && <FilterPanel f={f} set={set} />}
 
 
       {q.isLoading || q.isError ? <DashboardState isLoading={q.isLoading} isError={q.isError} refetch={q.refetch} /> : (

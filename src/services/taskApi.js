@@ -62,15 +62,15 @@ export const taskApi = api.injectEndpoints({
     }),
     addChecklistItem: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/tasks/${id}/checklist`, method: 'POST', body }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
     }),
     updateChecklistItem: builder.mutation({
       query: ({ id, itemId, ...body }) => ({ url: `/tasks/${id}/checklist/${itemId}`, method: 'PATCH', body }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
     }),
     removeChecklistItem: builder.mutation({
       query: ({ id, itemId }) => ({ url: `/tasks/${id}/checklist/${itemId}`, method: 'DELETE' }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
     }),
     watchTask: builder.mutation({
       query: (id) => ({ url: `/tasks/${id}/watch`, method: 'POST' }),
@@ -86,11 +86,11 @@ export const taskApi = api.injectEndpoints({
     }),
     addTimeEntry: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/tasks/${id}/time`, method: 'POST', body }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
     }),
     removeTimeEntry: builder.mutation({
       query: ({ id, entryId }) => ({ url: `/tasks/${id}/time/${entryId}`, method: 'DELETE' }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
     }),
     reorderTasks: builder.mutation({
       query: (body) => ({ url: '/tasks/reorder', method: 'PATCH', body }),

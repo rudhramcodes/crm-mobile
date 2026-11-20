@@ -9,7 +9,8 @@ import { useGetUsersQuery } from '@/services/userApi';
 import { useTheme } from '@/constants/theme';
 
 // Type a name, tap a match. Clients are left out: they have no attendance and can't own tasks.
-export function UserPicker({ label = 'Employee', onPick }) {
+// onCancel adds a Cancel link, so an opened picker is never a dead end.
+export function UserPicker({ label = 'Employee', onPick, onCancel }) {
   const theme = useTheme();
   const [q, setQ] = useState('');
   const { data, isFetching } = useGetUsersQuery({ search: q.trim() || undefined, isActive: true, limit: 20 });
@@ -26,7 +27,12 @@ export function UserPicker({ label = 'Employee', onPick }) {
           </View>
         </Pressable>
       ))}
-      {!people.length && !isFetching && <Text className="text-sm text-muted">No one matches.</Text>}
+      {!people.length && !isFetching && <Text className="text-sm text-muted">{q.trim() ? 'No one matches.' : 'No team members found.'}</Text>}
+      {onCancel && (
+        <Pressable onPress={onCancel} accessibilityRole="button" className="self-start py-2">
+          <Text className="font-body-semibold text-sm text-accent-ink">Cancel</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

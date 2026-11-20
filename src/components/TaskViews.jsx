@@ -17,7 +17,7 @@ import { useGetProjectsQuery } from '@/services/projectApi';
 import { useBulkUpdateTasksMutation, useCreateTaskMutation, useGetTasksQuery, useDeleteTaskMutation, useReorderTasksMutation, useUpdateTaskMutation } from '@/services/taskApi';
 import { useTheme } from '@/constants/theme';
 import { isAdmin, runAction, ymd } from '@/utils/attendance';
-import { canReview, myDay, reviewerOf, shareCsv } from '@/utils/tasks';
+import { canManageTask, canReview, canWorkTask, isOverdue, myDay, reviewerOf, shareCsv } from '@/utils/tasks';
 import { showToast } from './Toast';
 import { cn } from '@/utils/cn';
 
@@ -112,13 +112,15 @@ export function BulkBar({ tasks, selected, onClear }) {
   const [remove] = useDeleteTaskMutation();
   const [deleting, setDeleting] = useState(false);
   const picked = tasks.filter((t) => selected.includes(t._id));
+  const manageable = picked.filter((t) => canManageTask(t, me));
 
+  // Act on the tasks you're allowed to change and say how many were skipped, instead of failing them all.
   const set = async (data, label) => {
-    if (data.status === 'done') {
-      const notMine = picked.filter((t) => !canReview(t, me)).length;
-      if (notMine) return showToast({ title: 'Only the reviewer can mark Done', message: `${notMine} of these ${notMine === 1 ? 'is' : 'are'} reviewed by someone else. Send them for review instead.` });
-    }
-    if (await runAction(bulk({ ids: selected, data }), `${selected.length} ${selected.length === 1 ? 'task' : 'tasks'} ${label}`, "Couldn't update")) onClear();
+    const ok = picked.filter((t) => (data.priority ? canManageTask(t, me) : canWorkTask(t, me)) && (data.status !== 'done' || t.status === 'done' || canReview(t, me)));
+    const skipped = picked.length - ok.length;
+    if (!ok.length) return showToast({ title: "You can't change these", message: data.status === 'done' ? 'Only their reviewer can mark them Done. Send them for review instead.' : 'Only people on a task, its creator or a manager can change it.' });
+    const msg = `${ok.length} ${ok.length === 1 ? 'task' : 'tasks'} ${label}${skipped ? `, ${skipped} skipped (not yours to change)` : ''}`;
+    if (await runAction(bulk({ ids: ok.map((t) => t._id), data }), msg, "Couldn't update")) onClear();
   };
   const del = async () => {
     setDeleting(true);
@@ -141,10 +143,14 @@ export function BulkBar({ tasks, selected, onClear }) {
           <View className="flex-row flex-wrap gap-2">
             {TASK_STATUS.map((s) => <Chip key={s.value} label={s.label} onPress={() => !isLoading && set({ status: s.value }, `moved to ${s.label}`)} />)}
           </View>
-          <Text className="text-caption text-muted">SET PRIORITY</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {TASK_PRIORITY.map((p) => <Chip key={p.value} label={p.label} onPress={() => !isLoading && set({ priority: p.value }, `set to ${p.label}`)} />)}
-          </View>
+          {!!manageable.length && (
+            <>
+              <Text className="text-caption text-muted">SET PRIORITY</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {TASK_PRIORITY.map((p) => <Chip key={p.value} label={p.label} onPress={() => !isLoading && set({ priority: p.value }, `set to ${p.label}`)} />)}
+              </View>
+            </>
+          )}
           <Button title="Export selected" variant="secondary" size="sm" onPress={() => shareCsv(picked)} />
           {isAdmin(me) && <ConfirmDelete label={`Delete ${selected.length}`} loading={deleting} onConfirm={del} />}
         </>
@@ -190,12 +196,12 @@ export function BoardView({ tasks }) {
               <View className="flex-row items-center gap-2 px-1">
                 <Text className="flex-1 font-body-semibold">{s.label}</Text>
                 <Text className="text-sm text-muted tabular-nums">{col.length}</Text>
-                <Pressable onPress={() => newTask({ status: s.value })} accessibilityLabel={`Add to ${s.label}`} className="h-9 w-9 items-center justify-center"><Plus size={18} color={theme.ink} /></Pressable>
+                {['todo', 'in_progress'].includes(s.value) && <Pressable onPress={() => newTask({ status: s.value })} accessibilityLabel={`Add to ${s.label}`} className="h-9 w-9 items-center justify-center"><Plus size={18} color={theme.ink} /></Pressable>}
               </View>
               {col.map((t, i) => (
                 <View key={t._id} className="gap-1">
                   <TaskRow task={t} swipe={false} />
-                  {moving && (
+                  {moving && canWorkTask(t, me) && (
                     <View className="flex-row justify-between px-1">
                       <MoveBtn icon={ChevronLeft} label={si ? `Move to ${TASK_STATUS[si - 1].label}` : 'Already first column'} disabled={!si} onPress={() => shift(t, -1)} />
                       <MoveBtn icon={ArrowUp} label="Move up" disabled={!i} onPress={() => bump(col, i, -1)} />
@@ -252,7 +258,7 @@ export function CalendarView({ tasks }) {
           {cells.map((d, i) => {
             if (!d) return <View key={`x${i}`} className="aspect-square w-[14.28%]" />;
             const due = byDay[d] || [];
-            const late = due.some((t) => t.status !== 'done' && d < today);
+            const late = due.some(isOverdue);
             return (
               <View key={d} className="aspect-square w-[14.28%] p-0.5">
                 <Pressable
@@ -309,7 +315,7 @@ export function FilterPanel({ f, set }) {
           ? <Chip key="who" label={f.assigneeName} active onPress={() => setPicking(true)} />
           : <Chip key="pick" label="Someone else…" onPress={() => setPicking(true)} />,
       ])}
-      {picking && <UserPicker label="Assigned to" onPick={(u) => { set({ assignedTo: u._id, assigneeName: u.name }); setPicking(false); }} />}
+      {picking && <UserPicker label="Assigned to" onPick={(u) => { set({ assignedTo: u._id, assigneeName: u.name }); setPicking(false); }} onCancel={() => setPicking(false)} />}
       <Text className="text-caption text-muted">SHOW</Text>
       {row([
         <Chip key="all" label="All tasks" active={!f.watching} onPress={() => set({ watching: false })} />,
