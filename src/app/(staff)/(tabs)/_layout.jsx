@@ -1,10 +1,17 @@
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { NativeTabs } from 'expo-router/native-tabs';
 import { brand } from '@/constants/theme';
 import { useGetUnreadCountQuery } from '@/services/notificationApi';
 
 // System tab bar: liquid glass on iOS 26, Material bottom bar on Android. sf = iOS symbol, md = Android symbol.
 export default function StaffTabs() {
-  const { data: unread = 0 } = useGetUnreadCountQuery();
+  const { data: unread = 0, isSuccess } = useGetUnreadCountQuery();
+  // The app icon's red number always matches Inbox (it also follows live updates and mark-as-read).
+  useEffect(() => {
+    if (isSuccess && Platform.OS !== 'web') Notifications.setBadgeCountAsync(unread).catch(() => {});
+  }, [unread, isSuccess]);
   return (
     <NativeTabs tintColor={brand.ochre}>
       <NativeTabs.Trigger name="index">

@@ -1,6 +1,5 @@
 import { useCallback, useEffect } from 'react';
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useDispatch, useStore } from 'react-redux';
 import { api } from '@/services/api';
@@ -62,10 +61,7 @@ export function useLiveUpdates({ client = false } = {}) {
     });
     // A repeat folded into an earlier notification: refresh the list, no toast or sound.
     socket.on('notification:updated', () => dispatch(api.util.invalidateTags(['Notification'])));
-    socket.on('notification:unread', ({ count }) => {
-      dispatch(notificationApi.util.upsertQueryData('getUnreadCount', undefined, count));
-      if (Platform.OS !== 'web') Notifications.setBadgeCountAsync(count).catch(() => {}); // the app icon's red number
-    });
+    socket.on('notification:unread', ({ count }) => dispatch(notificationApi.util.upsertQueryData('getUnreadCount', undefined, count)));
     registerPush(dispatch).catch((e) => console.warn('[push]', e.message));
     return disconnectSocket;
   }, [store, dispatch, client]);
