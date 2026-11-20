@@ -17,8 +17,8 @@ export function HomeHeader({ subtitle }) {
     <>
       <View className="flex-row items-center gap-3">
         <View className="flex-1">
-          <Text className="text-sm text-muted">{subtitle}</Text>
           <Heading>Hi, {user.name.split(' ')[0]}</Heading>
+          {!!subtitle && <Text className="mt-0.5 font-body-medium text-sm text-muted">{subtitle}</Text>}
           {!!user.profile?.designation && <Badge label={user.profile.designation} className="mt-1" />}
         </View>
         <Avatar name={user.name} uri={user.avatar} size={48} />

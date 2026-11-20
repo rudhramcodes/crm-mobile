@@ -215,14 +215,15 @@ Admin/manager:
 - [ ] **Suggestion:** "Add to phone calendar" button **[Native]**
 
 ### M8 — Leads (sales)
-- [ ] List + Kanban (new, contacted, meeting_scheduled, proposal_sent, won, lost), stats per stage **[Port]**
-- [ ] Filters: search (name/email/company), status, source, venture; unread-lead badge (`isRead`)
-- [ ] Create: full name*, email*, phone*, company, venture, source (google_ads, referral, instagram, linkedin, website, email, call, other), assigned rep (**currently hard-wired to "Palak Gupta"** on web), follow-up date, notes **[Port]**
-- [ ] Detail: notes timeline (author + role), change stage, **lost needs a reason and must be contacted first**, community-group rule before marking new leads, convert to client, copy client ID **[Port]**
-- [ ] One-tap **Call / WhatsApp / Email** **[Native]**
-- [ ] Bulk update / bulk delete **[Port]**
-- [ ] Import CSV/Excel → **[Web-only?]** (or document picker if you want it); export CSV/Excel/PDF → **[Web-only?]**
-- [ ] **Suggestion:** follow-up date reminder as a local notification **[Native]**
+- [x] List + Kanban (new, contacted, meeting_scheduled, proposal_sent, won, lost), stats per stage **[Port]**
+- [x] Filters: search (name/email/company), status, source, venture; unread-lead badge (`isRead`)
+- [x] Create: full name*, email*, phone*, company, venture, source (google_ads, referral, instagram, linkedin, website, email, call, other), assigned rep (**currently hard-wired to "Palak Gupta"** on web), follow-up date, notes **[Port]**
+- [x] Detail: notes timeline (author + role), change stage, **lost needs a reason and must be contacted first**, community-group rule before marking new leads, convert to client, copy client ID **[Port]**
+- [x] One-tap **Call / WhatsApp / Email** **[Native]**
+- [x] Bulk update / bulk delete **[Port]**
+- (skipped) Import CSV/Excel → **[Web-only?]** (or document picker if you want it); export CSV/Excel/PDF → **[Web-only?]**
+- (later) **Suggestion:** follow-up date reminder as a local notification **[Native]**
+- Shortcuts taken (M8): lists load the first 100 leads; Board moves cards with ← → buttons, not drag; assigned rep is hard-wired to Palak Gupta (as on web); import/export skipped; after "Convert to client" you stay on the lead (Clients screens come with M9); the list unread dot clears on refresh, not on return from the lead.
 
 ### M9 — Clients
 - [ ] List + stats, filters (venture, status), search (company, contact, email, GST) **[Port]**
