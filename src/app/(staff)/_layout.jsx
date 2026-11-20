@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { Stack } from 'expo-router';
 import { useTheme } from '@/constants/theme';
 import { useLiveUpdates } from '@/hooks/useLiveUpdates';
+import { useClockTimer } from '@/hooks/useClockTimer';
 
 // Android: iOS-style slide with the screen behind easing away, and forms rising from the bottom. iOS keeps its native motion.
 const android = Platform.OS === 'android';
@@ -10,6 +11,7 @@ const modal = { presentation: 'modal', animation: android ? 'slide_from_bottom' 
 // Tabs at the root; module screens (leads, task detail, ...) push on top of them as they're built.
 export default function StaffLayout() {
   useLiveUpdates();
+  useClockTimer();
   const theme = useTheme();
   return (
     <Stack screenOptions={{ headerShown: false, animation: android ? 'ios_from_right' : 'default', contentStyle: { backgroundColor: theme.bg } }}>

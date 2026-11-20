@@ -20,23 +20,25 @@ import { dueText, parseQuickAdd } from '@/utils/quickAdd';
 import { useBulkUpdateTasksMutation, useCreateTaskMutation, useGetTasksQuery, useDeleteTaskMutation, useReorderTasksMutation, useUpdateTaskMutation } from '@/services/taskApi';
 import { useTheme } from '@/constants/theme';
 import { isAdmin, runAction, ymd } from '@/utils/attendance';
-import { canReview, myDay, reviewerOf, shareCsv } from '@/utils/tasks';
+import { canManageTask, canReview, canWorkTask, isOverdue, myDay, reviewerOf, shareCsv } from '@/utils/tasks';
 import { showToast } from './Toast';
 import { cn } from '@/utils/cn';
 
 const newTask = (params) => router.push({ pathname: '/tasks/new', params });
 
-function Group({ title, tasks, tone, empty }) {
+function Group({ title, tasks, tone, empty, hint }) {
   if (!tasks.length && !empty) return null;
   return (
     <View className="gap-2">
       <Text className={cn('text-caption', tone || 'text-muted')}>{title} · {tasks.length}</Text>
+      {!!hint && !!tasks.length && <Text className="-mt-1 text-xs text-muted">{hint}</Text>}
       {tasks.length ? tasks.map((t) => <TaskRow key={t._id} task={t} />) : <Text className="text-sm text-muted">{empty}</Text>}
     </View>
   );
 }
 
-// Personal focus: a one-line add (Enter saves it; @person, dates, !priority and #tags are understood), then overdue, today, upcoming, done.
+// Personal focus over my own tasks: a one-line add (Enter saves it; @person, dates, !priority and #tags are understood),
+// then what needs me (reviews, overdue, today), what's later, and what's with the reviewer.
 export function MyDayView({ tasks }) {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
@@ -45,6 +47,8 @@ export function MyDayView({ tasks }) {
   // Reviews come from their own query: they may sit outside the filtered list.
   const reviews = useGetTasksQuery({ status: 'review', reviewer: me._id, sort: 'reviewDueAt', limit: 50 }).data?.data || [];
   const g = myDay(tasks);
+  const reviewIds = new Set(reviews.map((t) => t._id));
+  const waiting = g.waiting.filter((t) => !reviewIds.has(t._id));
   const focus = g.overdue.length + g.today.length + g.done.length;
   const pct = focus ? Math.round((g.done.length / focus) * 100) : 0;
 
@@ -69,13 +73,17 @@ export function MyDayView({ tasks }) {
   return (
     <View className="gap-5">
       <Card className="gap-3 p-4">
-        <View className="flex-row items-end justify-between">
-          <Text className="text-caption text-muted">TODAY&apos;S PROGRESS</Text>
-          <Text className="font-body-semibold tabular-nums">{g.done.length} of {focus} · {pct}%</Text>
-        </View>
-        <View className="h-1.5 overflow-hidden rounded-full bg-sand" accessible accessibilityLabel={`${pct}% of today's focus done`}>
-          <View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
-        </View>
+        {!!focus && (
+          <>
+            <View className="flex-row items-end justify-between">
+              <Text className="text-caption text-muted">TODAY</Text>
+              <Text className="font-body-semibold tabular-nums">{g.done.length} of {focus} done</Text>
+            </View>
+            <View className="h-1.5 overflow-hidden rounded-full bg-sand" accessible accessibilityLabel={`${pct}% of today's tasks done`}>
+              <View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+            </View>
+          </>
+        )}
         <Input
           value={title}
           onChangeText={setTitle}
@@ -98,11 +106,12 @@ export function MyDayView({ tasks }) {
           </ScrollView>
         )}
       </Card>
-      <Group title="NEEDS MY REVIEW" tasks={reviews} tone="text-accent-ink" />
+      <Group title="NEEDS MY REVIEW" tasks={reviews} tone="text-accent-ink" hint="Approve or ask for changes within 1 office hour." />
       <Group title="OVERDUE" tasks={g.overdue} tone="text-danger" />
-      <Group title="TODAY" tasks={g.today} empty="Nothing due today. Add one above." />
-      <Group title="UPCOMING" tasks={g.upcoming} />
-      <Group title="DONE" tasks={g.done} />
+      <Group title="TODAY" tasks={g.today} empty={g.overdue.length ? 'Nothing else due today.' : 'Nothing due today. Add one above.'} />
+      <Group title="LATER" tasks={g.upcoming} />
+      <Group title="WITH THE REVIEWER" tasks={waiting} hint="Nothing to do until they reply." />
+      <Group title="DONE TODAY" tasks={g.done} />
     </View>
   );
 }
@@ -124,13 +133,15 @@ export function BulkBar({ tasks, selected, onClear }) {
   const [remove] = useDeleteTaskMutation();
   const [deleting, setDeleting] = useState(false);
   const picked = tasks.filter((t) => selected.includes(t._id));
+  const manageable = picked.filter((t) => canManageTask(t, me));
 
+  // Act on the tasks you're allowed to change and say how many were skipped, instead of failing them all.
   const set = async (data, label) => {
-    if (data.status === 'done') {
-      const notMine = picked.filter((t) => !canReview(t, me)).length;
-      if (notMine) return showToast({ title: 'Only the reviewer can mark Done', message: `${notMine} of these ${notMine === 1 ? 'is' : 'are'} reviewed by someone else. Send them for review instead.` });
-    }
-    if (await runAction(bulk({ ids: selected, data }), `${selected.length} ${selected.length === 1 ? 'task' : 'tasks'} ${label}`, "Couldn't update")) onClear();
+    const ok = picked.filter((t) => (data.priority ? canManageTask(t, me) : canWorkTask(t, me)) && (data.status !== 'done' || t.status === 'done' || canReview(t, me)));
+    const skipped = picked.length - ok.length;
+    if (!ok.length) return showToast({ title: "You can't change these", message: data.status === 'done' ? 'Only their reviewer can mark them Done. Send them for review instead.' : 'Only people on a task, its creator or a manager can change it.' });
+    const msg = `${ok.length} ${ok.length === 1 ? 'task' : 'tasks'} ${label}${skipped ? `, ${skipped} skipped (not yours to change)` : ''}`;
+    if (await runAction(bulk({ ids: ok.map((t) => t._id), data }), msg, "Couldn't update")) onClear();
   };
   const del = async () => {
     setDeleting(true);
@@ -153,10 +164,14 @@ export function BulkBar({ tasks, selected, onClear }) {
           <View className="flex-row flex-wrap gap-2">
             {TASK_STATUS.map((s) => <Chip key={s.value} label={s.label} onPress={() => !isLoading && set({ status: s.value }, `moved to ${s.label}`)} />)}
           </View>
-          <Text className="text-caption text-muted">SET PRIORITY</Text>
-          <View className="flex-row flex-wrap gap-2">
-            {TASK_PRIORITY.map((p) => <Chip key={p.value} label={p.label} onPress={() => !isLoading && set({ priority: p.value }, `set to ${p.label}`)} />)}
-          </View>
+          {!!manageable.length && (
+            <>
+              <Text className="text-caption text-muted">SET PRIORITY</Text>
+              <View className="flex-row flex-wrap gap-2">
+                {TASK_PRIORITY.map((p) => <Chip key={p.value} label={p.label} onPress={() => !isLoading && set({ priority: p.value }, `set to ${p.label}`)} />)}
+              </View>
+            </>
+          )}
           <Button title="Export selected" variant="secondary" size="sm" onPress={() => shareCsv(picked)} />
           {isAdmin(me) && <ConfirmDelete label={`Delete ${selected.length}`} loading={deleting} onConfirm={del} />}
         </>
@@ -202,12 +217,12 @@ export function BoardView({ tasks }) {
               <View className="flex-row items-center gap-2 px-1">
                 <Text className="flex-1 font-body-semibold">{s.label}</Text>
                 <Text className="text-sm text-muted tabular-nums">{col.length}</Text>
-                <Pressable onPress={() => newTask({ status: s.value })} accessibilityLabel={`Add to ${s.label}`} className="h-9 w-9 items-center justify-center"><Plus size={18} color={theme.ink} /></Pressable>
+                {['todo', 'in_progress'].includes(s.value) && <Pressable onPress={() => newTask({ status: s.value })} accessibilityLabel={`Add to ${s.label}`} className="h-9 w-9 items-center justify-center"><Plus size={18} color={theme.ink} /></Pressable>}
               </View>
               {col.map((t, i) => (
                 <View key={t._id} className="gap-1">
                   <TaskRow task={t} swipe={false} />
-                  {moving && (
+                  {moving && canWorkTask(t, me) && (
                     <View className="flex-row justify-between px-1">
                       <MoveBtn icon={ChevronLeft} label={si ? `Move to ${TASK_STATUS[si - 1].label}` : 'Already first column'} disabled={!si} onPress={() => shift(t, -1)} />
                       <MoveBtn icon={ArrowUp} label="Move up" disabled={!i} onPress={() => bump(col, i, -1)} />
@@ -264,7 +279,7 @@ export function CalendarView({ tasks }) {
           {cells.map((d, i) => {
             if (!d) return <View key={`x${i}`} className="aspect-square w-[14.28%]" />;
             const due = byDay[d] || [];
-            const late = due.some((t) => t.status !== 'done' && d < today);
+            const late = due.some(isOverdue);
             return (
               <View key={d} className="aspect-square w-[14.28%] p-0.5">
                 <Pressable
@@ -304,7 +319,7 @@ export function FilterPanel({ f, set }) {
   return (
     <Card className="gap-3 p-4">
       <Text className="text-caption text-muted">STATUS</Text>
-      {row([{ value: '', label: 'All' }, ...TASK_STATUS].map((s) => <Chip key={s.value || 'all'} label={s.label} active={f.status === s.value} onPress={() => set({ status: s.value })} />))}
+      {row([{ value: '', label: 'All' }, { value: 'open', label: 'Not done' }, ...TASK_STATUS].map((s) => <Chip key={s.value || 'all'} label={s.label} active={f.status === s.value} onPress={() => set({ status: s.value })} />))}
       <Text className="text-caption text-muted">PRIORITY</Text>
       {row([{ value: '', label: 'All' }, ...TASK_PRIORITY].map((p) => <Chip key={p.value || 'all'} label={p.label} active={f.priority === p.value} onPress={() => set({ priority: p.value })} />))}
       {!!projects.length && (
@@ -321,7 +336,7 @@ export function FilterPanel({ f, set }) {
           ? <Chip key="who" label={f.assigneeName} active onPress={() => setPicking(true)} />
           : <Chip key="pick" label="Someone else…" onPress={() => setPicking(true)} />,
       ])}
-      {picking && <UserPicker label="Assigned to" onPick={(u) => { set({ assignedTo: u._id, assigneeName: u.name }); setPicking(false); }} />}
+      {picking && <UserPicker label="Assigned to" onPick={(u) => { set({ assignedTo: u._id, assigneeName: u.name }); setPicking(false); }} onCancel={() => setPicking(false)} />}
       <Text className="text-caption text-muted">SHOW</Text>
       {row([
         <Chip key="all" label="All tasks" active={!f.watching} onPress={() => set({ watching: false })} />,

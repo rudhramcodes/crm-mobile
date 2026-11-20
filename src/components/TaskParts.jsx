@@ -14,7 +14,8 @@ import { Text } from './Text';
 import { useUpdateTaskMutation } from '@/services/taskApi';
 import { useTheme } from '@/constants/theme';
 import { runAction, ymd } from '@/utils/attendance';
-import { dueLabel, finishStatus, isOverdue, reviewClock, taskPriority, taskStatus } from '@/utils/tasks';
+import { canReview, canWorkTask, dueLabel, finishStatus, isOverdue, reviewClock, reviewerOf, taskPriority, taskProgress, taskStatus } from '@/utils/tasks';
+import { showToast } from './Toast';
 import { cn } from '@/utils/cn';
 import { getPref, setPref } from '@/utils/prefs';
 
@@ -34,12 +35,14 @@ export const openReschedule = (t) =>
     params: { id: t._id, due: t.dueDate ? ymd(t.dueDate) : '', title: t.title },
   });
 
-// Done for the creator, review for everyone else; ticking a done task reopens it.
+// Done for the reviewer, review for everyone else; ticking a done task reopens it (back to Working).
+// A task already waiting on someone else's review has nothing to do: say who it's waiting on.
 export function useFinishTask() {
   const me = useSelector((s) => s.auth.user);
   const [update] = useUpdateTaskMutation();
   return (t) => {
-    const next = t.status === 'done' ? 'todo' : finishStatus(t, me);
+    if (t.status === 'review' && !canReview(t, me)) return showToast({ title: `Waiting for ${reviewerOf(t)?.name || 'the reviewer'} to review it` });
+    const next = t.status === 'done' ? 'in_progress' : finishStatus(t, me);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const done = next === 'review' ? 'Sent for review' : next === 'done' ? (t.status === 'review' ? 'Approved' : 'Marked done') : 'Reopened';
     return runAction(update({ id: t._id, status: next }), done, "Couldn't update the task");
@@ -66,7 +69,10 @@ export function TaskRow({ task: t, selecting, selected, onToggleSelect, swipe = 
   const late = isOverdue(t);
   const total = t.checklists?.length || 0;
   const ticked = t.checklists?.filter((c) => c.checked).length || 0;
+  // Checklist % when there is one, else the doer's own "how far along".
+  const pct = total ? (ticked / total) * 100 : t.status === 'in_progress' ? t.progress || 0 : 0;
   const finishLabel = finishStatus(t, me) === 'done' ? (t.status === 'review' ? 'Approve' : 'Done') : 'Review';
+  const can = canWorkTask(t, me); // not on it: no tick, no swipes (they'd only fail)
   const clock = reviewClock(t);
 
   const open = selecting ? () => onToggleSelect(t._id) : () => router.push(`/tasks/${t._id}`);
@@ -77,10 +83,14 @@ export function TaskRow({ task: t, selecting, selected, onToggleSelect, swipe = 
         <Pressable onPress={open} haptic={false} hitSlop={10} accessibilityLabel={selected ? 'Deselect' : 'Select'} className={cn('mt-0.5 h-6 w-6 items-center justify-center rounded-full border-[1.5px]', selected ? 'border-ink bg-ink' : 'border-line')}>
           {selected && <Check size={14} color={theme.bg} />}
         </Pressable>
-      ) : (
-        <Pressable onPress={() => finish(t)} haptic={false} hitSlop={10} accessibilityLabel={done ? 'Reopen task' : finishLabel === 'Done' ? 'Mark done' : 'Send for review'}>
+      ) : can ? (
+        <Pressable onPress={() => finish(t)} haptic={false} hitSlop={10} accessibilityLabel={done ? 'Reopen task' : finishLabel === 'Done' ? 'Mark done' : finishLabel === 'Approve' ? 'Approve' : 'Send for review'}>
           {done ? <CheckCircle2 size={24} color={theme.success} /> : <Circle size={24} color={theme.muted} />}
         </Pressable>
+      ) : (
+        <View importantForAccessibility="no" accessibilityElementsHidden>
+          {done ? <CheckCircle2 size={24} color={theme.success} /> : <Circle size={24} color={theme.line} />}
+        </View>
       )}
       <Pressable
         onPress={open}
@@ -94,6 +104,9 @@ export function TaskRow({ task: t, selecting, selected, onToggleSelect, swipe = 
         }
         accessibilityLabel={`${t.title}, ${taskStatus(t.status).label}, ${taskPriority(t.priority).label} priority, due ${dueLabel(t.dueDate)}`}
         accessibilityState={selecting ? { selected: !!selected } : undefined}
+        // Screen readers can't swipe: offer the same two actions.
+        accessibilityActions={can && !selecting ? [{ name: 'finish', label: done ? 'Reopen' : finishLabel }, { name: 'reschedule', label: 'Reschedule' }] : undefined}
+        onAccessibilityAction={(e) => (e.nativeEvent.actionName === 'finish' ? finish(t) : openReschedule(t))}
         className={cn('flex-1 flex-row items-start gap-3', done && !selecting && 'opacity-60')}
       >
         <View className="flex-1 gap-1.5">
@@ -110,17 +123,16 @@ export function TaskRow({ task: t, selecting, selected, onToggleSelect, swipe = 
             {!!t.parent && <GitBranch size={14} color={theme.muted} accessibilityLabel="Subtask" />}
             {!!clock && <Text className={cn('text-sm tabular-nums', clock.late ? 'font-body-semibold text-danger' : 'text-accent-ink')}>{clock.label}</Text>}
           </View>
+          {/* Only what's worth a glance: High/Urgent, and a status the review clock doesn't already say. */}
           <View className="flex-row items-center gap-2">
-            <PriorityBadge priority={t.priority} />
-            {t.status !== 'todo' && !done && <TaskStatusBadge status={t.status} />}
-            {total > 0 && (
-              <View className="flex-1 flex-row items-center gap-2" accessibilityLabel={`Checklist ${ticked} of ${total}`}>
+            {['high', 'urgent'].includes(t.priority) && <PriorityBadge priority={t.priority} />}
+            {t.status !== 'todo' && !done && !clock && <TaskStatusBadge status={t.status} />}
+            {(total > 0 || pct > 0) && (
+              <View className="flex-1 flex-row items-center gap-2" accessibilityLabel={total ? `Checklist ${ticked} of ${total}` : `${pct}% done`}>
                 <View className="h-1.5 flex-1 overflow-hidden rounded-full bg-sand">
-                  <View className="h-full rounded-full bg-accent" style={{ width: `${(ticked / total) * 100}%` }} />
+                  <View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
                 </View>
-                <Text className="text-xs text-muted tabular-nums">
-                  {ticked}/{total}
-                </Text>
+                <Text className="text-xs text-muted tabular-nums">{total ? `${ticked}/${total}` : `${pct}%`}</Text>
               </View>
             )}
           </View>
@@ -130,7 +142,7 @@ export function TaskRow({ task: t, selecting, selected, onToggleSelect, swipe = 
       </Pressable>
     </View>
   );
-  if (!swipe || selecting) return body;
+  if (!swipe || selecting || !can) return body;
 
   return (
     <Swipeable
@@ -203,11 +215,36 @@ export function SwipeIntro() {
         </Animated.View>
       </View>
       <View className="gap-2.5">
-        <Tip icon={ArrowRight}>Swipe right to mark it Done. If someone else created it, it goes to them for review.</Tip>
+        <Tip icon={ArrowRight}>Swipe right when it&apos;s finished. If someone else reviews it, it goes to them.</Tip>
         <Tip icon={ArrowLeft}>Swipe left to pick a new due date.</Tip>
-        <Tip icon={Hand}>Tap the circle to finish, long-press to select several.</Tip>
+        <Tip icon={Hand}>Tap the circle to finish. In List, long-press to select several.</Tip>
       </View>
       <Button title="Got it" size="sm" onPress={dismiss} />
     </View>
+  );
+}
+
+// A client's task row: title, status, progress and due date; opens the portal's task page.
+export function ClientTaskRow({ task: t, first }) {
+  const pct = taskProgress(t);
+  return (
+    <Pressable
+      onPress={() => router.push(`/portal/tasks/${t._id}`)}
+      accessibilityRole="button"
+      accessibilityLabel={`${t.title}, ${t.status === 'done' ? 'done' : `${pct}% done, due ${dueLabel(t.dueDate)}`}`}
+      className={first ? 'gap-2 p-4' : 'gap-2 border-t border-line p-4'}
+    >
+      <View className="flex-row items-start gap-3">
+        <Text numberOfLines={2} className="flex-1 font-body-semibold">{t.title}</Text>
+        <TaskStatusBadge status={t.status} />
+      </View>
+      {t.status !== 'done' && (
+        <View className="flex-row items-center gap-3">
+          <View className="h-1.5 flex-1 overflow-hidden rounded-full bg-sand"><View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} /></View>
+          <Text className="text-xs text-muted tabular-nums">{t.dueDate ? `Due ${dueLabel(t.dueDate)}` : `${pct}%`}</Text>
+        </View>
+      )}
+      {!!t.comments?.length && <Text className="text-xs text-muted">{t.comments.length} {t.comments.length === 1 ? 'message' : 'messages'}</Text>}
+    </Pressable>
   );
 }

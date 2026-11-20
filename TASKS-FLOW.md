@@ -201,14 +201,22 @@ T1 first because it is small and stops spam today. T2 next because review speed 
 - Swiping or ticking a task still sends it for review at once, with no note.
 - Review alerts go by push and in-app only, never email.
 
-**T3 done (Nov 2026).** Shortcuts taken, upgrade later:
-- Up to 5 photos or PDFs per message, 10 MB each. No video, Word or Excel files yet.
-- Message alerts go to the owner, creator, reviewer, watchers and the person replied to, never the sender. Repeats fold into one alert (T1 grouping).
-- Only the author or an admin can delete a message; its files are deleted with it.
-- The Files strip collects files from the chat only. The review note (T2) is still text only.
+**T3 done (Nov 2026).**
+- Task chat: text, photos (camera or gallery), PDFs, @mentions, replies, delete own message (admins can delete any). Up to 5 files per message, 10 MB each; images go to Cloudinary, PDFs as raw files.
+- Everyone on the task (owner, helpers, creator, reviewer, watchers, the person replied to) is notified; T1 folds repeats into one push.
+- Files strip on top of the task, and a full-screen viewer: swipe between photos, pinch or double-tap to zoom. PDFs open in the in-app browser.
+- Review notes ("Send for review" and "Ask for changes") can carry photos/PDFs. They're posted to the task chat right after the note, and the review card shows everything sent since the task went into review.
+- Not done yet: long-press a message → "Make a task" (with T4 quick add), the project-level Files tab (T6). Only photos and PDFs are accepted, not other file types.
 - Without Cloudinary keys the dev server saves files to `server/uploads` and serves them at `/uploads`. Production never does this and returns 503 instead.
 - The web client shows chat text only, not the files.
-- Pinch zoom and swiping between photos in the viewer still need a check on a real phone.
+
+**Simple flow (Nov 2026), part of T5.**
+- The task screen has one card that always shows the next step: To do → **Start work** → "How far along?" 25 / 50 / 75% → **Done, send for review** (or **Mark done** for the reviewer) → Approve / Ask for changes → Done, with **Reopen**.
+- Blocked tasks show "Waiting on X" instead of Start, and the owner gets "You can start now" when the last blocking task is done.
+- A To Do task starts itself when someone sets progress, ticks a checklist item or logs time (not while it is still blocked). Done sets progress to 100.
+- Started / finished / moved back now reach owner, helpers, creator and watchers (not the person who did it), in plain words ("Rahul started …"). Before, helpers and watchers heard nothing.
+- My Day is only my tasks; tasks in review sit under "With the reviewer", not "Overdue". Done means done today.
+- New: `progress` (0-100) on Task. Test: `server/src/modules/tasks/__tests__/task.flow.test.js`.
 
 ---
 
@@ -220,3 +228,80 @@ T1 first because it is small and stops spam today. T2 next because review speed 
 4. Daily email time: **9 am**, and **on by default** (each person can turn it off)?
 5. Can helpers submit for review, or only the owner? **Anyone on the task**.
 6. Migrating project tasks (T6) touches the web app too — **do it in T6, after a DB backup**.
+
+---
+
+## 6. Who can do what
+
+One set of rules, enforced by the server (`CRM/server/src/modules/tasks/taskRules.js`) and mirrored in the app (`src/utils/tasks.js`). The app hides what you can't do; the server refuses it anyway.
+
+### 6.1 The roles on a task
+
+Your **role on a task** matters more than your job title:
+
+| Who | What they are |
+|---|---|
+| **Owner** | The person it's assigned to. |
+| **Helpers** | People helping the owner. They can do everything the owner can. |
+| **Creator** | Whoever made the task. Reviews it unless review was handed to someone else. |
+| **Reviewer** | Checks the work and marks it Done. The creator, unless handed over. |
+| **Task managers** | The creator, the reviewer, and anyone with the **Manager**, **Admin** or **Super admin** role. |
+| **Other staff** | Employees who aren't on the task. |
+| **Client** | The client user linked to the task's project. |
+
+### 6.2 What each can do
+
+| Action | Owner / helpers | Task managers | Other staff | Client |
+|---|---|---|---|---|
+| See the task | ✅ | ✅ | ✅ | ✅ own projects only, without internal history, time logs, review notes or emails |
+| Chat, photos, PDFs | ✅ | ✅ | ✅ | ✅ (staff see "The client can read this chat") |
+| Delete a chat message | own | own (admins: any) | own | own |
+| Follow (get updates) | already get them | already get them | ✅ | — |
+| Start, progress %, move back to To do | ✅ | ✅ | — | — |
+| Checklist: add and tick | ✅ | ✅ | — | — |
+| Checklist: remove an item | — | ✅ | — | — |
+| Description, tags, start date, estimate | ✅ | ✅ | — | — |
+| Log time (today or yesterday) | ✅ | ✅ | — | — |
+| Remove a time entry | own | anyone's | — | — |
+| Move the due date | ✅ with a reason; creator, reviewer and owner are told | ✅ with a reason | — | — |
+| Add a subtask | ✅ | ✅ | — | — |
+| Title, priority, assignee, helpers, project, repeat | — | ✅ | — | — |
+| Dependencies (link / unlink) | — | ✅ | — | — |
+| Hand review to someone else | — | ✅ | — | — |
+| Send for review | ✅ | ✅ | — | — |
+| **Approve / mark Done** | only if they're the reviewer | **reviewer only** | — | — |
+| Reopen a Done task | ✅ | ✅ | — | — |
+| Delete a task | — | **Admin / Super admin only** | — | — |
+
+Same rules apply to every way of changing a task: the task screen, swipes, the Board arrows, bulk select and notification buttons. Bulk changes skip the tasks you can't change and say how many were skipped.
+
+**Good to know**
+- A task can't be sent for review or approved while a task it depends on is still open.
+- Changing the **title, description or due date** of a Done task reopens it (Working). Tags, priority, estimate, start date and people don't.
+- Adding a subtask or checklist item to a task in Review or Done reopens it.
+- New tasks start in To do or Working, never straight in Review or Done.
+- Work can only be assigned to active staff, never to clients or deactivated accounts.
+
+### 6.3 Who gets notified
+
+Never the person who did the action.
+
+| When | Who hears | Buttons |
+|---|---|---|
+| Task assigned to you | the new owner | Start work · Open |
+| Added as a helper | each new helper | Start work · Open |
+| Reassigned away from you | the old owner ("now with X") | Open |
+| Started, moved back, reopened | owner, helpers, creator, reviewer, followers | Open |
+| Sent for review | the reviewer, with the 1-office-hour clock | Approve · Open |
+| 15 min before the review is due | the reviewer | Approve · Open |
+| Review is late | the reviewer and all admins | Approve · Open |
+| Changes asked | owner and helpers, with the note | Open |
+| Approved | owner, helpers, creator, followers | Open |
+| A task you were waiting on is done | owner of each task it unblocks | Open |
+| Due date moved | creator, reviewer and owner, with the reason | Open |
+| Due in the next 24 h (9 am daily, once per due date) | owner and helpers (not while in Review) | Open |
+| Chat message | people on the task and followers; on a client project the client hears staff and the team hears the client | Reply |
+| @mention or reply to you | that person | Reply |
+| Task deleted | everyone who was on it | — |
+
+Tapping any of these opens the task itself (clients: the portal's task page). A task you're already looking at doesn't buzz.

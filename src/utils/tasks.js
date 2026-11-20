@@ -4,16 +4,23 @@ import * as Sharing from 'expo-sharing';
 import { TASK_PRIORITY, TASK_STATUS } from '@/constants';
 import { getPref, setPref } from './prefs';
 import { ymd } from './attendance';
+import { showWorkTimer } from '@/services/liveActivity';
 
 export const taskStatus = (v) => TASK_STATUS.find((s) => s.value === v) || TASK_STATUS[0];
 export const taskPriority = (v) => TASK_PRIORITY.find((p) => p.value === v) || TASK_PRIORITY[1];
 export const idOf = (x) => String(x?._id || x || '');
 
-// Server rule: only the reviewer (the creator unless handed over) may set Done; everyone else sends it for review.
+// Same rules as the server (server/src/modules/tasks/taskRules.js; the table is in TASKS-FLOW.md "Who can do what"):
+// - managers of a task (creator, reviewer, manager/admin roles) plan it: title, priority, people, dependencies
+// - the owner and helpers work it: status, progress, checklist, time, details, due date with a reason
+// - everyone else follows and chats; only the reviewer marks Done (the creator unless review was handed over)
 export const isCreator = (task, user) => !!user?._id && idOf(task?.createdBy) === String(user._id);
-export const canReview = (task, user) => isCreator(task, user) || (!!user?._id && idOf(task?.reviewer) === String(user._id));
 export const reviewerOf = (task) => task?.reviewer || task?.createdBy;
+export const canReview = (task, user) => !!user?._id && idOf(reviewerOf(task)) === String(user._id);
 export const finishStatus = (task, user) => (canReview(task, user) ? 'done' : 'review');
+export const canManageTask = (task, user) => !!user?._id && (isCreator(task, user) || idOf(task?.reviewer) === String(user._id) || ['manager', 'admin', 'super_admin'].includes(user?.role));
+export const isOnTask = (task, user) => !!user?._id && [task?.assignedTo, ...(task?.helpers || [])].some((p) => idOf(p) === String(user._id));
+export const canWorkTask = (task, user) => canManageTask(task, user) || isOnTask(task, user);
 
 // The 1-office-hour review clock, as words: "32 min left", "late by 1h 5m", "due 10:30 am, Tue".
 export const reviewClock = (task, now = Date.now()) => {
@@ -25,7 +32,14 @@ export const reviewClock = (task, now = Date.now()) => {
   const due = new Date(task.reviewDueAt);
   return { late: false, label: `Review due ${due.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit' })}, ${due.toLocaleDateString('en-IN', { weekday: 'short' })}` };
 };
-export const isOverdue = (t) => !!t.dueDate && t.status !== 'done' && ymd(t.dueDate) < ymd();
+// Late only while it's still with the doer: in review it waits on the reviewer (who has their own clock).
+// How far along, 0-100: the checklist when there is one, else the doer's own estimate.
+export const taskProgress = (t) => {
+  if (t.status === 'done') return 100;
+  const total = t.checklists?.length || 0;
+  return total ? Math.round((t.checklists.filter((c) => c.checked).length / total) * 100) : t.status === 'todo' ? 0 : t.progress || 0;
+};
+export const isOverdue = (t) => !!t.dueDate && !['done', 'review'].includes(t.status) && ymd(t.dueDate) < ymd();
 export const dueLabel = (d) => {
   if (!d) return 'No due date';
   const day = ymd(d);
@@ -39,15 +53,20 @@ export const dueLabel = (d) => {
 // "@[Asha](64f…)" mentions read as "@Asha".
 export const plainMentions = (text = '') => text.replace(/@\[([^\]]+)\]\([a-f0-9]{24}\)/g, '@$1');
 
-// My Day buckets, same rules as the web: in-progress work counts as today.
+// My Day buckets. In-progress work counts as today; tasks in review wait on the reviewer, so they never count as overdue.
+// Done means done today; anything else open with a later (or no) date is upcoming.
 export const myDay = (tasks) => {
   const today = ymd();
   const due = (t) => (t.dueDate ? ymd(t.dueDate) : null);
+  const open = tasks.filter((t) => t.status !== 'done' && t.status !== 'review');
+  const overdue = open.filter((t) => due(t) && due(t) < today);
+  const todays = open.filter((t) => !overdue.includes(t) && (due(t) === today || t.status === 'in_progress'));
   return {
-    overdue: tasks.filter((t) => t.status !== 'done' && due(t) && due(t) < today),
-    today: tasks.filter((t) => t.status !== 'done' && (due(t) === today || (t.status === 'in_progress' && !(due(t) && due(t) < today)))),
-    upcoming: tasks.filter((t) => t.status !== 'done' && t.status !== 'in_progress' && due(t) > today),
-    done: tasks.filter((t) => t.status === 'done'),
+    overdue,
+    today: todays,
+    upcoming: open.filter((t) => !overdue.includes(t) && !todays.includes(t)),
+    waiting: tasks.filter((t) => t.status === 'review'),
+    done: tasks.filter((t) => t.status === 'done' && ymd(t.completedAt || t.updatedAt) === today),
   };
 };
 
@@ -86,4 +105,8 @@ const WATCH_KEY = 'task-stopwatch';
 export const getStopwatch = async () => {
   try { return JSON.parse((await getPref(WATCH_KEY)) || 'null'); } catch { return null; }
 };
-export const setStopwatch = (v) => setPref(WATCH_KEY, v ? JSON.stringify(v) : null);
+export const setStopwatch = (v) => {
+  // Also shown in the Dynamic Island / Lock Screen while it runs.
+  showWorkTimer('task', v ? { title: v.title, sub: 'Stopwatch running', start: v.startedAt, taskId: v.taskId } : null);
+  return setPref(WATCH_KEY, v ? JSON.stringify(v) : null);
+};
