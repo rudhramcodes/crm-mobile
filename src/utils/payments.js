@@ -19,6 +19,14 @@ export function maxEditable(payment) {
   return Math.round((Number(due) + (payment.status === 'completed' ? Number(payment.amount || 0) : 0)) * 100) / 100;
 }
 
+// The calendar day on this device. A payment recorded at 01:00 IST is stored as the previous UTC day,
+// so cutting the ISO string would show (and re-save) the wrong day.
+const pad = (n) => String(n).padStart(2, '0');
+export const localDay = (d) => {
+  const x = new Date(d);
+  return Number.isNaN(x.getTime()) ? '' : `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}`;
+};
+
 // Server record → edit form state.
 export const paymentForm = (p) => ({
   amount: p?.amount != null ? String(p.amount) : '',
@@ -26,19 +34,21 @@ export const paymentForm = (p) => ({
   paymentMethod: p?.paymentMethod || 'upi',
   status: p?.status || 'completed',
   referenceNo: p?.referenceNo || '',
-  paymentDate: p?.paymentDate ? String(p.paymentDate).slice(0, 10) : '',
+  paymentDate: p?.paymentDate ? localDay(p.paymentDate) : '',
   notes: p?.notes || '',
 });
 
 // Edit form → PATCH body (same fields as the web PaymentForm; the invoice can't change).
-export const paymentBody = (f) => ({
+// The date is sent only when it was changed (`initial` is the form as it opened), so fixing a note
+// never rewrites the stored date and time.
+export const paymentBody = (f, initial) => ({
   amount: Number(f.amount),
   paymentType: f.paymentType,
   paymentMethod: f.paymentMethod,
   status: f.status,
   referenceNo: String(f.referenceNo || '').trim(),
   notes: String(f.notes || '').trim(),
-  ...(f.paymentDate ? { paymentDate: f.paymentDate } : {}),
+  ...(f.paymentDate && f.paymentDate !== initial?.paymentDate ? { paymentDate: f.paymentDate } : {}),
 });
 
 // Receipt file name: the receipt number when there is one (the web uses part of the id).

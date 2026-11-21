@@ -32,7 +32,8 @@ function Chips({ options, value, onChange }) {
 // Same fields as the web "Edit Payment"; the invoice is fixed. Unlike the web, the amount is capped at what the invoice can take.
 function PaymentEditForm({ payment: p }) {
   const [update, u] = useUpdatePaymentMutation();
-  const [f, setF] = useState(() => paymentForm(p));
+  const [initial] = useState(() => paymentForm(p));
+  const [f, setF] = useState(initial);
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
   const { message, fieldErrors } = apiError(u.error);
   const err = (k) => getFieldError(fieldErrors, k);
@@ -49,7 +50,7 @@ function PaymentEditForm({ payment: p }) {
   const ready = amount > 0 && !amountError;
 
   const save = async () => {
-    if (await runAction(update({ id: p._id, ...paymentBody(f) }), "Payment updated", "Couldn't update the payment")) backTo(`/payments/${p._id}`);
+    if (await runAction(update({ id: p._id, ...paymentBody(f, initial) }), "Payment updated", "Couldn't update the payment")) backTo(`/payments/${p._id}`);
   };
 
   return (

@@ -118,7 +118,8 @@ function FreelancerBody({ freelancer: f }) {
 
   const setStatus = (status, done = `Marked ${status}`) => {
     if (status === f.status || u.isLoading) return;
-    runAction(update({ id: f._id, status }), done, "Couldn't update the status");
+    // The email goes along: older servers blank it on any update that leaves it out.
+    runAction(update({ id: f._id, status, email: f.email || "" }), done, "Couldn't update the status");
   };
   const openLink = (url) =>
     Linking.openURL(/^https?:\/\//i.test(url) ? url : `https://${url}`).catch(() => showToast({ title: "Couldn't open the link" }));

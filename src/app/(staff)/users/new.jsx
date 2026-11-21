@@ -4,6 +4,7 @@ import {
   Chip,
   DashboardState,
   DateField,
+  EmptyState,
   Input,
   PasswordInput,
   PasswordRules,
@@ -21,6 +22,7 @@ import { runAction } from "@/utils/attendance";
 import { getFieldError } from "@/utils/getFieldError";
 import { isStaffRole, userBody, userForm, userFormError } from "@/utils/users";
 import { useLocalSearchParams } from "expo-router";
+import { Lock } from "lucide-react-native";
 import { useState } from "react";
 import { Platform, View } from "react-native";
 import { useSelector } from "react-redux";
@@ -172,11 +174,16 @@ function UserForm({ user }) {
 // Create, or edit with ?id=. Android shows modals full screen under the status bar, so it needs the top inset; iOS sheets don't.
 export default function NewUser() {
   const { id } = useLocalSearchParams();
+  const me = useSelector((s) => s.auth.user);
   const { data, isLoading, isError, refetch } = useGetUserByIdQuery(id, { skip: !id });
   const user = data?.data?.user;
+  // The Super Admin's record is theirs alone to edit (also enforced on the server).
+  const locked = user?.role === "super_admin" && user._id !== me?._id;
   return (
     <Screen scroll edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]} className="gap-5 pt-6">
-      {!id || user ? (
+      {locked ? (
+        <EmptyState icon={Lock} title="Only the Super Admin can edit this account" message="Ask them to update it from their own login." actionTitle="Go back" onAction={() => backTo("/users")} />
+      ) : !id || user ? (
         <UserForm key={user?._id || "new"} user={user} />
       ) : (
         <DashboardState isLoading={isLoading} isError={isError || !isLoading} refetch={refetch} />

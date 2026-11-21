@@ -172,6 +172,8 @@ function UserList({ me }) {
           <View className={q.isFetching ? "pb-2 opacity-50" : "pb-2"}>
             <UserRow
               user={item}
+              // Only the Super Admin opens the Super Admin's record (the server refuses anyone else's edits).
+              readOnly={item.role === "super_admin" && item._id !== me?._id}
               showSalary={payroll}
               onDelete={
                 me?.role === "super_admin" && item.role !== "super_admin"

@@ -87,10 +87,12 @@ export function QuotationForm({ initial, locked, onSubmit, submitLabel, loading,
   const pickProject = (id) => setF((x) => applyProject({ ...x, project: id }, projects.find((p) => String(p._id) === String(id)), dirtyOf(x)));
 
   // Suggested text from the server for this client / project / template; only fills what the user hasn't typed.
-  const defaults = useGetQuotationDefaultsQuery(
+  // currentData, not data: data still holds the previous client's defaults while the new ones load.
+  const defaultsQ = useGetQuotationDefaultsQuery(
     { clientId: f.client || undefined, projectId: f.project || undefined, templateId: f.templateId },
     { skip: editing },
-  ).data?.data?.defaults;
+  );
+  const defaults = defaultsQ.currentData?.data?.defaults;
   // New defaults (client / project / template changed): fill untouched fields once, during render rather than in an effect.
   const [applied, setApplied] = useState(null);
   if (defaults && defaults !== applied) {
@@ -101,7 +103,10 @@ export function QuotationForm({ initial, locked, onSubmit, submitLabel, loading,
 
   const m = money({ price: f.price, taxRate: f.taxRate });
   const badDates = !!f.validUntil && !!f.issueDate && f.validUntil < f.issueDate;
-  const ready = !!f.client && !!f.issueDate && !badDates && Number(f.price || 0) >= 0 && Number(f.budget || 0) >= 0;
+  // A new quotation waits until this client's own recipient, letter and bank details are filled in,
+  // so a quick tap after switching clients can't freeze (and later email) the previous client's details.
+  const defaultsReady = editing || (!!defaults && defaults === applied && !defaultsQ.isFetching);
+  const ready = !!f.client && !!f.issueDate && !badDates && Number(f.price || 0) >= 0 && Number(f.budget || 0) >= 0 && defaultsReady;
   const pani = f.templateId === 'panigrahna';
   const toggle = (p) => () => setOpenPage((o) => (o === p ? '' : p));
   const text = (k, label, rows, extra = {}) => (
@@ -293,7 +298,18 @@ export function QuotationForm({ initial, locked, onSubmit, submitLabel, loading,
         )}
       </Card>
 
-      <Button title={submitLabel} loading={loading} disabled={!ready} onPress={() => onSubmit(docBody(f, { lockIdentity: !!locked }))} />
+      {!editing && !!f.client && defaultsQ.isError && (
+        <View className="flex-row items-center gap-2">
+          <Text className="flex-1 text-sm text-danger">{"Couldn't load this client's details."}</Text>
+          <Button title="Try again" size="sm" variant="secondary" onPress={defaultsQ.refetch} />
+        </View>
+      )}
+      <Button
+        title={!editing && !!f.client && !defaultsReady && !defaultsQ.isError ? 'Loading client details…' : submitLabel}
+        loading={loading}
+        disabled={!ready}
+        onPress={() => onSubmit(docBody(f, { lockIdentity: !!locked }))}
+      />
     </>
   );
 }
