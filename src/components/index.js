@@ -36,6 +36,7 @@ export * from './TaskChat';
 export * from './LeadParts';
 export * from './ConfirmDialog';
 export * from './ClientParts';
+export * from './FreelancerParts';
 export * from './MeetingParts';
 export * from './ProjectParts';
 export * from './ProjectEditParts';

@@ -283,10 +283,16 @@ Admin/manager:
 
 ### M15 — Freelancers (admin/manager)
 
-- [ ] List, stats, filters (active/inactive), search (name, phone, city, service, code) **[Port]**
-- [ ] Detail: profile, services, skill level (junior/mid/senior/specialist/lead), rate card history (per hour/shift/day/function/event/deliverable/monthly/custom, INR/USD), emergency contact, portfolio links, Call/WhatsApp **[Port]**
-- [ ] Create/edit, activate/deactivate, archive, hard delete **[Port]**
-- [ ] Copy public apply link **[Port]**
+- [x] List, stats, filters (active/inactive), search (name, phone, city, service, code) **[Port]**
+  - Status chips All / Active / Inactive / Archived ("All" = active + inactive, like the web's "All current"); venture chips with counts; Call/WhatsApp/Email on each card.
+  - Row power/archive/delete buttons moved to the detail screen to keep the cards clean.
+- [x] Detail: profile, services, skill level (junior/mid/senior/specialist/lead), rate card history (per hour/shift/day/function/event/deliverable/monthly/custom, INR/USD), emergency contact, portfolio links, Call/WhatsApp **[Port]**
+  - Shows the full rate history per venture (past rates greyed); the web shows only the current rate.
+- [x] Create/edit, activate/deactivate, archive, hard delete **[Port]**
+  - Form: basics + ventures/rates up front, "More details" collapsed.
+  - Profile photo: gallery or camera, square crop, uploaded to the web's `/freelancers/upload/upload` (≤5 MB); "Remove photo" clears it.
+  - Archive and hard delete admin only; hard delete only after archiving, plus a "Restore" button for archived profiles (not on the web).
+- [ ] ~~Copy public apply link~~ **[Skipped]** — the web has no copy-link feature (its form is just `/freelancer-portal`); matched the web.
 - [ ] Public freelancer apply form → **[Web-only?]** (public, no login; a web link works on phones already)
 
 ### M16 — Users (admin)
