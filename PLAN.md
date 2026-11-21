@@ -252,11 +252,19 @@ Admin/manager:
 
 ### M10 — Quotations (admin)
 
-- [ ] List, stats by venture (quoted value, accepted value, conversion rate), filters (status, date, search) **[Port]**
-- [ ] Detail: preview (server HTML in a WebView), **PDF download + share** **[Native]**
-- [ ] Versions: timeline, view a version, send / resend email, set status (draft/sent/accepted/rejected/expired), archive **[Port]**
-- [ ] Create invoice from quotation **[Port]**
-- [ ] Full document editor (letter text, scope, deliverables, payment terms, conditions, bank/UPI, issuer, templates standard/panigrahna, working copy) → **[Web-only?]**: long document editing is painful on a phone. Smaller option: allow editing price, GST and dates only.
+- [x] List, stats by venture (quoted value, accepted value, conversion rate), filters (status, date, search) **[Port]**
+  - Figures: Quoted / Accepted / Conversion %; status and venture chips with counts (the server's per-venture figure is a count, not a value). Date range and "Show archived" behind a Filters button. Cards flag a passed valid-until date (nothing on the server expires quotations).
+- [x] Detail: preview (server HTML in a WebView), **PDF download + share** **[Native]**
+  - Preview is the PDF itself (no WebView, so no new native build): the stored PDF of the chosen version, or a fresh render of the working draft, opened in the share sheet. File name `QTN-…-V{n}.pdf`.
+- [x] Versions: timeline, view a version, send / resend email, set status (draft/sent/accepted/rejected/expired), archive **[Port]**
+  - Same rules as the web: send draft versions, resend sent ones, accept/reject draft or sent, expire sent; create a revision from a version, save the working draft as the next version (with a note) or discard it; archive/restore.
+  - Legacy (pre-version) quotations: status, resend, delete while draft, "Enable version history".
+- [ ] Create invoice from quotation **[Port]** → moved to M11 (needs the invoice screens).
+- [x] Full document editor **[Port]** (same form as the web, used for both create and "Edit working draft"):
+  - Client and project dropdowns (first 100 of each, as on the web; projects narrowed to the client), template cards with the venture's recommendation, dates, GST, budget and price with live totals.
+  - Each PDF page as a collapsible section (Standard: 3 pages, Panigrahna: 4), filled from the server's suggested text for the client / project / template; "Restore suggested text" per page; your own edits are never overwritten.
+  - "Edit printed recipient, company and bank details" section.
+  - Edit locks the client and project and saves through the working copy's version tokens.
 
 ### M11 — Invoices (admin; client read-only)
 
@@ -268,8 +276,13 @@ Admin/manager:
 
 ### M12 — Payments (admin)
 
-- [ ] List, stats, filters (method: upi/bank_transfer/razorpay/stripe/paypal/cash; type: advance/partial/final/other; status; date; reference search) **[Port]**
-- [ ] Detail, edit, delete (super_admin), **receipt PDF share** **[Native]**
+- [x] List, stats, filters (method: upi/bank_transfer/razorpay/stripe/paypal/cash; type: advance/partial/final/other; status; date; reference search) **[Port]**
+  - Figures: Collected (excl. cash) / Cash / Outstanding (the web's "Bank / Online" card repeats Collected, so it's dropped). Venture chips filter the list; filters sit behind a Filters button with a count.
+  - "To" date sends the end of that day, so that day's payments are included (the web drops them).
+  - No "New payment" here, as on the web: recording comes with invoices (M11).
+- [x] Detail, edit, delete (super_admin), **receipt PDF share** **[Native]**
+  - Receipt: server PDF downloaded with the user's token and opened in the share sheet, named after the receipt number.
+  - Edit caps the amount at balance due + this payment (the server doesn't check on edit; the web shows "Max ₹0").
 
 ### M13 — Reports (admin)
 
@@ -283,10 +296,16 @@ Admin/manager:
 
 ### M15 — Freelancers (admin/manager)
 
-- [ ] List, stats, filters (active/inactive), search (name, phone, city, service, code) **[Port]**
-- [ ] Detail: profile, services, skill level (junior/mid/senior/specialist/lead), rate card history (per hour/shift/day/function/event/deliverable/monthly/custom, INR/USD), emergency contact, portfolio links, Call/WhatsApp **[Port]**
-- [ ] Create/edit, activate/deactivate, archive, hard delete **[Port]**
-- [ ] Copy public apply link **[Port]**
+- [x] List, stats, filters (active/inactive), search (name, phone, city, service, code) **[Port]**
+  - Status chips All / Active / Inactive / Archived ("All" = active + inactive, like the web's "All current"); venture chips with counts; Call/WhatsApp/Email on each card.
+  - Row power/archive/delete buttons moved to the detail screen to keep the cards clean.
+- [x] Detail: profile, services, skill level (junior/mid/senior/specialist/lead), rate card history (per hour/shift/day/function/event/deliverable/monthly/custom, INR/USD), emergency contact, portfolio links, Call/WhatsApp **[Port]**
+  - Shows the full rate history per venture (past rates greyed); the web shows only the current rate.
+- [x] Create/edit, activate/deactivate, archive, hard delete **[Port]**
+  - Form: basics + ventures/rates up front, "More details" collapsed.
+  - Profile photo: gallery or camera, square crop, uploaded to the web's `/freelancers/upload/upload` (≤5 MB); "Remove photo" clears it.
+  - Archive and hard delete admin only; hard delete only after archiving, plus a "Restore" button for archived profiles (not on the web).
+- [ ] ~~Copy public apply link~~ **[Skipped]** — the web has no copy-link feature (its form is just `/freelancer-portal`); matched the web.
 - [ ] Public freelancer apply form → **[Web-only?]** (public, no login; a web link works on phones already)
 
 ### M16 — Users (admin)
