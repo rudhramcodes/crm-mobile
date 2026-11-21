@@ -3,8 +3,7 @@ import { RefreshControl, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import {
-  BarChart3, Calendar, CheckCircle2, CircleAlert, ClipboardCheck, Clock, CloudOff, CreditCard, IndianRupee, ListTodo, MapPin, Percent, Plus,
-  TrendingUp, UserCheck, Users, Video, Wallet,
+  BarChart3, Calendar, CheckCircle2, CircleAlert, CloudOff, IndianRupee, ListTodo, MapPin, Plus, UserCheck, Users, Video,
 } from 'lucide-react-native';
 import { Screen } from './Screen';
 import { Text } from './Text';
@@ -17,7 +16,7 @@ import { HomeHeader } from './SignedInHome';
 import { AttendanceCard } from './AttendanceCard';
 import { ActivityRow, BarList, BrandMark, MonthBars, Ring, Section, StatTile, StatusCounts, shortDate } from './DashboardParts';
 import { useGetDashboardOverviewQuery, useGetEmployeeDashboardQuery } from '@/services/dashboardApi';
-import { BRANDS, LEAD_SOURCES, LEAD_STATUS, TASK_PRIORITY, TASK_STATUS } from '@/constants';
+import { BRANDS, TASK_PRIORITY, TASK_STATUS } from '@/constants';
 import { useTheme } from '@/constants/theme';
 import { canWriteModule } from '@/utils/access';
 import { formatCompactCurrency, formatCurrency } from '@/utils/formatters';
@@ -29,7 +28,6 @@ const TASK_DOT = { todo: 'bg-muted', in_progress: 'bg-sand', review: 'bg-accent'
 const taskCounts = (byStatus = []) => TASK_STATUS.map((t) => ({ key: t.value, label: t.label, count: byStatus.find((s) => s.status === t.value)?.count || 0, dot: TASK_DOT[t.value] }));
 // Stages in pipeline order; sources (no stage) biggest first.
 const byStage = (list) => (a, b) => (a.status ? list.findIndex((i) => i.value === a.status) - list.findIndex((i) => i.value === b.status) : b.count - a.count);
-const ACTIVITY_ICON = { lead: Users, client: UserCheck, payment: CreditCard, meeting: Calendar, task: ListTodo };
 const today = () => new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
 
 // Pull to refresh that spins only for the pull, not for background polling.
@@ -103,44 +101,14 @@ export function TasksSection({ tasks, title = 'Task completion', sub }) {
   );
 }
 
-function ActivitySection({ items, empty = 'Activity shows up here as the team works.' }) {
-  return (
-    <Section title="Recent activity">
-      {items?.length ? (
-        <View>
-          {items.map((a, i) => (
-            <ActivityRow
-              key={a._id || i}
-              icon={ACTIVITY_ICON[a.type] || Calendar}
-              title={a.title}
-              description={a.description}
-              right={(
-                <View className="items-end gap-1">
-                  <Text className="text-xs text-muted">{shortDate(a.timestamp)}</Text>
-                  {a.user ? <Text numberOfLines={1} className="max-w-[90px] text-xs text-muted">{a.user}</Text> : null}
-                  {a.priority ? <Badge label={labelOf(TASK_PRIORITY, a.priority)} color={TASK_PRIORITY.find((p) => p.value === a.priority)?.color} /> : null}
-                </View>
-              )}
-            />
-          ))}
-        </View>
-      ) : (
-        <Text className="text-sm text-muted">{empty}</Text>
-      )}
-    </Section>
-  );
-}
-
-// Admin / manager Home: same sections as the web /dashboard, stacked for a phone.
+// Admin / manager Home: a short summary; detailed charts live in Reports and the venture dashboards.
 export function AdminDashboard() {
-  const theme = useTheme();
   const user = useSelector((s) => s.auth.user);
   const { data, isLoading, isError, refetch } = useGetDashboardOverviewQuery();
   const refreshControl = usePullRefresh(refetch);
   const d = data?.data;
   const k = d?.kpis;
   const byBrand = Object.fromEntries((d?.clients?.byBrand || []).map((b) => [b.brand, b.count]));
-  const aging = d?.invoices?.aging || [];
 
   return (
     <Screen tab scroll className="gap-5 pt-6" refreshControl={refreshControl}>
@@ -153,15 +121,11 @@ export function AdminDashboard() {
       {!d ? <DashboardState isLoading={isLoading} isError={isError} refetch={refetch} /> : (
         <>
           <View className="flex-row flex-wrap gap-3">
-            {/* Same icons as the web dashboard's KPI cards; Wallet and Percent where the web repeats or has none. */}
+            {/* Only the 4 numbers people act on; the full breakdown lives in Reports and the venture dashboards. */}
             <StatTile label="TOTAL LEADS" icon={Users} value={k.totalLeads} sub={`${k.conversionRate}% converted`} onPress={() => router.push('/leads')} />
             <StatTile label="ACTIVE CLIENTS" icon={UserCheck} tone="success" value={k.activeClients} sub={`${k.activeProjects} active project${k.activeProjects === 1 ? '' : 's'}`} onPress={() => router.push('/clients')} />
-            <StatTile label="REVENUE" icon={IndianRupee} tone="success" value={formatCompactCurrency(k.totalRevenue)} sub={`${formatCurrency(k.totalRevenue)}, excl. cash`} onPress={() => router.push('/payments')} />
-            <StatTile label="CASH COLLECTED" icon={Wallet} tone="success" value={formatCompactCurrency(k.cashCollected)} sub={`${formatCurrency(k.cashCollected)}, separate`} onPress={() => router.push('/payments')} />
-            <StatTile label="PENDING PAYMENTS" icon={Clock} value={k.pendingPayments} sub="Unpaid invoices" onPress={() => router.push('/invoices')} />
-            <StatTile label="OVERDUE" icon={CircleAlert} tone="danger" value={k.overdueInvoices} sub="Past due date" alert={k.overdueInvoices > 0} onPress={() => router.push('/invoices')} />
-            <StatTile label="CONVERSION" icon={TrendingUp} value={`${k.conversionRate}%`} sub="Leads won" onPress={() => router.push('/leads')} />
-            <StatTile label="COLLECTION RATE" icon={Percent} tone="success" value={`${k.collectionRate}%`} sub="Of invoiced amount" onPress={() => router.push('/invoices')} />
+            <StatTile label="REVENUE" icon={IndianRupee} tone="success" value={formatCompactCurrency(k.totalRevenue)} sub="Excl. cash" onPress={() => router.push('/payments')} />
+            <StatTile label="OVERDUE" icon={CircleAlert} tone="danger" value={k.overdueInvoices} sub={`${k.pendingPayments} unpaid invoices`} alert={k.overdueInvoices > 0} onPress={() => router.push('/invoices')} />
           </View>
 
           <Section title="Ventures" sub="Clients per brand. Tap one for its dashboard.">
@@ -178,30 +142,14 @@ export function AdminDashboard() {
             </View>
           </Section>
 
-          <RevenueSection revenue={d.revenue} collected={k.totalRevenue} sub="Collected (excl. cash) per month. Tap a month." />
-          <PipelineSection sub="Leads at each stage" rows={d.pipeline?.byStatus} list={LEAD_STATUS} />
-          <PipelineSection title="Lead sources" sub="Where leads come from" rows={d.pipeline?.bySource} list={LEAD_SOURCES} />
-
-          <Section title="Invoice aging" sub="Outstanding by days past due" action="Invoices" onAction={() => router.push('/invoices')}>
-            {aging.some((a) => a.count) ? (
-              <BarList rows={aging.map((a) => ({ key: a.label, label: `${a.label} · ${a.count}`, value: a.amount, display: formatCurrency(a.amount) }))} />
-            ) : (
-              <View className="flex-row items-center gap-3">
-                <CheckCircle2 size={22} color={theme.success} />
-                <Text className="flex-1 text-sm text-muted">All invoices cleared. Nothing is past due.</Text>
-              </View>
-            )}
-          </Section>
-
           <TasksSection tasks={d.tasks} />
-          <ActivitySection items={d.recentActivity} />
         </>
       )}
     </Screen>
   );
 }
 
-// Employee Home: my tasks, upcoming meetings, my activity, quick links (web /dashboard for employees).
+// Employee Home: my tasks and upcoming meetings.
 export function EmployeeDashboard() {
   const { data, isLoading, isError, refetch } = useGetEmployeeDashboardQuery();
   const refreshControl = usePullRefresh(refetch);
@@ -265,16 +213,6 @@ export function EmployeeDashboard() {
             )}
           </Section>
 
-          <ActivitySection items={d.activity} empty="Activity shows up here as you work." />
-
-          <Section title="Quick links">
-            <View>
-              <ListRow icon={ListTodo} label="Tasks Hub" hint="View and submit your tasks" onPress={() => router.push('/tasks')} />
-              <ListRow icon={ClipboardCheck} label="Attendance" hint="Punches, calendar, regularize" onPress={() => router.push('/attendance')} />
-              <ListRow icon={Wallet} label="My payslips" hint="Salary slips and tax info" onPress={() => router.push('/my-payslips')} />
-              <ListRow icon={Calendar} label="Meetings" hint="Team and client syncs" onPress={() => router.push('/meetings')} />
-            </View>
-          </Section>
         </>
       )}
     </Screen>
