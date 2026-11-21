@@ -211,7 +211,7 @@ function FreelancerForm({ freelancer }) {
   const save = async () => {
     const body = freelancerBody(f);
     if (editing) {
-      if (await runAction(update({ id: freelancer._id, ...body }), "Freelancer updated", "Couldn't save the freelancer")) backTo(`/freelancers/${freelancer._id}`);
+      if (await runAction(update({ id: freelancer?._id, ...body }), "Freelancer updated", "Couldn't save the freelancer")) backTo(`/freelancers/${freelancer?._id}`);
       return;
     }
     const res = await runAction(create(body), "Freelancer added", "Couldn't add the freelancer");
@@ -222,7 +222,7 @@ function FreelancerForm({ freelancer }) {
 
   return (
     <>
-      <SheetHeader title={editing ? "Edit freelancer" : "Add freelancer"} sub={editing ? freelancer.fullName : "Only name, phone and one venture are needed. Add the rest later."} closeLabel="Cancel" />
+      <SheetHeader title={editing ? "Edit freelancer" : "Add freelancer"} sub={editing ? freelancer?.fullName : "Only name, phone and one venture are needed. Add the rest later."} closeLabel="Cancel" />
       <Alert message={fieldErrors.length ? "" : message} />
 
       <Text className="text-caption text-muted">BASICS</Text>

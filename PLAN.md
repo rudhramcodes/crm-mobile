@@ -252,11 +252,19 @@ Admin/manager:
 
 ### M10 — Quotations (admin)
 
-- [ ] List, stats by venture (quoted value, accepted value, conversion rate), filters (status, date, search) **[Port]**
-- [ ] Detail: preview (server HTML in a WebView), **PDF download + share** **[Native]**
-- [ ] Versions: timeline, view a version, send / resend email, set status (draft/sent/accepted/rejected/expired), archive **[Port]**
-- [ ] Create invoice from quotation **[Port]**
-- [ ] Full document editor (letter text, scope, deliverables, payment terms, conditions, bank/UPI, issuer, templates standard/panigrahna, working copy) → **[Web-only?]**: long document editing is painful on a phone. Smaller option: allow editing price, GST and dates only.
+- [x] List, stats by venture (quoted value, accepted value, conversion rate), filters (status, date, search) **[Port]**
+  - Figures: Quoted / Accepted / Conversion %; status and venture chips with counts (the server's per-venture figure is a count, not a value). Date range and "Show archived" behind a Filters button. Cards flag a passed valid-until date (nothing on the server expires quotations).
+- [x] Detail: preview (server HTML in a WebView), **PDF download + share** **[Native]**
+  - Preview is the PDF itself (no WebView, so no new native build): the stored PDF of the chosen version, or a fresh render of the working draft, opened in the share sheet. File name `QTN-…-V{n}.pdf`.
+- [x] Versions: timeline, view a version, send / resend email, set status (draft/sent/accepted/rejected/expired), archive **[Port]**
+  - Same rules as the web: send draft versions, resend sent ones, accept/reject draft or sent, expire sent; create a revision from a version, save the working draft as the next version (with a note) or discard it; archive/restore.
+  - Legacy (pre-version) quotations: status, resend, delete while draft, "Enable version history".
+- [ ] Create invoice from quotation **[Port]** → moved to M11 (needs the invoice screens).
+- [x] Full document editor **[Port]** (same form as the web, used for both create and "Edit working draft"):
+  - Client and project dropdowns (first 100 of each, as on the web; projects narrowed to the client), template cards with the venture's recommendation, dates, GST, budget and price with live totals.
+  - Each PDF page as a collapsible section (Standard: 3 pages, Panigrahna: 4), filled from the server's suggested text for the client / project / template; "Restore suggested text" per page; your own edits are never overwritten.
+  - "Edit printed recipient, company and bank details" section.
+  - Edit locks the client and project and saves through the working copy's version tokens.
 
 ### M11 — Invoices (admin; client read-only)
 
