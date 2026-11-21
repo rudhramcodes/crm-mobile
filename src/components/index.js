@@ -39,6 +39,7 @@ export * from './ClientParts';
 export * from './FreelancerParts';
 export * from './PaymentParts';
 export * from './ServerDocument';
+export * from './Charts';
 export * from './QuotationParts';
 export * from './SelectField';
 export * from './QuotationForm';

@@ -293,7 +293,11 @@ Admin/manager:
 
 ### M13 — Reports (admin)
 
-- [ ] Date range picker; Revenue (with/without cash, monthly trend), Pipeline (by status, by source, conversion), Clients, Invoices (status, overdue), Productivity (tasks by assignee/priority/status), Brand breakdown **[Port]**
+- [x] Date range picker; Revenue (with/without cash, monthly trend), Pipeline (by status, by source, conversion), Clients, Invoices (status, overdue), Productivity (tasks by assignee/priority/status), Brand breakdown **[Port]**
+  - Same tabs (Revenue, Pipeline, Clients, Invoices, Productivity), ranges (7D, 30D, This Month default, Last Month, This Year, All), cards, charts and monthly tables as the web; charts are bar lists, month bars and a ring instead of donuts. Brand breakdown is in Clients, as on the web.
+  - Fixes over the web: the With/Without cash toggle also changes the figures (the web only relabels them), and ranges start at local midnight (the web's "This Month" starts a day early in India). The aging card reads "Nothing past due" when every bucket is empty.
+  - Not on the web either: export, custom date range, manager access (the server allows super admin and admin only).
+  - Server fixes (CRM `server/src/modules/reports`): plain dates are whole days in India time and months group in India time; average conversion uses `convertedAt`; aging covers all unpaid invoices as of today with no gaps between buckets; bad dates return 400; the empty revenue summary includes `cashCollected`.
 
 ### M14 — Payroll & payslips
 
