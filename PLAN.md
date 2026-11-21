@@ -268,8 +268,13 @@ Admin/manager:
 
 ### M12 — Payments (admin)
 
-- [ ] List, stats, filters (method: upi/bank_transfer/razorpay/stripe/paypal/cash; type: advance/partial/final/other; status; date; reference search) **[Port]**
-- [ ] Detail, edit, delete (super_admin), **receipt PDF share** **[Native]**
+- [x] List, stats, filters (method: upi/bank_transfer/razorpay/stripe/paypal/cash; type: advance/partial/final/other; status; date; reference search) **[Port]**
+  - Figures: Collected (excl. cash) / Cash / Outstanding (the web's "Bank / Online" card repeats Collected, so it's dropped). Venture chips filter the list; filters sit behind a Filters button with a count.
+  - "To" date sends the end of that day, so that day's payments are included (the web drops them).
+  - No "New payment" here, as on the web: recording comes with invoices (M11).
+- [x] Detail, edit, delete (super_admin), **receipt PDF share** **[Native]**
+  - Receipt: server PDF downloaded with the user's token and opened in the share sheet, named after the receipt number.
+  - Edit caps the amount at balance due + this payment (the server doesn't check on edit; the web shows "Max ₹0").
 
 ### M13 — Reports (admin)
 
