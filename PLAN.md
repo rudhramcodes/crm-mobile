@@ -221,14 +221,14 @@ Admin/manager:
 - Pagination (Nov 2026): projects, clients, notifications and project tasks use numbered pages (Previous · Page X of Y · Next) from the server; the activity log pages on the device. Chat keeps "Show earlier".
 
 ### M7 — Meetings
-
-- [ ] List + calendar view; filters: search, status, venture, client, date range **[Port]**
-- [ ] Create/edit: title, date, start/end (end after start), venture, related lead / client / project, attendees, location, video link, recurrence (none/daily/weekly/monthly + count) **[Port]**
-- [ ] Generate **Zoho Meeting / Google Meet** link, regenerate, **Join** (opens app/browser) **[Native]**
-- [ ] Detail: status change (scheduled/completed/cancelled), discussion notes (employees can edit), recording link
-- [ ] Action items: add, assignee, deadline, done, remove, **convert to task** (pick project) **[Port]**
-- [ ] Delete single / whole recurring series
-- [ ] **Suggestion:** "Add to phone calendar" button **[Native]**
+- [x] List + calendar view (calendar loads the whole month); filters: search, status, venture (tabs with counts), client, date range; KPIs; 20 per page with infinite scroll **[Port]**
+- [x] Create/edit: title, venture, status, client / lead (client fills venture + invites its portal user), date (Today/Tomorrow), start time (slots or typed) + duration → end, recurrence (none/daily/weekly/monthly + 2–60 occurrences), Google Meet / Zoho link, paste / test / remove link, location, attendees, agenda **[Port]**
+- [x] Join opens the Zoho / Meet app or browser **[Native]**
+- [x] Detail: status change, client/lead links, participants, discussion notes (all staff can edit) **[Port]**
+- [x] Action items: add, done, remove, **convert to task** (project, assignee, deadline) **[Port]**
+- [x] Delete single / whole recurring series (series from the list, like the web)
+- [ ] (later) "Add to phone calendar" (needs expo-calendar); recording link (not shown on the web either)
+- Server fixes shipped with M7: venture saved on create; search + venture filter together.
 
 ### M8 — Leads (sales)
 
@@ -248,32 +248,56 @@ Admin/manager:
 - [x] Create/edit: venture*, company*, contact person*, email*, phone, GSTIN, PAN, address (street, city, state, PIN, country) **[Port]**
 - [x] Detail: Call / WhatsApp / Email, schedule meeting, notes feed, active/inactive toggle, delete, **send portal invite**, copy client ID **[Port]**
 - [ ] (later) Chat button and related projects, invoices, meetings of this client (not on the web yet)
-- Shortcuts: "Schedule meeting" opens `/meetings/new?client=` (Coming soon until M7); notes are read-only (no server endpoint, same as web).
+- Shortcuts: notes are read-only (no server endpoint, same as web).
 
 ### M10 — Quotations (admin)
 
-- [ ] List, stats by venture (quoted value, accepted value, conversion rate), filters (status, date, search) **[Port]**
-- [ ] Detail: preview (server HTML in a WebView), **PDF download + share** **[Native]**
-- [ ] Versions: timeline, view a version, send / resend email, set status (draft/sent/accepted/rejected/expired), archive **[Port]**
-- [ ] Create invoice from quotation **[Port]**
-- [ ] Full document editor (letter text, scope, deliverables, payment terms, conditions, bank/UPI, issuer, templates standard/panigrahna, working copy) → **[Web-only?]**: long document editing is painful on a phone. Smaller option: allow editing price, GST and dates only.
+- [x] List, stats by venture (quoted value, accepted value, conversion rate), filters (status, date, search) **[Port]**
+  - Figures: Quoted / Accepted / Conversion %; status and venture chips with counts (the server's per-venture figure is a count, not a value). Date range and "Show archived" behind a Filters button. Cards flag a passed valid-until date (nothing on the server expires quotations).
+- [x] Detail: preview (server HTML in a WebView), **PDF download + share** **[Native]**
+  - Preview is the PDF itself (no WebView, so no new native build): the stored PDF of the chosen version, or a fresh render of the working draft, opened in the share sheet. File name `QTN-…-V{n}.pdf`.
+- [x] Versions: timeline, view a version, send / resend email, set status (draft/sent/accepted/rejected/expired), archive **[Port]**
+  - Same rules as the web: send draft versions, resend sent ones, accept/reject draft or sent, expire sent; create a revision from a version, save the working draft as the next version (with a note) or discard it; archive/restore.
+  - Legacy (pre-version) quotations: status, resend, delete while draft, "Enable version history".
+- [x] Create invoice from quotation **[Port]** (built with M11): "Create invoice from V{n}" on a saved version, or "Open invoice" once one exists.
+- [x] Full document editor **[Port]** (same form as the web, used for both create and "Edit working draft"):
+  - Client and project dropdowns (first 100 of each, as on the web; projects narrowed to the client), template cards with the venture's recommendation, dates, GST, budget and price with live totals.
+  - Each PDF page as a collapsible section (Standard: 3 pages, Panigrahna: 4), filled from the server's suggested text for the client / project / template; "Restore suggested text" per page; your own edits are never overwritten.
+  - "Edit printed recipient, company and bank details" section.
+  - Edit locks the client and project and saves through the working copy's version tokens.
 
 ### M11 — Invoices (admin; client read-only)
 
-- [ ] List, stats (total invoiced, collection rate, outstanding, overdue count, by venture), filters **[Port]**
-- [ ] Create/edit: client, project, issue/due date, items (description, qty, rate), GST rate, discount %, billing address, notes/terms, issuer & bank details; from quotation **[Port]**
-- [ ] Detail: payment progress, timeline, linked quotation, status change, resend email, delete **[Port]**
-- [ ] **Record payment** + **split payment** (cash + bank/UPI) **[Port]**
-- [ ] PDF download + share (WhatsApp to client) **[Native]**
+- [x] List, stats (total invoiced, collection rate, outstanding, overdue count, by venture), filters **[Port]**
+  - Figures: Collected (non-cash) / Outstanding / Overdue count; status and venture chips with counts; search; issue-date range behind Filters. Cards show a paid-progress bar, balance or "Settled", and the due date in red once passed (before the nightly overdue job).
+- [x] Create/edit: client, project, issue/due date, items (description, qty, rate), GST rate, discount %, billing address, notes/terms, issuer & bank details; from quotation **[Port]**
+  - Same as the web InvoiceForm: client/project dropdowns, item rows, GST chips, discount %, live totals (server formula), collapsible billing address and printed details; picking a client fills untouched printed fields and address. Edit only for drafts.
+  - From a quotation: same prefill as the web (one item from the version's scope × price, GST, address, notes/terms, printed fields), client/project locked; blocked for archived / unsaved quotations; an existing invoice opens instead.
+- [x] Detail: payment progress, timeline, linked quotation, status change, resend email, delete **[Port]**
+  - Items and totals shown natively (the web shows the server HTML). Actions by status as on the web: Send / Edit / Record advance / Delete for drafts; Record payment / Mark as paid or Collect remaining / Resend / Cancel once sent.
+- [x] **Record payment** + **split payment** (cash + bank/UPI) **[Port]**
+  - Web PaymentForm: purpose, Full amount, amount capped at the balance, split switch (bank/UPI + cash), method, status, reference, date, notes, "After this payment" preview. Mark as paid = one-tap full balance with a method.
+  - Record advance on a draft matches the web (locks the invoice without emailing it); the form says so.
+- [x] PDF download + share (WhatsApp to client) **[Native]** — server PDF via the shared PDF helper.
+- [ ] Client portal invoices (read-only) → portal milestone. Server first: clients currently see their drafts, and `?brand=` overrides the client filter (a client can list other clients' invoices).
 
 ### M12 — Payments (admin)
 
-- [ ] List, stats, filters (method: upi/bank_transfer/razorpay/stripe/paypal/cash; type: advance/partial/final/other; status; date; reference search) **[Port]**
-- [ ] Detail, edit, delete (super_admin), **receipt PDF share** **[Native]**
+- [x] List, stats, filters (method: upi/bank_transfer/razorpay/stripe/paypal/cash; type: advance/partial/final/other; status; date; reference search) **[Port]**
+  - Figures: Collected (excl. cash) / Cash / Outstanding (the web's "Bank / Online" card repeats Collected, so it's dropped). Venture chips filter the list; filters sit behind a Filters button with a count.
+  - "To" date sends the end of that day, so that day's payments are included (the web drops them).
+  - No "New payment" here, as on the web: recording comes with invoices (M11).
+- [x] Detail, edit, delete (super_admin), **receipt PDF share** **[Native]**
+  - Receipt: server PDF downloaded with the user's token and opened in the share sheet, named after the receipt number.
+  - Edit caps the amount at balance due + this payment (the server doesn't check on edit; the web shows "Max ₹0").
 
 ### M13 — Reports (admin)
 
-- [ ] Date range picker; Revenue (with/without cash, monthly trend), Pipeline (by status, by source, conversion), Clients, Invoices (status, overdue), Productivity (tasks by assignee/priority/status), Brand breakdown **[Port]**
+- [x] Date range picker; Revenue (with/without cash, monthly trend), Pipeline (by status, by source, conversion), Clients, Invoices (status, overdue), Productivity (tasks by assignee/priority/status), Brand breakdown **[Port]**
+  - Same tabs (Revenue, Pipeline, Clients, Invoices, Productivity), ranges (7D, 30D, This Month default, Last Month, This Year, All), cards, charts and monthly tables as the web; charts are bar lists, month bars and a ring instead of donuts. Brand breakdown is in Clients, as on the web.
+  - Fixes over the web: the With/Without cash toggle also changes the figures (the web only relabels them), and ranges start at local midnight (the web's "This Month" starts a day early in India). The aging card reads "Nothing past due" when every bucket is empty.
+  - Not on the web either: export, custom date range, manager access (the server allows super admin and admin only).
+  - Server fixes (CRM `server/src/modules/reports`): plain dates are whole days in India time and months group in India time; average conversion uses `convertedAt`; aging covers all unpaid invoices as of today with no gaps between buckets; bad dates return 400; the empty revenue summary includes `cashCollected`.
 
 ### M14 — Payroll & payslips
 
@@ -283,17 +307,33 @@ Admin/manager:
 
 ### M15 — Freelancers (admin/manager)
 
-- [ ] List, stats, filters (active/inactive), search (name, phone, city, service, code) **[Port]**
-- [ ] Detail: profile, services, skill level (junior/mid/senior/specialist/lead), rate card history (per hour/shift/day/function/event/deliverable/monthly/custom, INR/USD), emergency contact, portfolio links, Call/WhatsApp **[Port]**
-- [ ] Create/edit, activate/deactivate, archive, hard delete **[Port]**
-- [ ] Copy public apply link **[Port]**
+- [x] List, stats, filters (active/inactive), search (name, phone, city, service, code) **[Port]**
+  - Status chips All / Active / Inactive / Archived ("All" = active + inactive, like the web's "All current"); venture chips with counts; Call/WhatsApp/Email on each card.
+  - Row power/archive/delete buttons moved to the detail screen to keep the cards clean.
+- [x] Detail: profile, services, skill level (junior/mid/senior/specialist/lead), rate card history (per hour/shift/day/function/event/deliverable/monthly/custom, INR/USD), emergency contact, portfolio links, Call/WhatsApp **[Port]**
+  - Shows the full rate history per venture (past rates greyed); the web shows only the current rate.
+- [x] Create/edit, activate/deactivate, archive, hard delete **[Port]**
+  - Form: basics + ventures/rates up front, "More details" collapsed.
+  - Profile photo: gallery or camera, square crop, uploaded to the web's `/freelancers/upload/upload` (≤5 MB); "Remove photo" clears it.
+  - Archive and hard delete admin only; hard delete only after archiving, plus a "Restore" button for archived profiles (not on the web).
+- [ ] ~~Copy public apply link~~ **[Skipped]** — the web has no copy-link feature (its form is just `/freelancer-portal`); matched the web.
 - [ ] Public freelancer apply form → **[Web-only?]** (public, no login; a web link works on phones already)
 
 ### M16 — Users (admin)
 
-- [ ] List, stats, role filter, search **[Port]**
-- [ ] Create/edit: name, email, phone, role, status, employee profile (employee ID, designation, joining/leaving date), compensation (gross salary, effective from), bank (name, account, IFSC), read-only modules **[Port]**
-- [ ] Change role (super_admin), delete (super_admin)
+- [x] List, stats, role filter, search **[Port]** (role chips carry the counts; Previous / Next pages)
+- [x] Create/edit: name, email, phone, role, employee profile (employee ID, designation, joining/leaving date), compensation (gross salary, effective from), bank (name, account, IFSC; payroll admins only) **[Port]**
+  - Password only on create: the server's update ignores it (the web's edit field does nothing).
+  - Added an Active switch on edit (server already supports it; the web has no way to deactivate).
+  - "Read-only modules" isn't on the web; skipped.
+- [x] Role change happens in the edit form (as on the web); delete (super_admin, not on super admins; blocked for payroll history)
+
+### M16b — Teams (by location)
+
+- [x] Teams page: Surat / Mumbai / Delhi team cards (count + avatars); "No location" card for admins (staff without a location)
+- [x] Team page: people in that location (active staff), search, pages; admins tap a person to edit their location
+- [x] Custom teams (hand-made groups for the task people picker) stay below, unchanged
+- [x] Server: `location` filter on GET /users (`none` = no location; clients excluded); a client's location is cleared
 
 ### M17 — Settings & profile
 

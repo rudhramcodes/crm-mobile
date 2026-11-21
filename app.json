@@ -10,6 +10,10 @@
     "ios": {
       "bundleIdentifier": "com.rudhram.crm",
       "supportsTablet": true,
+      "infoPlist": {
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true
+      },
       "entitlements": {
         "com.apple.developer.usernotifications.time-sensitive": true
       }

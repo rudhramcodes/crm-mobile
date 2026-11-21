@@ -10,9 +10,8 @@ import { ListRow } from './ListRow';
 import { signOut } from '@/store/session';
 import { authenticate, biometricLabel, getBiometricPref, setBiometricPref } from '@/utils/biometric';
 import { isSoundOn, setSoundOn } from '@/utils/notificationSound';
+import { ROLE_LABELS } from '@/constants';
 import { useTheme } from '@/constants/theme';
-
-const roleName = { super_admin: 'Super admin', admin: 'Admin', manager: 'Manager', employee: 'Employee', client: 'Client' };
 
 export function Toggle({ value, onValueChange, label }) {
   const theme = useTheme();
@@ -52,7 +51,7 @@ export function AccountSettings() {
         <View className="flex-1">
           <Text className="font-body-semibold text-lg" numberOfLines={1}>{user.name}</Text>
           <Text className="text-sm text-muted" numberOfLines={1}>{user.email}</Text>
-          <Text className="text-caption uppercase text-accent-ink">{roleName[user.role] ?? user.role}</Text>
+          <Text className="text-caption uppercase text-accent-ink">{ROLE_LABELS[user.role] ?? user.role}</Text>
         </View>
       </Card>
       <View>

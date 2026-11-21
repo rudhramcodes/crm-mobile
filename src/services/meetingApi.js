@@ -11,6 +11,16 @@ export const meetingApi = api.injectEndpoints({
       keepUnusedDataFor: 0,
     }),
 
+    // Pages of 20 for the list; all loaded pages refetch together when the Meeting tag is invalidated.
+    getMeetingPages: builder.infiniteQuery({
+      infiniteQueryOptions: {
+        initialPageParam: 1,
+        getNextPageParam: (last) => (last.pagination?.hasNextPage ? last.pagination.page + 1 : undefined),
+      },
+      query: ({ queryArg, pageParam }) => ({ url: '/meetings', params: { ...queryArg, page: pageParam, limit: 20 } }),
+      providesTags: ['Meeting'],
+    }),
+
     getMeetingById: builder.query({
       query: (id) => `/meetings/${id}`,
       providesTags: (result, error, id) => [{ type: 'Meeting', id }],
@@ -103,10 +113,11 @@ export const meetingApi = api.injectEndpoints({
     }),
 
     convertActionItem: builder.mutation({
-      query: ({ id, itemId, projectId }) => ({
+      // The server needs an assignee and deadline when the item has none (the web drops them and gets a 400).
+      query: ({ id, itemId, projectId, assignedTo, dueDate }) => ({
         url: `/meetings/${id}/action-items/${itemId}/convert`,
         method: 'POST',
-        body: { projectId },
+        body: { projectId, assignedTo, dueDate },
       }),
       invalidatesTags: (result, error, { id }) => [
         { type: 'Meeting', id },
@@ -119,6 +130,7 @@ export const meetingApi = api.injectEndpoints({
 
 export const {
   useGetMeetingsQuery,
+  useGetMeetingPagesInfiniteQuery,
   useGetMeetingByIdQuery,
   useCreateMeetingMutation,
   useGenerateMeetingLinkMutation,

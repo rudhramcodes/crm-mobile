@@ -21,7 +21,8 @@ export const requestMeta = (v) => REQUEST_STATUS.find((s) => s.value === v) || R
 export const backTo = (fallback = '/attendance') => (router.canGoBack() ? router.back() : router.replace(fallback));
 
 // Back chevron, caption and title for pushed screens; `right` holds the screen's main action.
-export function PageHeader({ caption, title, right, fallback }) {
+// oneLine: shrink a long title to fit one line instead of wrapping.
+export function PageHeader({ caption, title, right, fallback, oneLine }) {
   const theme = useTheme();
   return (
     <View className="gap-1">
@@ -31,7 +32,7 @@ export function PageHeader({ caption, title, right, fallback }) {
       <View className="flex-row items-end gap-3">
         <View className="flex-1">
           {!!caption && <Text className="text-caption text-muted">{caption}</Text>}
-          <Heading numberOfLines={2}>{title}</Heading>
+          <Heading numberOfLines={oneLine ? 1 : 2} adjustsFontSizeToFit={oneLine}>{title}</Heading>
         </View>
         {right}
       </View>
@@ -69,8 +70,9 @@ export function MiniStats({ items }) {
   return (
     <View className="flex-row gap-2">
       {items.map((i) => (
-        <View key={i.label} className="flex-1 rounded-2xl bg-surface-2 px-3 py-2.5" accessible accessibilityLabel={`${i.label}: ${i.value}`}>
-          <Text className="text-caption text-muted">{i.label.toUpperCase()}</Text>
+        <View key={i.label} className="flex-1 rounded-2xl bg-surface-2 px-2.5 py-2.5" accessible accessibilityLabel={`${i.label}: ${i.value}`}>
+          {/* One line: long labels (e.g. CANCELLED in a row of four) shrink a little instead of wrapping. */}
+          <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} className="text-caption text-muted">{i.label.toUpperCase()}</Text>
           <Text className="font-body-semibold tabular-nums">{i.value}</Text>
         </View>
       ))}

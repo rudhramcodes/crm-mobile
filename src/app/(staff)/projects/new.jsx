@@ -2,11 +2,8 @@ import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSelector } from 'react-redux';
-import { X } from 'lucide-react-native';
-import { Alert, Avatar, Button, Chip, DateField, Input, Pressable, Screen, SheetHeader, Text, UserPicker, brandLabel } from '@/components';
+import { Alert, Avatar, Button, Chip, ClientField, DateField, Input, Pressable, Screen, SheetHeader, Text, UserPicker } from '@/components';
 import { TASK_PRIORITY } from '@/constants';
-import { useTheme } from '@/constants/theme';
-import { useGetClientsQuery } from '@/services/clientApi';
 import { useCreateProjectMutation } from '@/services/projectApi';
 import { apiError } from '@/utils/apiError';
 import { runAction } from '@/utils/attendance';
@@ -18,38 +15,6 @@ const Field = ({ label, children }) => (
     {children}
   </View>
 );
-
-// Type to find a client; the venture comes from the client. `?client=<id>&clientName=` prefills it.
-function ClientField({ value, onChange, error }) {
-  const theme = useTheme();
-  const [q, setQ] = useState('');
-  const found = useGetClientsQuery({ search: q.trim(), status: 'active', limit: 6 }, { skip: q.trim().length < 2 }).data?.data || [];
-  if (value) {
-    return (
-      <View className="flex-row items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3">
-        <Avatar name={value.companyName} size={32} />
-        <View className="flex-1">
-          <Text className="font-body-medium">{value.companyName}</Text>
-          {!!value.brand && <Text className="text-xs text-muted">{brandLabel(value.brand)}</Text>}
-        </View>
-        <Pressable onPress={() => onChange(null)} accessibilityLabel="Change client" className="h-11 w-11 items-center justify-center"><X size={18} color={theme.muted} /></Pressable>
-      </View>
-    );
-  }
-  return (
-    <View className="gap-2">
-      <Input value={q} onChangeText={setQ} placeholder="Search a client" accessibilityLabel="Search a client" autoCorrect={false} error={error} />
-      {found.map((c) => (
-        <Pressable key={c._id} onPress={() => { onChange(c); setQ(''); }} accessibilityLabel={`Pick ${c.companyName}`} className="flex-row items-center gap-3 rounded-2xl bg-surface-2 px-3 py-2.5">
-          <Avatar name={c.companyName} size={28} />
-          <Text numberOfLines={1} className="flex-1 font-body-medium">{c.companyName}</Text>
-          {!!c.brand && <Text className="text-xs text-muted">{brandLabel(c.brand)}</Text>}
-        </Pressable>
-      ))}
-      {q.trim().length >= 2 && !found.length && <Text className="text-sm text-muted">No active client matches. Add the client first in Clients.</Text>}
-    </View>
-  );
-}
 
 // New project, the fields the web asks for up front. Every project starts at the Brief stage.
 // Milestones are optional; tasks are added on the project page afterwards.

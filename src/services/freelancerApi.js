@@ -1,4 +1,5 @@
 import { api } from './api';
+import { uploadPart } from './taskApi';
 
 export const freelancerApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -31,6 +32,14 @@ export const freelancerApi = api.injectEndpoints({
       query: (id) => ({ url: `/freelancers/${id}/hard`, method: 'DELETE' }),
       invalidatesTags: ['Freelancer'],
     }),
+    // Same route as the web photo picker (the path really is doubled); returns { url } of a 500px Cloudinary image.
+    uploadFreelancerPhoto: builder.mutation({
+      query: (photo) => {
+        const body = new FormData();
+        body.append('file', uploadPart(photo));
+        return { url: '/freelancers/upload/upload', method: 'POST', body };
+      },
+    }),
     archiveFreelancer: builder.mutation({
       query: (id) => ({ url: `/freelancers/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Freelancer'],
@@ -45,6 +54,7 @@ export const {
   useCreateFreelancerMutation,
   useCreateFreelancerPublicMutation,
   useUpdateFreelancerMutation,
+  useUploadFreelancerPhotoMutation,
   useArchiveFreelancerMutation,
   useDeleteFreelancerMutation,
 } = freelancerApi;
