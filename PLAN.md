@@ -259,7 +259,7 @@ Admin/manager:
 - [x] Versions: timeline, view a version, send / resend email, set status (draft/sent/accepted/rejected/expired), archive **[Port]**
   - Same rules as the web: send draft versions, resend sent ones, accept/reject draft or sent, expire sent; create a revision from a version, save the working draft as the next version (with a note) or discard it; archive/restore.
   - Legacy (pre-version) quotations: status, resend, delete while draft, "Enable version history".
-- [ ] Create invoice from quotation **[Port]** → moved to M11 (needs the invoice screens).
+- [x] Create invoice from quotation **[Port]** (built with M11): "Create invoice from V{n}" on a saved version, or "Open invoice" once one exists.
 - [x] Full document editor **[Port]** (same form as the web, used for both create and "Edit working draft"):
   - Client and project dropdowns (first 100 of each, as on the web; projects narrowed to the client), template cards with the venture's recommendation, dates, GST, budget and price with live totals.
   - Each PDF page as a collapsible section (Standard: 3 pages, Panigrahna: 4), filled from the server's suggested text for the client / project / template; "Restore suggested text" per page; your own edits are never overwritten.
@@ -268,11 +268,18 @@ Admin/manager:
 
 ### M11 — Invoices (admin; client read-only)
 
-- [ ] List, stats (total invoiced, collection rate, outstanding, overdue count, by venture), filters **[Port]**
-- [ ] Create/edit: client, project, issue/due date, items (description, qty, rate), GST rate, discount %, billing address, notes/terms, issuer & bank details; from quotation **[Port]**
-- [ ] Detail: payment progress, timeline, linked quotation, status change, resend email, delete **[Port]**
-- [ ] **Record payment** + **split payment** (cash + bank/UPI) **[Port]**
-- [ ] PDF download + share (WhatsApp to client) **[Native]**
+- [x] List, stats (total invoiced, collection rate, outstanding, overdue count, by venture), filters **[Port]**
+  - Figures: Collected (non-cash) / Outstanding / Overdue count; status and venture chips with counts; search; issue-date range behind Filters. Cards show a paid-progress bar, balance or "Settled", and the due date in red once passed (before the nightly overdue job).
+- [x] Create/edit: client, project, issue/due date, items (description, qty, rate), GST rate, discount %, billing address, notes/terms, issuer & bank details; from quotation **[Port]**
+  - Same as the web InvoiceForm: client/project dropdowns, item rows, GST chips, discount %, live totals (server formula), collapsible billing address and printed details; picking a client fills untouched printed fields and address. Edit only for drafts.
+  - From a quotation: same prefill as the web (one item from the version's scope × price, GST, address, notes/terms, printed fields), client/project locked; blocked for archived / unsaved quotations; an existing invoice opens instead.
+- [x] Detail: payment progress, timeline, linked quotation, status change, resend email, delete **[Port]**
+  - Items and totals shown natively (the web shows the server HTML). Actions by status as on the web: Send / Edit / Record advance / Delete for drafts; Record payment / Mark as paid or Collect remaining / Resend / Cancel once sent.
+- [x] **Record payment** + **split payment** (cash + bank/UPI) **[Port]**
+  - Web PaymentForm: purpose, Full amount, amount capped at the balance, split switch (bank/UPI + cash), method, status, reference, date, notes, "After this payment" preview. Mark as paid = one-tap full balance with a method.
+  - Record advance on a draft matches the web (locks the invoice without emailing it); the form says so.
+- [x] PDF download + share (WhatsApp to client) **[Native]** — server PDF via the shared PDF helper.
+- [ ] Client portal invoices (read-only) → portal milestone. Server first: clients currently see their drafts, and `?brand=` overrides the client filter (a client can list other clients' invoices).
 
 ### M12 — Payments (admin)
 

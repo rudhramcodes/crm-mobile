@@ -31,6 +31,9 @@ export default function StaffLayout() {
       <Stack.Screen name="payments/edit" options={modal} />
       <Stack.Screen name="quotations/edit" options={modal} />
       <Stack.Screen name="quotations/new" options={modal} />
+      <Stack.Screen name="invoices/new" options={modal} />
+      <Stack.Screen name="invoices/pay" options={modal} />
+      <Stack.Screen name="document-preview" options={modal} />
       <Stack.Screen name="meetings/new" options={modal} />
       <Stack.Screen name="meetings/convert" options={modal} />
       <Stack.Screen name="projects/new" options={modal} />

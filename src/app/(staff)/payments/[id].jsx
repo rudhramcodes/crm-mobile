@@ -15,7 +15,8 @@ import {
   payDate,
   paymentAccess,
   purposeLabel,
-  shareReceipt,
+  PdfActions,
+  receiptPdf,
   showToast,
   usePullRefresh,
 } from "@/components";
@@ -25,10 +26,10 @@ import { runAction } from "@/utils/attendance";
 import { formatCurrency } from "@/utils/formatters";
 import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
-import { Copy, Pencil, Share2, Trash2 } from "lucide-react-native";
+import { Copy, Pencil, Trash2 } from "lucide-react-native";
 import { useState } from "react";
 import { View } from "react-native";
-import { useSelector, useStore } from "react-redux";
+import { useSelector } from "react-redux";
 
 const Label = ({ children }) => <Text className="text-caption text-muted">{children}</Text>;
 
@@ -57,10 +58,10 @@ function InvoiceCard({ payment: p }) {
   const settled = (inv.balanceDue || 0) <= 0;
   return (
     <Card className="gap-3 p-4">
-      <View className="flex-row items-center">
+      <Pressable onPress={() => router.push(`/invoices/${inv._id}`)} accessibilityLabel={`Open invoice ${inv.invoiceNumber}`} className="flex-row items-center">
         <Text className="flex-1 text-caption text-muted">INVOICE</Text>
-        <Text className="font-body-semibold text-sm tabular-nums">{inv.invoiceNumber}</Text>
-      </View>
+        <Text className="font-body-semibold text-sm tabular-nums text-accent-ink">{inv.invoiceNumber} ›</Text>
+      </Pressable>
       <View className="flex-row justify-between">
         <View>
           <Text className="text-xs text-muted">Total</Text>
@@ -95,23 +96,15 @@ function InvoiceCard({ payment: p }) {
 
 function PaymentBody({ payment: p, refetch }) {
   const theme = useTheme();
-  const store = useStore();
   const me = useSelector((s) => s.auth.user);
   const can = paymentAccess(me);
   const [del, d] = useDeletePaymentMutation();
   const [confirming, setConfirming] = useState(false);
-  const [sharing, setSharing] = useState(false);
   const receipt = p.receiptNumber || `RCT-${p._id.slice(-8).toUpperCase()}`;
 
   const copyReceipt = async () => {
     await Clipboard.setStringAsync(receipt);
     showToast({ title: "Receipt number copied" });
-  };
-  const share = async () => {
-    setSharing(true);
-    await refetch(); // renews an expired login before the direct download, which can't refresh it itself
-    await shareReceipt(p, store.getState().auth.accessToken);
-    setSharing(false);
   };
 
   return (
@@ -153,7 +146,7 @@ function PaymentBody({ payment: p, refetch }) {
         <Field label="Reference" value={p.referenceNo || "—"} mono />
       </Card>
 
-      <Button title="Share receipt" icon={Share2} variant="secondary" loading={sharing} onPress={share} />
+      <PdfActions {...receiptPdf(p)} label="receipt" title="Download receipt" refresh={refetch} />
 
       <InvoiceCard payment={p} />
 

@@ -1,7 +1,7 @@
 // Self-check for the quotation helpers: `node src/utils/quotations.check.js`
 import assert from 'node:assert/strict';
 import {
-  applyDefaults, applyProject, defaultSelection, docBody, docForm, isPastValid, money, pdfTarget,
+  applyDefaults, applyProject, defaultSelection, docBody, docForm, htmlTarget, isPastValid, money, pdfTarget,
   quotationParams, recommendedTemplate, versionActions, versionOptions,
 } from './quotations.js';
 
@@ -93,6 +93,9 @@ assert.deepEqual(versionOptions(legacy), []);
 assert.deepEqual(pdfTarget(q, 2), { path: '/quotations/q1/revisions/2/pdf', name: 'QTN-PG-0007-V2.pdf' });
 assert.equal(pdfTarget(draft, 'working').path, '/quotations/q1/working-copy/pdf');
 assert.equal(pdfTarget(legacy).path, '/quotations/l1/pdf');
+assert.equal(htmlTarget(q, 2), '/quotations/q1/revisions/2/html');
+assert.equal(htmlTarget(draft, 'working'), '/quotations/q1/working-copy/html');
+assert.equal(htmlTarget(legacy), '/quotations/l1/html');
 
 const today = new Date('2026-11-21T10:00:00');
 assert.equal(isPastValid({ status: 'sent', validUntil: '2026-11-20' }, today), true);

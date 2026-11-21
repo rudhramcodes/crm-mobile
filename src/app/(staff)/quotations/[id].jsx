@@ -15,7 +15,7 @@ import {
   backTo,
   quotationAccess,
   quoteDate,
-  shareServerPdf,
+  PdfActions,
   usePullRefresh,
 } from "@/components";
 import { QUOTATION_STATUS } from "@/constants";
@@ -37,12 +37,13 @@ import {
 } from "@/services/quotationApi";
 import { runAction } from "@/utils/attendance";
 import { formatCurrency } from "@/utils/formatters";
-import { defaultSelection, isPastValid, isVersioned, money, pdfTarget, versionActions, versionOptions } from "@/utils/quotations";
+import { defaultSelection, htmlTarget, isPastValid, isVersioned, money, pdfTarget, versionActions, versionOptions } from "@/utils/quotations";
 import { router, useLocalSearchParams } from "expo-router";
-import { Archive, ArchiveRestore, FileClock, FilePlus2, FileText, Pencil, RefreshCw, Send, Trash2 } from "lucide-react-native";
+import { Archive, ArchiveRestore, Eye, FileClock, FilePlus2, Pencil, Receipt, RefreshCw, Send, Trash2 } from "lucide-react-native";
+import { useGetInvoicesQuery } from "@/services/invoiceApi";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
-import { useSelector, useStore } from "react-redux";
+import { useSelector } from "react-redux";
 
 const Label = ({ children }) => <Text className="text-caption text-muted">{children}</Text>;
 const statusLabel = (v) => QUOTATION_STATUS.find((s) => s.value === v)?.label || v;
@@ -120,7 +121,6 @@ function History({ quotation: q, selection, onSelect }) {
 
 function QuotationBody({ quotation: q, refetch }) {
   const theme = useTheme();
-  const store = useStore();
   const me = useSelector((s) => s.auth.user);
   const can = quotationAccess(me);
   const versioned = isVersioned(q);
@@ -133,12 +133,12 @@ function QuotationBody({ quotation: q, refetch }) {
   const revQ = useGetQuotationRevisionQuery({ id: q._id, version: selection }, { skip: !revision });
   const content = !versioned ? q : working ? { ...(q.workingCopy?.content || {}), status: "draft" } : { ...(revQ.data?.data?.revision?.content || (selection === q.latestVersion ? q : {})), status: revision?.status };
   const act = can.manage ? versionActions(q, selection) : {};
+  const linkedInvoice = useGetInvoicesQuery({ sourceQuotation: q._id, limit: 1 }).data?.data?.[0];
   const wc = q.workingCopy;
 
   const [confirm, setConfirm] = useState(null); // { title, message, label, danger, task }
   const [saving, setSaving] = useState(false); // shows the "save as version" note box
   const [note, setNote] = useState("");
-  const [sharing, setSharing] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const [sendRev] = useSendQuotationRevisionMutation();
@@ -164,13 +164,13 @@ function QuotationBody({ quotation: q, refetch }) {
   const recipient = content.recipientEmail || q.recipientEmail || q.client?.email || "the saved recipient";
   const v = `V${selection}`;
 
-  const sharePdf = async () => {
-    setSharing(true);
-    await refetch(); // renews an expired login before the direct download
-    const t = pdfTarget(q, selection);
-    await shareServerPdf(t.path, t.name, store.getState().auth.accessToken, "quotation");
-    setSharing(false);
-  };
+  const doc = pdfTarget(q, selection);
+  const docName = working ? "Working draft" : versioned ? v : "";
+  const preview = () =>
+    router.push({
+      pathname: "/document-preview",
+      params: { title: [q.quotationNumber, docName].filter(Boolean).join(" · "), htmlPath: htmlTarget(q, selection), path: doc.path, fileName: doc.name, label: "quotation" },
+    });
   const createRevision = async () => {
     setBusy(true);
     const ok = await runAction(createWc({ id: q._id, sourceVersion: selection, baseVersion: q.latestVersion }), `Working draft created from ${v}`, "Couldn't create the working draft");
@@ -232,7 +232,20 @@ function QuotationBody({ quotation: q, refetch }) {
 
       <MoneyCard content={content} loading={!!revision && revQ.isFetching} />
 
-      <Button title={working ? "View draft PDF" : versioned ? `View / share ${v} PDF` : "View / share PDF"} icon={FileText} variant="secondary" loading={sharing} onPress={sharePdf} />
+      <Button title={working ? "Preview working draft" : versioned ? `Preview ${v}` : "Preview quotation"} icon={Eye} variant="secondary" onPress={preview} />
+      <PdfActions path={doc.path} fileName={doc.name} label="quotation" title={working ? "Download draft PDF" : versioned ? `Download ${v} PDF` : "Download PDF"} refresh={refetch} />
+
+      {/* One invoice per quotation (web rule): open it if it exists, else invoice the saved version on screen. */}
+      {linkedInvoice ? (
+        <Button title={`Open invoice ${linkedInvoice.invoiceNumber || ""}`.trim()} icon={Receipt} variant="secondary" onPress={() => router.push(`/invoices/${linkedInvoice._id}`)} />
+      ) : can.manage && !q.archivedAt && !working && (!versioned || revision) ? (
+        <Button
+          title={versioned ? `Create invoice from ${v}` : "Create invoice"}
+          icon={Receipt}
+          variant="secondary"
+          onPress={() => router.push({ pathname: "/invoices/new", params: { quotationId: q._id, ...(versioned ? { version: String(selection) } : {}) } })}
+        />
+      ) : null}
 
       {/* Saved version: send, resend, decide, branch a new draft. */}
       {(act.send || act.resend || act.status?.length || act.createRevision || act.openWorking) && (
