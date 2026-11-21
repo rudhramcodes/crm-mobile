@@ -66,6 +66,13 @@ export function pdfTarget(q, selection) {
   return { path: `/quotations/${q._id}/revisions/${selection}/pdf`, name: `${no}-V${selection}.pdf` };
 }
 
+// HTML of the same document, for the in-app preview (the web shows this page in an iframe).
+export function htmlTarget(q, selection) {
+  if (!isVersioned(q)) return `/quotations/${q._id}/html`;
+  if (selection === 'working') return `/quotations/${q._id}/working-copy/html`;
+  return `/quotations/${q._id}/revisions/${selection}/html`;
+}
+
 // Valid-until passed on a quotation still open (draft/sent): warn on the card. Nothing on the server expires it.
 export function isPastValid(q, today = new Date()) {
   if (!q?.validUntil || !['draft', 'sent'].includes(q.status)) return false;
