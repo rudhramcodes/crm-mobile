@@ -113,6 +113,8 @@ export default function Meetings() {
               size="sm"
               onPress={() => router.push("/meetings/new")}
             />
+          ) : me?.role === "employee" ? (
+            <Button title="Request" icon={Plus} size="sm" variant="secondary" onPress={() => router.push("/meetings/request")} />
           ) : null
         }
       />

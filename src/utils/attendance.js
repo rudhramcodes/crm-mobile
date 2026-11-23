@@ -60,12 +60,12 @@ export const runAction = async (promise, done, failTitle = "Couldn't save") => {
   try {
     const res = await promise.unwrap();
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (done) showToast({ title: done });
+    if (done) showToast({ title: done, tone: 'success' });
     return res ?? true;
   } catch (e) {
     if (__DEV__) console.warn('[runAction]', failTitle, JSON.stringify(e));
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    showToast({ title: failTitle, message: apiError(e).message });
+    showToast({ title: failTitle, message: apiError(e).message, tone: 'error' });
     return null;
   }
 };

@@ -51,3 +51,4 @@ export * from './ProjectEditParts';
 export * from './Pager';
 export * from './UserParts';
 export * from './SettingsParts';
+export * from './WorkCalendar';

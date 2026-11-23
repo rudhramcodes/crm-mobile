@@ -1,5 +1,5 @@
 import {
-  AlertCircle, AlertTriangle, ArrowRightCircle, AtSign, Bell, Calendar, CheckSquare, ClipboardCheck, Clock, CreditCard,
+  AlertCircle, AlertTriangle, ArrowRightCircle, AtSign, Bell, Calendar, CalendarPlus, CheckSquare, ClipboardCheck, Clock, CreditCard,
   FileText, FolderKanban, MessageCircle, MessageSquare, Receipt, Repeat, Trash2, UserPlus, Users,
 } from 'lucide-react-native';
 
@@ -19,6 +19,7 @@ export const NOTIFICATION_CONFIG = {
   lead_converted: { icon: Repeat, tone: 'success', label: 'Leads' },
   meeting_scheduled: { icon: Calendar, tone: 'sand', label: 'Meeting' },
   meeting_reminder: { icon: Clock, tone: 'accent', label: 'Meeting' },
+  meeting_requested: { icon: CalendarPlus, tone: 'accent', label: 'Meeting' },
   invoice_paid: { icon: Receipt, tone: 'success', label: 'Invoice' },
   invoice_overdue: { icon: AlertCircle, tone: 'danger', label: 'Invoice' },
   payment_received: { icon: CreditCard, tone: 'success', label: 'Payment' },
