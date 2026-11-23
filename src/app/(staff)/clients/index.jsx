@@ -21,12 +21,13 @@ import {
   useGetClientsQuery,
   useGetClientStatsQuery,
 } from "@/services/clientApi";
-import { runAction } from "@/utils/attendance";
+import { isAdmin, runAction } from "@/utils/attendance";
 import { cleanParams } from "@/utils/leads";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
-import { Plus, Search, UserCheck } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
+import { Download, Plus, Search, UserCheck } from "lucide-react-native";
+import { useRef, useState } from "react";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { usePage, usePageNav } from "@/hooks/usePaged";
 import { View } from "react-native";
 import { useSelector } from "react-redux";
@@ -38,16 +39,11 @@ export default function Clients() {
   const can = clientAccess(me);
   const [status, setStatus] = useState("active");
   const [brand, setBrand] = useState("");
-  const [typed, setTyped] = useState("");
-  const [search, setSearch] = useState("");
+  const { typed, setTyped, search, setSearch } = useDebouncedSearch();
   const [deleting, setDeleting] = useState(null);
   const [del, d] = useDeleteClientMutation();
 
   // Search as you type, once typing pauses.
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(typed.trim()), 350);
-    return () => clearTimeout(t);
-  }, [typed]);
 
   // 20 per page from the server, with Previous / Next under the list.
   const LIMIT = 20;
@@ -82,14 +78,19 @@ export default function Clients() {
         title="Clients"
         fallback="/more"
         right={
-          can.manage ? (
-            <Button
-              title="New"
-              icon={Plus}
-              size="sm"
-              onPress={() => router.push("/clients/new")}
-            />
-          ) : null
+          <View className="flex-row gap-2">
+            {isAdmin(me) && (
+              <Button title="Save to contacts" icon={Download} size="sm" variant="secondary" accessibilityLabel="Save client contacts to this phone" onPress={() => router.push("/clients/save-contacts")} />
+            )}
+            {can.manage && (
+              <Button
+                title="New"
+                icon={Plus}
+                size="sm"
+                onPress={() => router.push("/clients/new")}
+              />
+            )}
+          </View>
         }
       />
 

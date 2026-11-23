@@ -1,41 +1,47 @@
 import { useCallback, useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
+import { addNetworkStateListener } from 'expo-network';
 import { router } from 'expo-router';
 import { useDispatch, useStore } from 'react-redux';
 import { api } from '@/services/api';
 import { notificationApi } from '@/services/notificationApi';
 import { connectSocket, disconnectSocket } from '@/services/socket';
 import { hasPush, registerPush, showLocalNotification } from '@/services/push';
-import { taskApi } from '@/services/taskApi';
 import { usePushTaps } from './usePushTaps';
 import { showToast } from '@/components/Toast';
 import { notificationRoute } from '@/utils/notificationRoute';
 import { playNotificationSound } from '@/utils/notificationSound';
+import { flushQueue, sendOrQueue } from '@/utils/offlineQueue';
 
 // Mark read and open; push data carries `id`, socket/REST notifications carry `_id`.
 export const openNotification = (n, { dispatch, client }) => {
   const id = n._id ?? n.id;
-  if (id && !n.read) dispatch(notificationApi.endpoints.markNotificationRead.initiate(id));
-  const path = notificationRoute(n);
-  // Clients have their own screens: task alerts open the portal's task page, anything else the portal home.
-  router.push(!client || path.startsWith('/portal') ? path : path.startsWith('/tasks/') ? `/portal${path}` : '/portal');
+  if (id && !n.read) sendOrQueue(dispatch, 'markNotificationRead', id).catch(() => {});
+  // Clients get portal pages only (see utils/notificationRoute.js).
+  router.push(notificationRoute(n, { client }));
 };
 
-// Buttons under a notification (see CATEGORIES in services/push.js). If the quick action fails, open the item instead.
+// Buttons under a notification (see CATEGORIES in services/push.js). Offline, they wait and send when the
+// connection is back; if the server refuses one, open the item instead.
 const QUICK = {
-  approve: (id) => taskApi.endpoints.updateTask.initiate({ id, status: 'done' }),
-  start: (id) => taskApi.endpoints.updateTask.initiate({ id, status: 'in_progress' }),
-  reply: (id, text) => taskApi.endpoints.addTaskComment.initiate({ id, text }),
+  approve: (id) => ['updateTask', { id, status: 'done' }],
+  start: (id) => ['updateTask', { id, status: 'in_progress' }],
+  reply: (id, text) => ['addTaskComment', { id, text }],
 };
 const DONE = { approve: 'Approved', start: 'Started', reply: 'Reply sent' };
+// Shown after a queued action finally goes through.
+const sendWaiting = (dispatch) => flushQueue(dispatch)
+  .then((n) => n && showToast({ tone: 'success', title: 'Back online', message: n === 1 ? 'Sent 1 action you took offline.' : `Sent ${n} actions you took offline.` }))
+  .catch(() => {});
 
 const runQuick = async (data, action, text, ctx) => {
   const id = data.referenceModel === 'Task' && data.referenceId;
   if (!QUICK[action] || !id || (action === 'reply' && !text?.trim())) return openNotification(data, ctx);
   try {
-    await ctx.dispatch(QUICK[action](id, text?.trim())).unwrap();
-    if (data.id) ctx.dispatch(notificationApi.endpoints.markNotificationRead.initiate(data.id));
-    showToast({ title: DONE[action] });
+    const res = await sendOrQueue(ctx.dispatch, ...QUICK[action](id, text?.trim()));
+    if (res.error) throw res.error;
+    if (data.id) sendOrQueue(ctx.dispatch, 'markNotificationRead', data.id).catch(() => {});
+    showToast(res.queued ? { title: "You're offline", message: `${DONE[action]} as soon as you're back online.` } : { tone: 'success', title: DONE[action] });
   } catch {
     showToast({ title: "Couldn't do that from the notification" });
     openNotification(data, ctx);
@@ -49,6 +55,10 @@ export function useLiveUpdates({ client = false } = {}) {
 
   useEffect(() => {
     const socket = connectSocket(store);
+    // Anything done offline goes out once the connection is back (socket up, network up, or app reopened).
+    sendWaiting(dispatch);
+    socket.on('connect', () => sendWaiting(dispatch));
+    const net = addNetworkStateListener(({ isInternetReachable }) => isInternetReachable && sendWaiting(dispatch));
     socket.on('notification:new', (n) => {
       // A task alert means a task changed: refresh task lists too, not just the inbox.
       dispatch(api.util.invalidateTags(n.referenceModel === 'Task' ? ['Notification', 'Task'] : ['Notification']));
@@ -66,8 +76,12 @@ export function useLiveUpdates({ client = false } = {}) {
     socket.on('notification:unread', ({ count }) => dispatch(notificationApi.util.upsertQueryData('getUnreadCount', undefined, count)));
     registerPush(dispatch).catch((e) => console.warn('[push]', e.message));
     // Back from the background: anything may have changed while the socket slept.
-    const sub = AppState.addEventListener('change', (state) => state === 'active' && dispatch(api.util.invalidateTags(['Task', 'Notification'])));
-    return () => { sub.remove(); disconnectSocket(); };
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      dispatch(api.util.invalidateTags(['Task', 'Notification']));
+      sendWaiting(dispatch);
+    });
+    return () => { sub.remove(); net.remove(); disconnectSocket(); };
   }, [store, dispatch, client]);
 
   usePushTaps(useCallback((data, action, text) => runQuick(data, action, text, { dispatch, client }), [dispatch, client]));

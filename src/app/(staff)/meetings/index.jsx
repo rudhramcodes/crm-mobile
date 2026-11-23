@@ -37,7 +37,8 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { View } from "react-native";
 import { useSelector } from "react-redux";
 
@@ -52,17 +53,12 @@ export default function Meetings() {
   const [f, setF] = useState(EMPTY);
   const [brand, setBrand] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  const [typed, setTyped] = useState("");
-  const [search, setSearch] = useState("");
+  const { typed, setTyped, search, setSearch } = useDebouncedSearch();
   const [deleting, setDeleting] = useState(null);
   const [del, d] = useDeleteMeetingMutation();
   const clients = useGetClientsQuery({ limit: 100 }).data?.data || [];
 
   // Search as you type, once typing pauses.
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(typed.trim()), 350);
-    return () => clearTimeout(t);
-  }, [typed]);
 
   const base = { search, brand, status: f.status, client: f.client };
   const q = useGetMeetingPagesInfiniteQuery(
@@ -113,6 +109,8 @@ export default function Meetings() {
               size="sm"
               onPress={() => router.push("/meetings/new")}
             />
+          ) : me?.role === "employee" ? (
+            <Button title="Request" icon={Plus} size="sm" variant="secondary" onPress={() => router.push("/meetings/request")} />
           ) : null
         }
       />

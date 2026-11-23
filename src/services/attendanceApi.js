@@ -89,15 +89,6 @@ export const attendanceApi = api.injectEndpoints({
       keepUnusedDataFor: 0,
     }),
 
-    manualOverride: builder.mutation({
-      query: ({ id, ...body }) => ({
-        url: `/attendance/${id}`,
-        method: 'PATCH',
-        body,
-      }),
-      invalidatesTags: ['Attendance', 'AttendanceToday', 'AttendanceStats'],
-    }),
-
     manualEntry: builder.mutation({
       query: (body) => ({
         url: '/attendance/manual',
@@ -290,7 +281,6 @@ export const {
   useGetAttendanceCalendarQuery,
   useGetAttendanceStatsQuery,
   useGetAttendanceOverviewStatsQuery,
-  useManualOverrideMutation,
   useManualEntryMutation,
   useRequestRegularizationMutation,
   useGetRegularizationRequestsQuery,

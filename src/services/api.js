@@ -3,9 +3,15 @@ import { loggedOut, setCredentials } from '@/store/authSlice';
 import { clearRefreshToken, getRefreshToken, saveRefreshToken } from '@/utils/refreshToken';
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
+// A request that hangs gives up (TIMEOUT_ERROR, shown as "can't reach the server") instead of spinning forever.
+// Photo and file uploads get longer on slow mobile data.
+const TIMEOUT_MS = 30000;
+const UPLOAD_TIMEOUT_MS = 120000;
+
 // Mobile has no cookies: send the access token as Bearer and refresh with the stored refresh token.
-const baseQuery = fetchBaseQuery({
+const rawBaseQuery = fetchBaseQuery({
   baseUrl: API_BASE_URL,
+  timeout: TIMEOUT_MS,
   prepareHeaders: (headers, { getState }) => {
     const token = getState().auth.accessToken;
     if (token) headers.set('Authorization', `Bearer ${token}`);
@@ -13,6 +19,10 @@ const baseQuery = fetchBaseQuery({
     return headers;
   },
 });
+const baseQuery = (args, api, extraOptions) => {
+  const upload = typeof FormData !== 'undefined' && args?.body instanceof FormData && !args.timeout;
+  return rawBaseQuery(upload ? { ...args, timeout: UPLOAD_TIMEOUT_MS } : args, api, extraOptions);
+};
 
 let refreshing = null;
 
@@ -51,7 +61,6 @@ export const api = createApi({
     'LeadStats',
     'Client',
     'ClientMe',
-    'PortalStaff',
     'Meeting',
     'Project',
     'Task',

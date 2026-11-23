@@ -3,7 +3,8 @@ import { RefreshControl, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import {
-  BarChart3, Calendar, CheckCircle2, CircleAlert, CloudOff, IndianRupee, ListTodo, MapPin, Plus, UserCheck, Users, Video,
+  BarChart3, Calendar, CalendarDays, CheckCircle2, CircleAlert, CloudOff, IndianRupee, ListTodo, MapPin, Plane, Plus, UserCheck,
+  Users, Video,
 } from 'lucide-react-native';
 import { Screen } from './Screen';
 import { Text } from './Text';
@@ -14,13 +15,17 @@ import { EmptyState } from './EmptyState';
 import { ListRow } from './ListRow';
 import { HomeHeader } from './SignedInHome';
 import { AttendanceCard } from './AttendanceCard';
+import { CalendarCard } from './WorkCalendar';
 import { ActivityRow, BarList, BrandMark, MonthBars, Ring, Section, StatTile, StatusCounts, shortDate } from './DashboardParts';
 import { useGetDashboardOverviewQuery, useGetEmployeeDashboardQuery } from '@/services/dashboardApi';
+import { useGetMeetingsQuery } from '@/services/meetingApi';
+import { useGetLeaveBalanceQuery } from '@/services/attendanceApi';
 import { BRANDS, TASK_PRIORITY, TASK_STATUS } from '@/constants';
 import { useTheme } from '@/constants/theme';
-import { canWriteModule } from '@/utils/access';
+import { canOpenPath, canWriteModule } from '@/utils/access';
 import { formatCompactCurrency, formatCurrency } from '@/utils/formatters';
 import { toDisplay } from '@/utils/time';
+import { ymd } from '@/utils/attendance';
 
 const labelOf = (list, value) => list.find((i) => i.value === value)?.label || String(value ?? 'Other').replace(/_/g, ' ');
 const TASK_DOT = { todo: 'bg-muted', in_progress: 'bg-sand', review: 'bg-accent', done: 'bg-success' };
@@ -101,31 +106,68 @@ export function TasksSection({ tasks, title = 'Task completion', sub }) {
   );
 }
 
+// Upcoming meetings list, shared by both Homes. `loading` shows a short skeleton instead of "no meetings".
+export function MeetingsSection({ meetings, loading, sub, max = 5 }) {
+  const theme = useTheme();
+  // The server sorts by day only; order same-day meetings by start time.
+  const sorted = [...(meetings || [])].sort((a, b) => `${String(a.date).slice(0, 10)}${a.startTime}`.localeCompare(`${String(b.date).slice(0, 10)}${b.startTime}`)).slice(0, max);
+  return (
+    <Section title="Upcoming meetings" sub={sub} action="View all" onAction={() => router.push('/meetings')}>
+      {loading ? <Skeleton className="h-16 rounded-2xl" /> : sorted.length ? (
+        <View>
+          {sorted.map((m, i) => (
+            <ActivityRow
+              key={m._id || i}
+              icon={Calendar}
+              title={m.title}
+              description={[`${shortDate(m.date)}, ${toDisplay(m.startTime)}–${toDisplay(m.endTime)}`, m.lead?.name || m.client?.companyName].filter(Boolean).join(' · ')}
+              onPress={m._id ? () => router.push(`/meetings/${m._id}`) : undefined}
+              right={(
+                <View className="flex-row gap-1.5">
+                  {!!m.meetingLink && <Video size={16} color={theme.muted} />}
+                  {!!m.location && <MapPin size={16} color={theme.muted} />}
+                </View>
+              )}
+            />
+          ))}
+        </View>
+      ) : (
+        <Text className="text-sm text-muted">{"No upcoming meetings. You're all clear."}</Text>
+      )}
+    </Section>
+  );
+}
+
 // Admin / manager Home: a short summary; detailed charts live in Reports and the venture dashboards.
 export function AdminDashboard() {
   const user = useSelector((s) => s.auth.user);
   const { data, isLoading, isError, refetch } = useGetDashboardOverviewQuery();
   const refreshControl = usePullRefresh(refetch);
   const d = data?.data;
-  const k = d?.kpis;
+  // A partial answer (no kpis) shows zeros instead of crashing Home.
+  const k = d?.kpis ?? {};
   const byBrand = Object.fromEntries((d?.clients?.byBrand || []).map((b) => [b.brand, b.count]));
+  // Tiles only link to pages this person can open (managers can't open money pages or Reports).
+  const go = (path) => (canOpenPath(user, path) ? () => router.push(path) : undefined);
+  const meetingsQ = useGetMeetingsQuery({ status: 'scheduled', dateFrom: ymd(new Date()), sortBy: 'date', sortOrder: 'asc', page: 1, limit: 10 });
 
   return (
     <Screen tab scroll className="gap-5 pt-6" refreshControl={refreshControl}>
       <HomeHeader subtitle={today()} />
       <View className="flex-row gap-3">
         {canWriteModule(user, 'leads') && <Button title="New lead" icon={Plus} size="sm" className="flex-1" onPress={() => router.push('/leads/new')} />}
-        <Button title="Reports" icon={BarChart3} variant="secondary" size="sm" className="flex-1" onPress={() => router.push('/reports')} />
+        {canOpenPath(user, '/reports') && <Button title="Reports" icon={BarChart3} variant="secondary" size="sm" className="flex-1" onPress={() => router.push('/reports')} />}
       </View>
       <AttendanceCard />
+      <CalendarCard />
       {!d ? <DashboardState isLoading={isLoading} isError={isError} refetch={refetch} /> : (
         <>
           <View className="flex-row flex-wrap gap-3">
             {/* Only the 4 numbers people act on; the full breakdown lives in Reports and the venture dashboards. */}
-            <StatTile label="TOTAL LEADS" icon={Users} value={k.totalLeads} sub={`${k.conversionRate}% converted`} onPress={() => router.push('/leads')} />
-            <StatTile label="ACTIVE CLIENTS" icon={UserCheck} tone="success" value={k.activeClients} sub={`${k.activeProjects} active project${k.activeProjects === 1 ? '' : 's'}`} onPress={() => router.push('/clients')} />
-            <StatTile label="REVENUE" icon={IndianRupee} tone="success" value={formatCompactCurrency(k.totalRevenue)} sub="Excl. cash" onPress={() => router.push('/payments')} />
-            <StatTile label="OVERDUE" icon={CircleAlert} tone="danger" value={k.overdueInvoices} sub={`${k.pendingPayments} unpaid invoices`} alert={k.overdueInvoices > 0} onPress={() => router.push('/invoices')} />
+            <StatTile label="TOTAL LEADS" icon={Users} value={k.totalLeads ?? 0} sub={`${k.conversionRate ?? 0}% converted`} onPress={go('/leads')} />
+            <StatTile label="ACTIVE CLIENTS" icon={UserCheck} tone="success" value={k.activeClients ?? 0} sub={`${k.activeProjects ?? 0} active project${k.activeProjects === 1 ? '' : 's'}`} onPress={go('/clients')} />
+            <StatTile label="REVENUE" icon={IndianRupee} tone="success" value={formatCompactCurrency(k.totalRevenue)} sub="Excl. cash, last 12 months" onPress={go('/payments')} />
+            <StatTile label="OVERDUE" icon={CircleAlert} tone="danger" value={k.overdueInvoices ?? 0} sub={`${k.pendingPayments ?? 0} pending payments`} alert={k.overdueInvoices > 0} onPress={go('/invoices')} />
           </View>
 
           <Section title="Ventures" sub="Clients per brand. Tap one for its dashboard.">
@@ -142,6 +184,8 @@ export function AdminDashboard() {
             </View>
           </Section>
 
+          <RevenueSection revenue={d.revenue} collected={k.totalRevenue} sub="Collected (excl. cash), last 12 months. Tap a month." />
+          <MeetingsSection meetings={meetingsQ.data?.data} loading={meetingsQ.isLoading} sub="Next on the company calendar" max={4} />
           <TasksSection tasks={d.tasks} />
         </>
       )}
@@ -149,18 +193,45 @@ export function AdminDashboard() {
   );
 }
 
-// Employee Home: my tasks and upcoming meetings.
+const NO_TASKS = { total: 0, done: 0, byStatus: [], items: [] };
+
+// Employee Home: leave left with one-tap links, my tasks and upcoming meetings.
+function TimeOffSection() {
+  const me = useSelector((s) => s.auth.user);
+  const bal = useGetLeaveBalanceQuery(me._id);
+  const b = bal.data?.data?.balance;
+  const left = (k) => (b?.[k]?.balance ?? (bal.isLoading ? '…' : '—'));
+  return (
+    <Section title="Time off" action="Calendar" onAction={() => router.push('/attendance/calendar')}>
+      <View className="flex-row gap-3">
+        {[['casual', 'Casual'], ['sick', 'Sick']].map(([k, label]) => (
+          <View key={k} className="flex-1 gap-0.5 rounded-2xl bg-surface-2 p-3" accessible accessibilityLabel={`${label} leave left: ${left(k)}`}>
+            <Text className="text-caption text-muted">{label.toUpperCase()} LEFT</Text>
+            <Text className="font-display text-numeral tabular-nums">{left(k)}</Text>
+          </View>
+        ))}
+      </View>
+      <View className="flex-row gap-3">
+        <Button title="Apply leave" icon={Plane} size="sm" className="flex-1" onPress={() => router.push('/attendance/apply-leave')} />
+        <Button title="My leaves" icon={CalendarDays} size="sm" variant="secondary" className="flex-1" onPress={() => router.push('/attendance/leaves')} />
+      </View>
+    </Section>
+  );
+}
+
 export function EmployeeDashboard() {
   const { data, isLoading, isError, refetch } = useGetEmployeeDashboardQuery();
   const refreshControl = usePullRefresh(refetch);
   const theme = useTheme();
   const d = data?.data;
-  const tasks = d?.tasks;
+  // A partial answer (no tasks block) shows an empty ring instead of crashing Home.
+  const tasks = { ...NO_TASKS, ...d?.tasks };
 
   return (
     <Screen tab scroll className="gap-5 pt-6" refreshControl={refreshControl}>
       <HomeHeader subtitle={today()} />
       <AttendanceCard />
+      <CalendarCard />
       {!d ? <DashboardState isLoading={isLoading} isError={isError} refetch={refetch} /> : (
         <>
           <Section title="My tasks" action="View all" onAction={() => router.push('/tasks')}>
@@ -189,29 +260,8 @@ export function EmployeeDashboard() {
             )}
           </Section>
 
-          <Section title="Upcoming meetings" action="View all" onAction={() => router.push('/meetings')}>
-            {d.meetings?.length ? (
-              <View>
-                {d.meetings.map((m, i) => (
-                  <ActivityRow
-                    key={m._id || i}
-                    icon={Calendar}
-                    title={m.title}
-                    description={[`${shortDate(m.date)}, ${toDisplay(m.startTime)}–${toDisplay(m.endTime)}`, m.lead?.name || m.client?.companyName].filter(Boolean).join(' · ')}
-                    onPress={m._id ? () => router.push(`/meetings/${m._id}`) : undefined}
-                    right={(
-                      <View className="flex-row gap-1.5">
-                        {!!m.meetingLink && <Video size={16} color={theme.muted} />}
-                        {!!m.location && <MapPin size={16} color={theme.muted} />}
-                      </View>
-                    )}
-                  />
-                ))}
-              </View>
-            ) : (
-              <Text className="text-sm text-muted">{"No upcoming meetings. You're all clear."}</Text>
-            )}
-          </Section>
+          <MeetingsSection meetings={d.meetings} />
+          <TimeOffSection />
 
         </>
       )}

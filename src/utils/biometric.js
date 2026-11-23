@@ -18,6 +18,15 @@ export async function biometricLabel() {
 export const getBiometricPref = () => getPref(KEY);
 export const setBiometricPref = (value) => setPref(KEY, value);
 
+// How long the app may sit in the background before the lock comes back. Settings offers these; 5 is the default.
+export const LOCK_CHOICES = [1, 5, 15];
+const LOCK_KEY = 'lockAfterMinutes';
+export const getLockMinutes = async () => {
+  const n = Number(await getPref(LOCK_KEY));
+  return LOCK_CHOICES.includes(n) ? n : 5;
+};
+export const setLockMinutes = (min) => setPref(LOCK_KEY, min == null ? null : String(min));
+
 // Falls back to the phone passcode after failed scans, like the system apps do.
 export const authenticate = (promptMessage = 'Unlock Rudhram CRM') =>
   LocalAuthentication.authenticateAsync({ promptMessage, cancelLabel: 'Cancel' });

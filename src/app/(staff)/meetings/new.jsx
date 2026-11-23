@@ -23,6 +23,7 @@ import {
   useCreateMeetingMutation,
   useGenerateMeetingLinkMutation,
   useGetMeetingByIdQuery,
+  useGetMeetingsQuery,
   useUpdateMeetingMutation,
 } from "@/services/meetingApi";
 import { useGetUsersQuery } from "@/services/userApi";
@@ -36,6 +37,7 @@ import {
   clientOptions,
   durationOf,
   endFrom,
+  findClash,
   leadOptions,
   meetingBody,
 } from "@/utils/meetings";
@@ -44,6 +46,9 @@ import * as Clipboard from "expo-clipboard";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Platform, ScrollView, View } from "react-native";
+import { useSelector } from "react-redux";
+import { AlertCircle } from "lucide-react-native";
+import { useTheme } from "@/constants/theme";
 
 const textArea = { height: 110, paddingTop: 14, textAlignVertical: "top" };
 const LINK = /^https?:\/\/\S+$/i;
@@ -66,34 +71,52 @@ const Row = ({ children }) => (
 const Section = ({ children }) => <Text className="pt-2 text-caption text-muted">{children}</Text>;
 
 const idOf = (x) => (x && typeof x === "object" ? x._id : x) || "";
-const initial = (m, client) => ({
-  title: m?.title || "",
+const one = (v) => (typeof v === "string" ? v : "");
+// d: prefills from the URL (client page, calendar day, or an employee's meeting request).
+const initial = (m, d = {}) => ({
+  title: m?.title || one(d.title),
   brand: m?.brand || "",
   status: m?.status || "scheduled",
-  client: idOf(m?.client) || client || "",
+  client: idOf(m?.client) || one(d.client),
   lead: idOf(m?.lead),
-  date: m?.date ? String(m.date).slice(0, 10) : "",
-  startTime: m?.startTime || "",
+  date: m?.date ? String(m.date).slice(0, 10) : /^\d{4}-\d{2}-\d{2}$/.test(one(d.date)) ? d.date : "",
+  startTime: m?.startTime || (/^\d{2}:\d{2}$/.test(one(d.startTime)) ? d.startTime : ""),
   endTime: m?.endTime || "",
   recurrence: "none",
   occurrences: "3",
   meetingLink: m?.meetingLink || "",
   location: m?.location || "",
-  attendees: (m?.attendees || []).map(idOf),
+  attendees: m ? (m.attendees || []).map(idOf) : one(d.attendee) ? [d.attendee] : [],
   notes: m?.notes || "",
 });
 
 // Same fields, labels and rules as the web MeetingForm.
-function MeetingForm({ meeting, defaultClient }) {
+function MeetingForm({ meeting, defaults }) {
   const editing = !!meeting;
   const [create, c] = useCreateMeetingMutation();
   const [update, u] = useUpdateMeetingMutation();
   const [generate, g] = useGenerateMeetingLinkMutation();
-  const [f, setF] = useState(() => initial(meeting, defaultClient));
+  const [f, setF] = useState(() => initial(meeting, defaults));
   const [startRaw, setStartRaw] = useState(toDisplay(f.startTime));
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
   const { message, fieldErrors } = apiError(c.error || u.error);
   const err = (k) => getFieldError(fieldErrors, k);
+  const me = useSelector((st) => st.auth.user);
+  const theme = useTheme();
+
+  // Clash check as you pick: that day's meetings, same rule as the server (overlap + a shared person).
+  const dayQ = useGetMeetingsQuery({ page: 1, limit: 100, dateFrom: f.date, dateTo: `${f.date}T23:59:59.999Z` }, { skip: !f.date });
+  const clash = findClash(dayQ.data?.data, {
+    startTime: f.startTime,
+    endTime: f.endTime,
+    people: [idOf(meeting?.createdBy) || me._id, ...f.attendees],
+    excludeId: meeting?._id,
+  });
+  const clashText = clash ? `Clashes with "${clash.title}" (${toDisplay(clash.startTime)} – ${toDisplay(clash.endTime)}). Pick another time.` : "";
+  // The server's own 409 (e.g. a meeting added by someone else a moment ago), shown by the time fields too.
+  const serverClash = (c.error || u.error)?.status === 409
+    ? message.replace(/\((\d{2}:\d{2})-(\d{2}:\d{2})\)/, (_, a, b) => `(${toDisplay(a)} – ${toDisplay(b)})`)
+    : "";
 
   const usersQ = useGetUsersQuery({ limit: 100 });
   const users = [...(usersQ.data?.data?.users || [])].sort(
@@ -124,7 +147,7 @@ function MeetingForm({ meeting, defaultClient }) {
   const badLink = !!link && !LINK.test(link);
   const occ = Number(f.occurrences);
   const badOcc = !editing && f.recurrence !== "none" && !(occ >= 2 && occ <= 60);
-  const ready = f.title.trim().length >= 2 && f.date && f.startTime && f.endTime && minutes > 0 && !badLink && !badOcc;
+  const ready = f.title.trim().length >= 2 && f.date && f.startTime && f.endTime && minutes > 0 && !clash && !badLink && !badOcc;
 
   const makeLink = async (provider) => {
     if (!f.title.trim() || !f.date || !f.startTime || !f.endTime) {
@@ -145,12 +168,12 @@ function MeetingForm({ meeting, defaultClient }) {
   const save = async () => {
     const body = meetingBody(f, editing);
     if (editing) {
-      if (await runAction(update({ id: meeting?._id, ...body }), "Meeting updated successfully", "Something went wrong while saving the meeting")) {
+      if (await runAction(update({ id: meeting?._id, ...body }), "Meeting updated successfully", "Couldn't update the meeting")) {
         backTo(`/meetings/${meeting?._id}`);
       }
       return;
     }
-    const res = await runAction(create(body), "Meeting scheduled successfully", "Something went wrong while saving the meeting");
+    const res = await runAction(create(body), "Meeting scheduled successfully", "Couldn't schedule the meeting");
     const id = res?.data?.meeting?._id || res?.data?.meetings?.[0]?._id;
     if (id) router.replace(`/meetings/${id}`);
     else if (res) backTo("/meetings");
@@ -168,7 +191,7 @@ function MeetingForm({ meeting, defaultClient }) {
         sub={editing ? meeting?.title : "New session scheduling"}
         closeLabel="Cancel"
       />
-      <Alert message={fieldErrors.length ? "" : message} />
+      <Alert message={fieldErrors.length || serverClash ? "" : message} />
 
       <Input
         label="Meeting Subject / Title *"
@@ -235,7 +258,7 @@ function MeetingForm({ meeting, defaultClient }) {
         placeholder="9:00 AM"
         autoCapitalize="none"
         autoCorrect={false}
-        error={startRaw.trim() && !parseTime(startRaw) ? "Enter a time like 9:30 AM" : err("startTime")}
+        error={startRaw.trim() && !parseTime(startRaw) ? "Enter a time like 9:30 AM" : (!f.endTime && clashText) || err("startTime")}
       />
       <Row>
         {START_SLOTS.map((t) => (
@@ -253,9 +276,17 @@ function MeetingForm({ meeting, defaultClient }) {
             })}
           </Row>
         ) : <Text className="text-sm text-muted">Select start time first</Text>}
-        <Text className={err("endTime") ? "text-sm text-danger" : "text-sm text-muted"}>
-          {err("endTime") || (f.endTime ? `Ends at ${toDisplay(f.endTime)}` : "Select duration")}
-        </Text>
+        {(() => {
+          const bad = err("endTime") || (f.endTime && clashText) || serverClash;
+          return (
+            <View className="flex-row items-start gap-1.5">
+              {!!bad && <AlertCircle size={14} color={theme.danger} style={{ marginTop: 3 }} />}
+              <Text className={bad ? "flex-1 text-sm text-danger" : "flex-1 text-sm text-muted"}>
+                {bad || (f.endTime ? `Ends at ${toDisplay(f.endTime)}` : "Select duration")}
+              </Text>
+            </View>
+          );
+        })()}
       </Field>
 
       {!editing && (
@@ -352,16 +383,16 @@ function MeetingForm({ meeting, defaultClient }) {
   );
 }
 
-// Create, edit with ?id=, or preselect a client with ?client= (from the client page).
+// Create, or edit with ?id=. Prefills: ?client= (client page), ?date= (calendar), and ?title=&startTime=&attendee= (meeting request).
 // Android shows modals full screen under the status bar, so it needs the top inset; iOS sheets don't.
 export default function NewMeeting() {
-  const { id, client } = useLocalSearchParams();
+  const { id, ...defaults } = useLocalSearchParams();
   const { data, isLoading, isError, refetch } = useGetMeetingByIdQuery(id, { skip: !id });
   const meeting = data?.data?.meeting;
   return (
     <Screen scroll edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]} className="gap-5 pt-6">
       {!id || meeting ? (
-        <MeetingForm key={meeting?._id || "new"} meeting={meeting} defaultClient={client} />
+        <MeetingForm key={meeting?._id || "new"} meeting={meeting} defaults={defaults} />
       ) : (
         <DashboardState isLoading={isLoading} isError={isError || !isLoading} refetch={refetch} />
       )}

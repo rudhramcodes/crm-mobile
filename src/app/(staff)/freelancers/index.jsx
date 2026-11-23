@@ -20,7 +20,8 @@ import { cleanParams } from "@/utils/leads";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { BriefcaseBusiness, Plus, Search, ShieldAlert } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { ScrollView, View } from "react-native";
 import { useSelector } from "react-redux";
 
@@ -39,13 +40,7 @@ export default function Freelancers() {
   const can = freelancerAccess(me);
   const [status, setStatus] = useState("");
   const [venture, setVenture] = useState("");
-  const [typed, setTyped] = useState("");
-  const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(typed.trim()), 350);
-    return () => clearTimeout(t);
-  }, [typed]);
+  const { typed, setTyped, search, setSearch } = useDebouncedSearch();
 
   const LIMIT = 20;
   const listRef = useRef(null);

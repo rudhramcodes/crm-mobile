@@ -91,3 +91,17 @@ export const brandCounts = (meetings) => {
   }
   return counts;
 };
+
+// Same rule as the server's findConflicts: another non-cancelled meeting that day whose time overlaps
+// and that shares a person (creator or attendee). Returns the first clash, or undefined.
+const mins = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+const idOf = (x) => String((x && typeof x === 'object' ? x._id : x) || '');
+export const findClash = (meetings = [], { startTime, endTime, people = [], excludeId }) => {
+  if (!startTime) return undefined;
+  const s = mins(startTime);
+  const e = endTime ? mins(endTime) : s + 1; // only a start picked: is that minute already taken?
+  const who = new Set(people.map(idOf));
+  return meetings.find((m) => m.status !== 'cancelled' && m._id !== excludeId && m.startTime && m.endTime
+    && s < mins(m.endTime) && mins(m.startTime) < e
+    && [m.createdBy, ...(m.attendees || [])].some((p) => who.has(idOf(p))));
+};

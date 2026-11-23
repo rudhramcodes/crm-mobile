@@ -1,8 +1,17 @@
+import { useEffect } from 'react';
+import { Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { NativeTabs } from 'expo-router/native-tabs';
 import { brand } from '@/constants/theme';
+import { useGetUnreadCountQuery } from '@/services/notificationApi';
 
 // Paths match the web portal (/portal/projects, ...), so notification links land on the same place.
 export default function ClientTabs() {
+  // The app icon's red number matches the Inbox behind the bell on Home.
+  const { data: unread = 0, isSuccess } = useGetUnreadCountQuery();
+  useEffect(() => {
+    if (isSuccess && Platform.OS !== 'web') Notifications.setBadgeCountAsync(unread).catch(() => {});
+  }, [unread, isSuccess]);
   return (
     <NativeTabs tintColor={brand.ochre}>
       <NativeTabs.Trigger name="portal/index">

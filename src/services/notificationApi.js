@@ -30,7 +30,6 @@ export const notificationApi = api.injectEndpoints({
 export const {
   useGetNotificationsQuery,
   useGetUnreadCountQuery,
-  useMarkNotificationReadMutation,
   useMarkAllNotificationsReadMutation,
   useDeleteNotificationMutation,
 } = notificationApi;

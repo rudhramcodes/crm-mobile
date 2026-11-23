@@ -43,13 +43,6 @@ export const parseTime = (raw) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 };
 
-export const addMinutes = (time24, minutesToAdd) => {
-  const [h, m] = (time24 || '').split(':').map(Number);
-  if (Number.isNaN(h) || Number.isNaN(m)) return '';
-  const total = (h * 60 + m + minutesToAdd) % (24 * 60);
-  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
-};
-
 export const toMin = (t) => {
   if (!t) return null;
   const [h, m] = t.split(':').map(Number);

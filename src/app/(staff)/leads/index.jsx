@@ -27,7 +27,8 @@ import {
   SlidersHorizontal,
   Users,
 } from "lucide-react-native";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { View } from "react-native";
 import { useSelector } from "react-redux";
 
@@ -41,16 +42,11 @@ export default function Leads() {
   const [view, setView] = useState("list");
   const [f, setF] = useState(EMPTY);
   const [showFilters, setShowFilters] = useState(false);
-  const [typed, setTyped] = useState("");
-  const [search, setSearch] = useState("");
+  const { typed, setTyped, search, setSearch } = useDebouncedSearch();
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState([]);
 
   // Search as you type, once typing pauses.
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(typed.trim()), 350);
-    return () => clearTimeout(t);
-  }, [typed]);
 
   // shortcut: first 100 leads for the filters (server max); add paging when a filtered list routinely holds more.
   const q = useGetLeadsQuery(
