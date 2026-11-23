@@ -51,6 +51,12 @@
         }
       ],
       [
+        "expo-contacts",
+        {
+          "contactsPermission": "Rudhram CRM saves client contacts to your phone when you tap Download on the Clients list."
+        }
+      ],
+      [
         "expo-local-authentication",
         {
           "faceIDPermission": "Rudhram CRM uses Face ID to unlock the app."

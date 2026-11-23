@@ -285,7 +285,7 @@ export const NOTIF_PREF_GROUPS = [
   { label: 'Tasks', types: [['task_assigned', 'Task assigned'], ['task_status_change', 'Task status change'], ['task_comment', 'Task comment'], ['mention', 'Mentions']] },
   { label: 'Projects', types: [['project_assigned', 'Project assigned'], ['project_status_change', 'Project status change'], ['project_chat', 'Project chat']] },
   { label: 'Leads', types: [['lead_created', 'New lead'], ['lead_assigned', 'Lead assigned']] },
-  { label: 'Meetings', types: [['meeting_scheduled', 'Meeting scheduled'], ['meeting_reminder', 'Meeting reminder']] },
+  { label: 'Meetings', types: [['meeting_scheduled', 'Meeting scheduled'], ['meeting_reminder', 'Meeting reminder'], ['meeting_requested', 'Meeting request']] },
   { label: 'Money', types: [['invoice_paid', 'Invoice paid'], ['invoice_overdue', 'Invoice overdue'], ['payment_received', 'Payment received']] },
 ];
 export const TIMEZONES = ['Asia/Kolkata', 'Asia/Dubai', 'Asia/Singapore', 'Asia/Shanghai', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Australia/Sydney', 'Pacific/Auckland', 'UTC'].map((v) => ({ value: v, label: v }));

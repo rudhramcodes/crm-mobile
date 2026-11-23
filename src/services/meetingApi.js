@@ -21,6 +21,11 @@ export const meetingApi = api.injectEndpoints({
       providesTags: ['Meeting'],
     }),
 
+    // Employees: ask an admin/manager to schedule a meeting (sends them a notification; nothing is created).
+    requestMeeting: builder.mutation({
+      query: (body) => ({ url: '/meetings/request', method: 'POST', body }),
+    }),
+
     getMeetingById: builder.query({
       query: (id) => `/meetings/${id}`,
       providesTags: (result, error, id) => [{ type: 'Meeting', id }],
@@ -133,6 +138,7 @@ export const {
   useGetMeetingPagesInfiniteQuery,
   useGetMeetingByIdQuery,
   useCreateMeetingMutation,
+  useRequestMeetingMutation,
   useGenerateMeetingLinkMutation,
   useUpdateMeetingMutation,
   useUpdateMeetingNotesMutation,
