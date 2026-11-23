@@ -278,3 +278,32 @@ export const HOLIDAY_TYPES = [
   { value: 'company', label: 'Company', color: 'bg-sand text-brown' },
   { value: 'optional', label: 'Optional', color: 'bg-surface-2 text-muted' },
 ];
+
+// Settings (same lists as the web settings tabs).
+export const NOTIF_PREF_GROUPS = [
+  { label: 'Tasks', types: [['task_assigned', 'Task assigned'], ['task_status_change', 'Task status change'], ['task_comment', 'Task comment'], ['mention', 'Mentions']] },
+  { label: 'Projects', types: [['project_assigned', 'Project assigned'], ['project_status_change', 'Project status change'], ['project_chat', 'Project chat']] },
+  { label: 'Leads', types: [['lead_created', 'New lead'], ['lead_assigned', 'Lead assigned']] },
+  { label: 'Meetings', types: [['meeting_scheduled', 'Meeting scheduled'], ['meeting_reminder', 'Meeting reminder']] },
+  { label: 'Money', types: [['invoice_paid', 'Invoice paid'], ['invoice_overdue', 'Invoice overdue'], ['payment_received', 'Payment received']] },
+];
+export const TIMEZONES = ['Asia/Kolkata', 'Asia/Dubai', 'Asia/Singapore', 'Asia/Shanghai', 'America/New_York', 'America/Chicago', 'America/Los_Angeles', 'Europe/London', 'Europe/Berlin', 'Europe/Paris', 'Australia/Sydney', 'Pacific/Auckland', 'UTC'].map((v) => ({ value: v, label: v }));
+export const DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD MMM YYYY'].map((v) => ({ value: v, label: v }));
+export const CURRENCIES = [
+  { value: 'INR', label: '₹ INR' }, { value: 'USD', label: '$ USD' }, { value: 'EUR', label: '€ EUR' },
+  { value: 'GBP', label: '£ GBP' }, { value: 'AED', label: 'د.إ AED' }, { value: 'SGD', label: 'S$ SGD' },
+];
+export const LANGUAGES = [{ value: 'en', label: 'English' }, { value: 'hi', label: 'Hindi' }, { value: 'mr', label: 'Marathi' }, { value: 'gu', label: 'ગુજરાતી' }];
+export const PERMISSION_GROUPS = [
+  { module: 'Users', prefix: 'users', perms: ['read', 'create', 'update', 'delete', 'manage_roles'] },
+  ...['Leads', 'Clients', 'Projects', 'Tasks', 'Invoices', 'Payments', 'Meetings'].map((m) => ({ module: m, prefix: m.toLowerCase(), perms: ['read', 'create', 'update', 'delete'] })),
+  { module: 'Reports', prefix: 'reports', perms: ['read', 'create'] },
+  { module: 'Settings', prefix: 'settings', perms: ['read', 'update'] },
+];
+export const ROLE_DESCRIPTIONS = {
+  super_admin: 'Full control across the entire workspace',
+  admin: 'Manage operations, people, and settings',
+  manager: 'Coordinate teams, work, and reports',
+  employee: 'Access assigned work and collaboration tools',
+  client: 'View shared projects, tasks, and billing',
+};

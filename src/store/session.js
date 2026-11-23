@@ -4,7 +4,7 @@ import { authenticate, biometricLabel, getBiometricPref, setBiometricPref } from
 import { api } from '@/services/api';
 import { authApi } from '@/services/authApi';
 import { disconnectSocket } from '@/services/socket';
-import { unregisterPush } from '@/services/push';
+import { setPushOn, unregisterPush } from '@/services/push';
 import { loggedOut, setCredentials, setStatus } from './authSlice';
 
 // After the first sign-in on this phone, offer the biometric lock once. "Not now" is remembered.
@@ -50,6 +50,7 @@ export const signOut = () => async (dispatch) => {
   await clearRefreshToken();
   // The next person to sign in on this phone chooses for themselves.
   await setBiometricPref(null);
+  await setPushOn(true);
   dispatch(loggedOut());
   dispatch(api.util.resetApiState());
 };
