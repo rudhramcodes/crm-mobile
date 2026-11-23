@@ -38,7 +38,8 @@ export const appPath = (link) => {
 };
 const section = (path) => path.split(/[/?#]/)[1] ?? '';
 
-export function staffRoute({ type = '', link, referenceModel, referenceId } = {}) {
+export function staffRoute({ type: rawType, link, referenceModel, referenceId } = {}) {
+  const type = typeof rawType === 'string' ? rawType : '';
   if (STAFF_TYPE[type]) return STAFF_TYPE[type];
   if (referenceId && STAFF_ITEM[referenceModel]) return STAFF_ITEM[referenceModel](referenceId);
   const path = appPath(link);

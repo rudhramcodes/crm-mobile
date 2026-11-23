@@ -6,7 +6,7 @@ import { ROLE_LABELS } from "@/constants";
 import { useRequestMeetingMutation } from "@/services/meetingApi";
 import { useGetUsersQuery } from "@/services/userApi";
 import { apiError } from "@/utils/apiError";
-import { runAction } from "@/utils/attendance";
+import { runAction, ymd } from "@/utils/attendance";
 import { getFieldError } from "@/utils/getFieldError";
 import { START_SLOTS } from "@/utils/meetings";
 import { toDisplay } from "@/utils/time";
@@ -25,15 +25,24 @@ export default function RequestMeeting() {
   const { message, fieldErrors } = apiError(s.error);
   const err = (k) => getFieldError(fieldErrors, k);
 
-  const usersQ = useGetUsersQuery({ isActive: true, limit: 100 });
-  const options = (usersQ.data?.data?.users || [])
+  // One request per role (the server filters by a single role), so the list never stops at the first 100 people.
+  const superQ = useGetUsersQuery({ isActive: true, role: "super_admin", limit: 100 });
+  const adminQ = useGetUsersQuery({ isActive: true, role: "admin", limit: 100 });
+  const managerQ = useGetUsersQuery({ isActive: true, role: "manager", limit: 100 });
+  const userQs = [superQ, adminQ, managerQ];
+  const usersLoading = userQs.some((q) => q.isLoading);
+  const usersFailed = userQs.some((q) => q.isError);
+  const options = userQs.flatMap((q) => q.data?.data?.users || [])
     .filter((u) => SCHEDULERS.includes(u.role))
     .sort((a, b) => String(a.name).localeCompare(String(b.name)))
     .map((u) => ({ value: u._id, label: u.name, hint: [ROLE_LABELS[u.role], u.email].filter(Boolean).join(" · ") }));
   const assignee = options.find((o) => o.value === f.assignee);
 
   const title = f.title.trim();
-  const ready = title.length >= 2 && !!f.assignee;
+  const today = ymd();
+  // A time needs a day to mean anything, and the day can't already be over.
+  const dateProblem = f.date && f.date < today ? "Pick today or a later day" : f.startTime && !f.date ? "Pick a date for this time" : "";
+  const ready = title.length >= 2 && !!f.assignee && !dateProblem;
   const submit = async () => {
     const body = { title, assignee: f.assignee, date: f.date || undefined, startTime: f.startTime || undefined, note: f.note.trim() || undefined };
     if (await runAction(send(body), `Request sent to ${assignee?.label || "them"}`, "Couldn't send the request")) backTo("/meetings");
@@ -51,11 +60,14 @@ export default function RequestMeeting() {
         onChange={(v) => set({ assignee: v })}
         placeholder="Search admins and managers"
         searchable
-        loading={usersQ.isLoading}
+        loading={usersLoading}
         emptyText="No admins or managers found"
-        error={err("assignee")}
+        error={err("assignee") || (usersFailed && !options.length ? "Couldn't load admins and managers. Check your connection." : "")}
       />
-      <DateField label="Preferred date" value={f.date} onChange={(v) => set({ date: v })} placeholder="Any day" error={err("date")} />
+      {usersFailed && (
+        <Button title="Try loading them again" size="sm" variant="secondary" className="-mt-3 self-start" onPress={() => userQs.forEach((q) => q.isError && q.refetch())} />
+      )}
+      <DateField label="Preferred date" value={f.date} onChange={(v) => set({ date: v })} onClear={() => set({ date: "", startTime: "" })} minDate={today} placeholder="Any day" error={err("date") || dateProblem} />
       <View className="gap-1.5">
         <Text className="font-body-medium text-sm">Preferred time</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-5" contentContainerClassName="gap-2 px-5">

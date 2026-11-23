@@ -42,5 +42,8 @@ export const NOTIFICATION_CONFIG = {
   system: { icon: Bell, tone: 'sand', label: 'System' },
 };
 
-export const notificationConfig = (type = '') =>
-  NOTIFICATION_CONFIG[type] ?? (type.startsWith('regularization_') ? NOTIFICATION_CONFIG.regularization_request : NOTIFICATION_CONFIG.system);
+// Unknown, empty or null types fall back to the plain bell, so a new server type never breaks the Inbox.
+export const notificationConfig = (type) => {
+  const t = typeof type === 'string' ? type : '';
+  return NOTIFICATION_CONFIG[t] ?? (t.startsWith('regularization_') ? NOTIFICATION_CONFIG.regularization_request : NOTIFICATION_CONFIG.system);
+};

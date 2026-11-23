@@ -29,14 +29,17 @@ export const dayLabel = (day, opts = { weekday: 'short', day: 'numeric', month: 
 // shortcut: 100 tasks + 100 meetings per range (server max); page if a month ever holds more.
 export function useCalendarItems(from, to) {
   const me = useSelector((s) => s.auth.user);
+  const myId = me?._id;
   // Due dates are stored as midnight of a day; a day of slack each side so no timezone drops one, then keyed locally.
-  const t = useGetTasksQuery({ page: 1, limit: 100, sort: 'dueDate', dueDateFrom: addDays(from, -1), dueDateTo: `${addDays(to, 1)}T23:59:59.999Z`, assignedTo: me._id });
-  const m = useGetMeetingsQuery({ page: 1, limit: 100, dateFrom: from, dateTo: `${to}T23:59:59.999Z` });
+  // Signed out or still restoring (no user yet): ask for nothing and show an empty calendar.
+  const t = useGetTasksQuery({ page: 1, limit: 100, sort: 'dueDate', dueDateFrom: addDays(from, -1), dueDateTo: `${addDays(to, 1)}T23:59:59.999Z`, assignedTo: myId }, { skip: !myId });
+  const m = useGetMeetingsQuery({ page: 1, limit: 100, dateFrom: from, dateTo: `${to}T23:59:59.999Z` }, { skip: !myId });
+  if (!myId) return { byDay: {}, isFetching: false, isError: false, refetch: () => Promise.resolve() };
   const byDay = {};
   const put = (day, item) => { if (day >= from && day <= to) (byDay[day] ||= []).push(item); };
   for (const x of m.data?.data || []) {
     // The server shows every meeting to staff, so "mine" is filtered here: invited or organised by me.
-    if (idOf(x.createdBy) !== me._id && !(x.attendees || []).some((a) => idOf(a) === me._id)) continue;
+    if (idOf(x.createdBy) !== myId && !(x.attendees || []).some((a) => idOf(a) === myId)) continue;
     put(dayOf(x), {
       kind: 'meeting', id: x._id, title: x.title, sort: x.startTime || '',
       time: x.startTime ? `${toDisplay(x.startTime)}${x.endTime ? ` – ${toDisplay(x.endTime)}` : ''}` : 'Meeting',
@@ -211,7 +214,7 @@ function AddSheet({ day, canMeet, onClose, onTask, onMeeting }) {
 // so their second option is "Request a meeting" instead.
 export function useAddToDay() {
   const me = useSelector((s) => s.auth.user);
-  const canMeet = meetingAccess(me).manage;
+  const canMeet = !!me && meetingAccess(me).manage;
   const [day, setDay] = useState(null);
   const go = (pathname, params) => { setDay(null); setTimeout(() => router.push({ pathname, params }), SHEET_OUT); };
   const add = setDay;
@@ -263,6 +266,7 @@ export function DayAgenda({ day, items = [] }) {
   const me = useSelector((s) => s.auth.user);
   const [add, sheet] = useAddToDay();
   const canAdd = day >= ymd();
+  if (!me) return null; // signed out or still restoring: nothing to plan yet
   return (
     <View className="gap-2">
       {sheet}

@@ -80,7 +80,7 @@ export default function Clients() {
         right={
           <View className="flex-row gap-2">
             {isAdmin(me) && (
-              <Button title="Download" icon={Download} size="sm" variant="secondary" accessibilityLabel="Save client contacts to this phone" onPress={() => router.push("/clients/save-contacts")} />
+              <Button title="Save to contacts" icon={Download} size="sm" variant="secondary" accessibilityLabel="Save client contacts to this phone" onPress={() => router.push("/clients/save-contacts")} />
             )}
             {can.manage && (
               <Button

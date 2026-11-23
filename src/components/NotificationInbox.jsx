@@ -131,8 +131,14 @@ export function NotificationInbox({ client = false }) {
 
   const readAll = async () => {
     setMarkingAll(true);
-    const res = await sendOrQueue(dispatch, 'markAllNotificationsRead');
-    setMarkingAll(false);
+    let res;
+    try {
+      res = await sendOrQueue(dispatch, 'markAllNotificationsRead');
+    } catch {
+      res = { error: true };
+    } finally {
+      setMarkingAll(false); // the button always comes back, even if the call throws
+    }
     if (res.queued) return showToast({ title: "You're offline", message: "They'll be marked read when you're back online." });
     if (res.error) return showToast({ title: "Couldn't mark them read", message: 'Please try again.' });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

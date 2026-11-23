@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Platform, View } from "react-native";
+import { Alert, Platform, View } from "react-native";
 import { FlashList } from "@shopify/flash-list";
 import { useDispatch } from "react-redux";
 import { Check, Download, Search } from "lucide-react-native";
-import { Avatar, Button, DashboardState, Input, Pressable, Screen, SheetHeader, Text, VentureChips, backTo } from "@/components";
+import { Avatar, Button, DashboardState, Input, Pressable, Screen, SheetHeader, Text, VentureChips, backTo, showToast } from "@/components";
 import { useTheme } from "@/constants/theme";
 import { fetchAllClients, saveClientsToContacts } from "@/services/clientContacts";
 import { toE164 } from "@/utils/clientContacts";
@@ -29,7 +29,7 @@ function ClientPickRow({ client: c, selected, onToggle }) {
       <View className="flex-1">
         <Text numberOfLines={1} className="font-body-semibold">{c.contactPerson || c.companyName}</Text>
         <Text numberOfLines={1} className="text-sm text-muted">
-          {[c.contactPerson && c.companyName, hasPhone ? c.phone : "No phone number"].filter(Boolean).join(" · ")}
+          {[c.clientId, c.contactPerson && c.companyName, hasPhone ? c.phone : "No phone number"].filter(Boolean).join(" · ")}
         </Text>
       </View>
     </Pressable>
@@ -70,18 +70,35 @@ export default function SaveClientContacts() {
     return n;
   });
 
+  // Writing to the phone's Contacts is a real change on the device, so ask once before doing it.
+  const confirmSave = () => {
+    const n = picked.size;
+    Alert.alert(
+      `Save ${n} contact${n === 1 ? "" : "s"} to this phone?`,
+      "Each gets the name, client ID, phone and email. Contacts already on the phone only get missing details filled in.",
+      [{ text: "Cancel", style: "cancel" }, { text: "Save", onPress: save }],
+    );
+  };
+
   const save = async () => {
     setSaving(true);
-    const res = await saveClientsToContacts((clients || []).filter((c) => picked.has(c._id)));
-    setSaving(false);
+    let res = false;
+    try {
+      res = await saveClientsToContacts((clients || []).filter((c) => picked.has(c._id)));
+    } catch (e) {
+      // saveClientsToContacts shows its own messages; this only catches the unexpected.
+      showToast({ title: "Couldn't save the contacts", message: e?.message || "Please try again.", tone: "error" });
+    } finally {
+      setSaving(false); // the spinner always stops: saved, denied or failed
+    }
     // Close only when something was added; otherwise stay so the message can be read and the picks changed.
-    if (res?.saved) backTo("/clients");
+    if (res?.saved || res?.updated) backTo("/clients");
   };
 
   const count = picked.size;
   return (
     <Screen edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]} className="gap-4 pt-6">
-      <SheetHeader title="Save to contacts" sub="Pick the clients to add to this phone" closeLabel="Cancel" />
+      <SheetHeader title="Save to contacts" sub="Name, phone, email and client ID go into this phone's Contacts" closeLabel="Cancel" />
       {!clients ? <DashboardState isLoading={!error} isError={error} refetch={load} /> : (
         <>
           {/* Plain wrapper: a horizontal ScrollView grows to fill spare height in this non-scrolling screen. */}
@@ -110,7 +127,7 @@ export default function SaveClientContacts() {
             icon={Download}
             loading={saving}
             disabled={!count}
-            onPress={save}
+            onPress={confirmSave}
             className="mb-2"
           />
         </>

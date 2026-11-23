@@ -12,6 +12,10 @@ assert.equal(staffRoute({ type: 'lead_converted', referenceModel: 'Client', refe
 assert.equal(staffRoute({ type: 'invoice_overdue', referenceModel: 'Invoice', referenceId: 'i1' }), '/invoices/i1');
 assert.equal(staffRoute({ type: 'payment_received', referenceModel: 'Payment', referenceId: 'pay1' }), '/payments/pay1');
 assert.equal(staffRoute({ type: 'meeting_reminder', referenceModel: 'Meeting', referenceId: 'm1' }), '/meetings/m1');
+assert.equal(staffRoute({ type: 'task_due_soon', referenceModel: 'Task', referenceId: 't1', link: '/projects/p1' }), '/tasks/t1');
+assert.equal(staffRoute({ type: 'task_due_soon', link: '/tasks' }), '/tasks'); // several tasks due: the Tasks tab
+assert.equal(clientRoute({ type: 'task_due_soon', referenceModel: 'Task', referenceId: 't1' }), '/portal/tasks/t1');
+assert.equal(staffRoute({ type: null, link: '/attendance' }), '/attendance'); // a null type never crashes
 // Types with fixed screens.
 assert.equal(staffRoute({ type: 'leave_applied', referenceModel: 'LeaveRequest', referenceId: 'x' }), '/attendance/leaves');
 assert.equal(staffRoute({ type: 'leave_rejected' }), '/attendance/leaves');

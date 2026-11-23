@@ -95,12 +95,13 @@ Your `.env` file points to `localhost`. **EAS cloud builds never see your local 
 1. Your backend must be deployed on a public **HTTPS** address (e.g. `https://api.rudhramenterprises.com`). Apple and Android block plain `http://` by default.
 2. Store the values in EAS (replace the URLs with your real ones):
    ```bash
-   npx eas-cli@latest env:create --name EXPO_PUBLIC_API_URL --value https://api.yourdomain.com/api --environment production --visibility plaintext
+   npx eas-cli@latest env:set --name EXPO_PUBLIC_API_URL --value https://api.yourdomain.com/api --environment production --visibility plaintext
    ```
    ```bash
-   npx eas-cli@latest env:create --name EXPO_PUBLIC_SOCKET_URL --value https://api.yourdomain.com --environment production --visibility plaintext
+   npx eas-cli@latest env:set --name EXPO_PUBLIC_SOCKET_URL --value https://api.yourdomain.com --environment production --visibility plaintext
    ```
-   (If `env:create` is not recognized, use `env:set` with the same options.)
+   (`env:set` creates or updates the variable. Older guides use `env:create`, which EAS now marks as deprecated.)
+   These are the only two variables the app reads (`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_SOCKET_URL`, see `.env.example`).
 3. Tell the production build to use these values — in `eas.json`, change the `production` profile to:
    ```json
    "production": {
@@ -158,7 +159,7 @@ Create these while you wait for account approval.
 |---|---|---|
 | App icon | 1024×1024 PNG, no transparency (already `assets/images/icon.png`) | 512×512 PNG |
 | Feature graphic | — | 1024×500 PNG/JPG |
-| Screenshots | iPhone 6.9" (1320×2868) required; iPad 13" (2064×2752) required because `supportsTablet: true` | Phone: min 2 screenshots (e.g. 1080×1920) |
+| Screenshots | iPhone 6.9" (1320×2868) required; iPad 13" (2064×2752) required because `app.json` sets `ios.supportsTablet: true` (the app also runs on iPad). Don't want iPad? Set it to `false` before the first build and skip these. | Phone: min 2 screenshots (e.g. 1080×1920) |
 | App name | max 30 chars | max 30 chars |
 | Subtitle / short description | 30 chars | 80 chars |
 | Description | up to 4000 chars | up to 4000 chars |
@@ -171,7 +172,7 @@ Specs: https://developer.apple.com/help/app-store-connect/reference/screenshot-s
 
 Tips:
 - **Screenshots:** run the app on the iOS Simulator (iPhone 17 Pro Max for 6.9", iPad Pro 13") and press `Cmd + S` to save screenshots.
-- **Privacy Policy:** a public web page (e.g. `rudhramenterprises.com/privacy`) explaining what you collect. This app collects: name/email/phone, **location** (clock-in), **photos/camera**, **microphone/audio**, files, push tokens, and Face ID/fingerprint (biometrics stay on the device). Say what it's used for, who it's shared with, and how a user can request data deletion.
+- **Privacy Policy:** a public web page (e.g. `rudhramenterprises.com/privacy`) explaining what you collect. This app collects: name/email/phone, **location** (clock-in), **photos/camera**, files, push tokens, and Face ID/fingerprint (biometrics stay on the device). It also asks for **Contacts** access, only to save client contacts onto the phone (nothing from the phone's contacts is uploaded). It does **not** use the microphone (`app.json` turns microphone access off). Say what it's used for, who it's shared with, and how a user can request data deletion.
 - **Demo account:** create a test user on the production server (e.g. `reviewer@rudhramenterprises.com`) with sample data. Reviewers **reject apps they can't log into**. Make sure clock-in works for the reviewer even if they are not near your office (e.g. disable the location check for this demo account), or explain in the review notes.
 - **Account deletion:** Apple requires an in-app "Delete account" option *if users can sign up themselves*. If only your admins create accounts, write that in the review notes.
 
@@ -186,7 +187,7 @@ Tips:
 ```bash
 npx eas-cli@latest build --profile preview --platform android
 ```
-When it finishes you get a link/QR code → open on an Android phone → install. For iPhone internal builds you must register devices first (`npx eas-cli@latest device:create`), so most people test iOS through **TestFlight** instead (Step 5).
+The `preview` profile in `eas.json` builds an installable `.apk`. When it finishes you get a link/QR code → open on an Android phone → install. For iPhone internal builds you must register devices first (`npx eas-cli@latest device:create`), so most people test iOS through **TestFlight** instead (Step 5).
 
 ### 4.2 Production builds
 
@@ -195,7 +196,7 @@ npx eas-cli@latest build --platform all --profile production
 ```
 
 What happens / what to answer:
-- **iOS:** it asks you to log in with your **Apple ID** → choose your team → answer **Yes** to let EAS generate the distribution certificate, provisioning profiles (for the app *and* the widget extension), and Push Notification key.
+- **iOS:** it asks you to log in with your **Apple ID** → choose your team → answer **Yes** to let EAS generate the distribution certificate, provisioning profiles (for the app *and* the widget extension that the `expo-widgets` plugin adds for the clock-in / stopwatch Live Activity), and Push Notification key.
 - **Android:** answer **Yes** to "Generate a new Android Keystore". EAS stores it safely — **never delete it** (you can download a backup from expo.dev → Credentials).
 - Builds run in the cloud, about 15–40 min each (free plan may queue). Follow progress at https://expo.dev → your project → **Builds**.
 - Result: an `.ipa` (iOS) and an `.aab` (Android).
@@ -221,7 +222,7 @@ Log in with your Apple ID when asked. After 10–30 minutes the build shows unde
 ### 5.4 Fill in the App Store page
 In App Store Connect → your app:
 1. **App Information:** category (*Business* / *Productivity*), content rights, age rating questionnaire (answer No to everything for a CRM → 4+).
-2. **App Privacy:** add the Privacy Policy URL → **Get Started** on data collection → declare: Contact Info, Location (precise), Photos, Audio, User Content, Identifiers (push token) → for each: "used for App Functionality", linked to the user, not used for tracking.
+2. **App Privacy:** add the Privacy Policy URL → **Get Started** on data collection → declare: Contact Info, Location (precise), Photos, User Content, Identifiers (push token) → for each: "used for App Functionality", linked to the user, not used for tracking. Do **not** declare Audio: the app has no microphone access.
 3. **Pricing and Availability:** Free, choose countries.
 4. **iOS App 1.0 (version page):** upload screenshots (iPhone + iPad), promotional text, description, keywords, support URL.
 5. **Build:** click **＋** and select the build you uploaded.
@@ -271,9 +272,9 @@ Play Console → **Dashboard** → work through every item under *Set up your ap
 - **Content rating:** questionnaire (category: *Utility, Productivity, Communication, or Other*) → mostly "No"
 - **Target audience:** 18+ (avoid selecting children's ages)
 - **News app:** No
-- **Data safety:** declare Personal info (name, email, phone), Location (precise), Photos, Audio, Files, App activity, Device IDs (push) → collected, encrypted in transit, users can request deletion. Help: https://support.google.com/googleplay/android-developer/answer/10787469
+- **Data safety:** declare Personal info (name, email, phone), Location (precise), Photos, Files, App activity, Device IDs (push) → collected, encrypted in transit, users can request deletion. Do **not** declare Audio. Help: https://support.google.com/googleplay/android-developer/answer/10787469
 - **Government app / Financial features / Health:** No
-- **Foreground service permissions:** the app uses `FOREGROUND_SERVICE_MEDIA_PLAYBACK` → declare it (audio playback) and give a short video/link showing the feature if asked.
+- **Foreground service permissions:** none. `app.json` blocks `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_MEDIA_PLAYBACK` and turns off background audio, so this declaration should not appear; if it does, the build is out of date (rebuild).
 - **Location permissions:** foreground only — confirm in the declaration if prompted.
 - **Store listing** (Grow → Store presence → Main store listing): short + full description, 512×512 icon, 1024×500 feature graphic, phone screenshots, category (*Business*), contact email.
 
