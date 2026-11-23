@@ -85,7 +85,7 @@ export function AccountSettings({ compact }) {
         <Text className="mb-2 text-caption uppercase text-muted">Account</Text>
         <Card className="py-2">
           <View className="min-h-[64px] flex-row items-center gap-3 py-2">
-            <Avatar name={user.name} uri={user.avatar || undefined} size={44} />
+            <Avatar ring name={user.name} uri={user.avatar || undefined} size={40} />
             <View className="flex-1">
               <Text className="font-body-semibold" numberOfLines={1}>{user.name}</Text>
               <Text className="text-sm text-muted" numberOfLines={1}>{user.email}</Text>

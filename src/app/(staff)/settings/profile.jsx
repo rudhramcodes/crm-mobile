@@ -71,7 +71,7 @@ export default function Profile() {
       <PageHeader caption="SETTINGS" title="Profile" fallback="/settings" />
       <View className="items-center gap-3">
         <Pressable onPress={gallery} disabled={busy} accessibilityLabel="Change photo" className={busy ? 'opacity-50' : ''}>
-          <Avatar name={user.name} uri={user.avatar || undefined} size={96} />
+          <Avatar ring name={user.name} uri={user.avatar || undefined} size={96} />
         </Pressable>
         <View className="flex-row gap-2">
           <Button title="Gallery" icon={ImagePlus} size="sm" variant="secondary" loading={up.isLoading} disabled={busy} onPress={gallery} />
