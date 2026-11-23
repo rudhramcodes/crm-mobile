@@ -337,11 +337,14 @@ Admin/manager:
 
 ### M17 — Settings & profile
 
-- [ ] Profile (name, phone, avatar from camera), change password (policy hints) **[Port]**
-- [ ] Notification preferences (in-app / email per type), sound toggle + test **[Port]**
-- [ ] Push notifications on/off, biometric lock on/off **[Native]**
-- [ ] Organization settings (view; edit for admin) **[Port]**
-- [ ] Roles & permissions matrix, security policy, integrations (Zoho OAuth), email template previews → **[Web-only?]**: rare admin setup
+- [x] Settings hub `/settings` (rows gated by role like the web tabs) **[Port]**
+- [x] Profile (name, phone, avatar from camera/gallery, remove), change password (policy hints) **[Port]**
+- [x] Notification preferences (in-app / email per type), sound toggle + test **[Port]**
+- [x] Push notifications on/off (`pushEnabled` pref), biometric lock on/off **[Native]**
+- [x] Organization settings (view for employee; edit for admin; hidden for managers, server 403s them) **[Port]**
+- [x] Roles & permissions (read-only), security policy, integrations (Zoho OAuth via in-app browser), email template previews (WebView) **[Port]**
+- [x] Server: `POST /auth/profile/avatar` (multer 5 MB image → Cloudinary `crm/avatars`, saves `user.avatar`)
+- Known server gaps (not fixed): profile email edits dropped by zod; managers 403 on GET org settings; no saved pref = email ON on server but OFF in UI; login lockout settings never enforced; Zoho client secret returned in plain text
 
 ### M18 — Client portal (role `client`)
 

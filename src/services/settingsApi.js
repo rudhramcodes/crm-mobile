@@ -1,4 +1,5 @@
 import { api } from './api';
+import { uploadPart } from './taskApi';
 
 export const settingsApi = api.injectEndpoints({
   endpoints: (builder) => ({
@@ -23,8 +24,13 @@ export const settingsApi = api.injectEndpoints({
     updateProfile: builder.mutation({
       query: (data) => ({ url: '/auth/profile', method: 'PATCH', body: data }),
     }),
-    changePassword: builder.mutation({
-      query: (data) => ({ url: '/auth/password', method: 'PUT', body: data }),
+    // Own photo: uploads to Cloudinary and saves it on the user; returns { data: { user } }.
+    uploadAvatar: builder.mutation({
+      query: (photo) => {
+        const body = new FormData();
+        body.append('file', uploadPart(photo));
+        return { url: '/auth/profile/avatar', method: 'POST', body };
+      },
     }),
     getRolesPermissions: builder.query({
       query: () => '/settings/roles',
@@ -75,7 +81,7 @@ export const {
   useGetOrgSettingsQuery,
   useUpdateOrgSettingsMutation,
   useUpdateProfileMutation,
-  useChangePasswordMutation,
+  useUploadAvatarMutation,
   useGetRolesPermissionsQuery,
   useUpdateRolePermissionsMutation,
   useGetSecuritySettingsQuery,
