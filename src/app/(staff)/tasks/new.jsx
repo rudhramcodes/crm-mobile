@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { ChevronDown, ChevronUp } from 'lucide-react-native';
@@ -83,7 +83,7 @@ export default function NewTask() {
   };
 
   return (
-    <Screen scroll edges={['bottom']} className="gap-4 pt-6">
+    <Screen scroll edges={Platform.OS === 'android' ? ['top', 'bottom'] : ['bottom']} className="gap-4 pt-6">
       <SheetHeader title="New task" closeLabel="Cancel" />
       <Alert message={fieldErrors.length ? '' : message} />
       <Input label="What needs doing?" value={title} onChangeText={setTitle} placeholder="Edit the wedding teaser" maxLength={200} autoFocus={!p.title} error={err('title')} />

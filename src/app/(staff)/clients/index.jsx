@@ -21,11 +21,11 @@ import {
   useGetClientsQuery,
   useGetClientStatsQuery,
 } from "@/services/clientApi";
-import { runAction } from "@/utils/attendance";
+import { isAdmin, runAction } from "@/utils/attendance";
 import { cleanParams } from "@/utils/leads";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
-import { Plus, Search, UserCheck } from "lucide-react-native";
+import { Download, Plus, Search, UserCheck } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import { usePage, usePageNav } from "@/hooks/usePaged";
 import { View } from "react-native";
@@ -82,14 +82,19 @@ export default function Clients() {
         title="Clients"
         fallback="/more"
         right={
-          can.manage ? (
-            <Button
-              title="New"
-              icon={Plus}
-              size="sm"
-              onPress={() => router.push("/clients/new")}
-            />
-          ) : null
+          <View className="flex-row gap-2">
+            {isAdmin(me) && (
+              <Button title="Download" icon={Download} size="sm" variant="secondary" accessibilityLabel="Save client contacts to this phone" onPress={() => router.push("/clients/save-contacts")} />
+            )}
+            {can.manage && (
+              <Button
+                title="New"
+                icon={Plus}
+                size="sm"
+                onPress={() => router.push("/clients/new")}
+              />
+            )}
+          </View>
         }
       />
 

@@ -14,6 +14,7 @@ import { EmptyState } from './EmptyState';
 import { ListRow } from './ListRow';
 import { HomeHeader } from './SignedInHome';
 import { AttendanceCard } from './AttendanceCard';
+import { CalendarCard } from './WorkCalendar';
 import { ActivityRow, BarList, BrandMark, MonthBars, Ring, Section, StatTile, StatusCounts, shortDate } from './DashboardParts';
 import { useGetDashboardOverviewQuery, useGetEmployeeDashboardQuery } from '@/services/dashboardApi';
 import { BRANDS, TASK_PRIORITY, TASK_STATUS } from '@/constants';
@@ -118,6 +119,7 @@ export function AdminDashboard() {
         <Button title="Reports" icon={BarChart3} variant="secondary" size="sm" className="flex-1" onPress={() => router.push('/reports')} />
       </View>
       <AttendanceCard />
+      <CalendarCard />
       {!d ? <DashboardState isLoading={isLoading} isError={isError} refetch={refetch} /> : (
         <>
           <View className="flex-row flex-wrap gap-3">
@@ -161,6 +163,7 @@ export function EmployeeDashboard() {
     <Screen tab scroll className="gap-5 pt-6" refreshControl={refreshControl}>
       <HomeHeader subtitle={today()} />
       <AttendanceCard />
+      <CalendarCard />
       {!d ? <DashboardState isLoading={isLoading} isError={isError} refetch={refetch} /> : (
         <>
           <Section title="My tasks" action="View all" onAction={() => router.push('/tasks')}>
