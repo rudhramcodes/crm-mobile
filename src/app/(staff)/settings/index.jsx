@@ -23,7 +23,7 @@ export default function Settings() {
       <PageHeader caption="WORKSPACE" title="Settings" fallback="/more" />
       <Pressable onPress={() => router.push('/settings/profile')} accessibilityLabel="Edit profile">
         <Card className="flex-row items-center gap-3">
-          <Avatar name={user.name} uri={user.avatar || undefined} size={56} />
+          <Avatar ring name={user.name} uri={user.avatar || undefined} size={52} />
           <View className="flex-1">
             <Text className="font-body-semibold text-lg" numberOfLines={1}>{user.name}</Text>
             <Text className="text-sm text-muted" numberOfLines={1}>{user.email}</Text>
