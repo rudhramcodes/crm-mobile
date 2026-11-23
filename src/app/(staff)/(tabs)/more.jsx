@@ -61,7 +61,7 @@ export default function More() {
               </Card>
             </View>
           ))}
-          <AccountSettings />
+          <AccountSettings compact />
         </>
       )}
     </Screen>

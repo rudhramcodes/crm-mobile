@@ -4,6 +4,12 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { authApi } from './authApi';
 import { isSoundOn } from '@/utils/notificationSound';
+import { getPref, setPref } from '@/utils/prefs';
+
+// Settings > Push notifications. On unless this phone's user turned it off.
+const PUSH_KEY = 'pushEnabled';
+export const isPushOn = async () => (await getPref(PUSH_KEY)) !== 'off';
+export const setPushOn = (on) => setPref(PUSH_KEY, on ? null : 'off');
 
 let pushToken = null;
 // True once this phone gets the server's pushes. Until then (simulator, permission off) the app posts the
@@ -72,7 +78,7 @@ export function showLocalNotification(n) {
 
 // Ask once, then send this phone's Expo push token to the server. Quietly does nothing where push can't work.
 export async function registerPush(dispatch) {
-  if (Platform.OS === 'web') return;
+  if (Platform.OS === 'web' || !(await isPushOn())) return;
   if (Platform.OS === 'android') {
     await Promise.all(CHANNELS.map(([id, name, importance]) => Notifications.setNotificationChannelAsync(id, {
       name,
