@@ -66,30 +66,31 @@ const Row = ({ children }) => (
 const Section = ({ children }) => <Text className="pt-2 text-caption text-muted">{children}</Text>;
 
 const idOf = (x) => (x && typeof x === "object" ? x._id : x) || "";
-const initial = (m, client) => ({
-  title: m?.title || "",
+// `ask`: a "meeting request" notification's link (/meetings/new?title=&attendee=&date=&startTime=) fills a new form.
+const initial = (m, client, ask = {}) => ({
+  title: m?.title || ask.title || "",
   brand: m?.brand || "",
   status: m?.status || "scheduled",
   client: idOf(m?.client) || client || "",
   lead: idOf(m?.lead),
-  date: m?.date ? String(m.date).slice(0, 10) : "",
-  startTime: m?.startTime || "",
+  date: m?.date ? String(m.date).slice(0, 10) : /^\d{4}-\d{2}-\d{2}$/.test(ask.date || "") ? ask.date : "",
+  startTime: m?.startTime || (/^\d{2}:\d{2}$/.test(ask.startTime || "") ? ask.startTime : ""),
   endTime: m?.endTime || "",
   recurrence: "none",
   occurrences: "3",
   meetingLink: m?.meetingLink || "",
   location: m?.location || "",
-  attendees: (m?.attendees || []).map(idOf),
+  attendees: m ? (m.attendees || []).map(idOf) : ask.attendee ? [ask.attendee] : [],
   notes: m?.notes || "",
 });
 
 // Same fields, labels and rules as the web MeetingForm.
-function MeetingForm({ meeting, defaultClient }) {
+function MeetingForm({ meeting, defaultClient, ask }) {
   const editing = !!meeting;
   const [create, c] = useCreateMeetingMutation();
   const [update, u] = useUpdateMeetingMutation();
   const [generate, g] = useGenerateMeetingLinkMutation();
-  const [f, setF] = useState(() => initial(meeting, defaultClient));
+  const [f, setF] = useState(() => initial(meeting, defaultClient, ask));
   const [startRaw, setStartRaw] = useState(toDisplay(f.startTime));
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
   const { message, fieldErrors } = apiError(c.error || u.error);
@@ -355,13 +356,13 @@ function MeetingForm({ meeting, defaultClient }) {
 // Create, edit with ?id=, or preselect a client with ?client= (from the client page).
 // Android shows modals full screen under the status bar, so it needs the top inset; iOS sheets don't.
 export default function NewMeeting() {
-  const { id, client } = useLocalSearchParams();
+  const { id, client, title, attendee, date, startTime } = useLocalSearchParams();
   const { data, isLoading, isError, refetch } = useGetMeetingByIdQuery(id, { skip: !id });
   const meeting = data?.data?.meeting;
   return (
     <Screen scroll edges={Platform.OS === "android" ? ["top", "bottom"] : ["bottom"]} className="gap-5 pt-6">
       {!id || meeting ? (
-        <MeetingForm key={meeting?._id || "new"} meeting={meeting} defaultClient={client} />
+        <MeetingForm key={meeting?._id || "new"} meeting={meeting} defaultClient={client} ask={{ title, attendee, date, startTime }} />
       ) : (
         <DashboardState isLoading={isLoading} isError={isError || !isLoading} refetch={refetch} />
       )}

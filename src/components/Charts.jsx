@@ -10,8 +10,8 @@ import { cn } from '@/utils/cn';
 // validate_palette.js: light on #fffcf3, dark on #2a1a0f, all checks pass. A few light steps sit under 3:1 on cream,
 // so every chart shows its values as text beside the colour (legend rows / tapped values): never colour alone.
 const SERIES = {
-  light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'],
-  dark: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#0ca30c', '#9085e9', '#e66767'],
+  light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#0f7f8c', '#e34948'],
+  dark: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#0ca30c', '#22a3b3', '#e66767'],
 };
 export const useSeriesColors = () => SERIES[useColorScheme() === 'dark' ? 'dark' : 'light'];
 

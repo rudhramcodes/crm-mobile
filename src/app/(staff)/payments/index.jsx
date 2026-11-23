@@ -25,7 +25,8 @@ import { formatCompactCurrency } from "@/utils/formatters";
 import { paymentParams } from "@/utils/payments";
 import { FlashList } from "@shopify/flash-list";
 import { CreditCard, Search, ShieldAlert, SlidersHorizontal } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { ScrollView, View } from "react-native";
 import { useSelector } from "react-redux";
 
@@ -50,16 +51,11 @@ export default function Payments() {
   const me = useSelector((s) => s.auth.user);
   const can = paymentAccess(me);
   const [brand, setBrand] = useState("");
-  const [typed, setTyped] = useState("");
-  const [search, setSearch] = useState("");
+  const { typed, setTyped, search, setSearch } = useDebouncedSearch();
   const [f, setFilters] = useState(NONE);
   const [open, setOpen] = useState(false);
   const set = (patch) => setFilters((x) => ({ ...x, ...patch }));
 
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(typed.trim()), 350);
-    return () => clearTimeout(t);
-  }, [typed]);
 
   const LIMIT = 20;
   const listRef = useRef(null);

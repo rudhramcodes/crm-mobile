@@ -9,17 +9,21 @@ import { useGetVentureDashboardQuery } from '@/services/dashboardApi';
 import { BRANDS, BRAND_METAS, LEAD_SOURCES, LEAD_STATUS } from '@/constants';
 import { useTheme } from '@/constants/theme';
 import { formatCompactCurrency, formatCurrency } from '@/utils/formatters';
+import { canOpenPath } from '@/utils/access';
+import { useSelector } from 'react-redux';
 import { cn } from '@/utils/cn';
 
 // Web /dashboard/venture/:brand. Admin, super admin and manager only; employees never get a link here.
 export default function VentureDashboard() {
   const theme = useTheme();
+  const user = useSelector((s) => s.auth.user);
+  const go = (path) => (canOpenPath(user, path) ? () => router.push(path) : undefined);
   const { brand } = useLocalSearchParams();
   const { data, isLoading, isFetching, isError, refetch } = useGetVentureDashboardQuery(brand);
   const refreshControl = usePullRefresh(refetch);
   const meta = BRAND_METAS[brand] || { label: brand };
   const d = data?.data;
-  const k = d?.kpis;
+  const k = d?.kpis ?? {}; // partial answer: zeros, not a crash
   const top = Math.max(1, ...(d?.comparison || []).map((c) => c.leads));
 
   return (
@@ -42,13 +46,13 @@ export default function VentureDashboard() {
       {!d || (isFetching && d.brand !== brand) ? <DashboardState isLoading={isLoading || isFetching} isError={isError} refetch={refetch} /> : (
         <>
           <View className="flex-row flex-wrap gap-3">
-            <StatTile label="TOTAL LEADS" value={k.totalLeads} onPress={() => router.push('/leads')} />
-            <StatTile label="WON DEALS" value={k.wonLeads} onPress={() => router.push('/leads')} />
-            <StatTile label="ACTIVE CLIENTS" value={k.activeClients} onPress={() => router.push('/clients')} />
-            <StatTile label="CONVERSION" value={`${k.conversionRate}%`} onPress={() => router.push('/leads')} />
-            <StatTile label="REVENUE" value={formatCompactCurrency(k.totalRevenue)} sub={`${formatCurrency(k.totalRevenue)}, excl. cash`} onPress={() => router.push('/payments')} />
+            <StatTile label="TOTAL LEADS" value={k.totalLeads ?? 0} onPress={go('/leads')} />
+            <StatTile label="WON DEALS" value={k.wonLeads ?? 0} onPress={go('/leads')} />
+            <StatTile label="ACTIVE CLIENTS" value={k.activeClients ?? 0} onPress={go('/clients')} />
+            <StatTile label="CONVERSION" value={`${k.conversionRate ?? 0}%`} onPress={go('/leads')} />
+            <StatTile label="REVENUE" value={formatCompactCurrency(k.totalRevenue)} sub={`${formatCurrency(k.totalRevenue)}, excl. cash`} onPress={go('/payments')} />
             <StatTile label="CASH COLLECTED" value={formatCompactCurrency(k.cashCollected)} sub={`${formatCurrency(k.cashCollected)}, separate`} />
-            <StatTile label="OUTSTANDING" value={formatCompactCurrency(k.totalOutstanding)} sub={formatCurrency(k.totalOutstanding)} alert={k.totalOutstanding > 0} onPress={() => router.push('/invoices')} />
+            <StatTile label="OUTSTANDING" value={formatCompactCurrency(k.totalOutstanding)} sub={formatCurrency(k.totalOutstanding)} alert={k.totalOutstanding > 0} onPress={go('/invoices')} />
           </View>
 
           <RevenueSection revenue={d.revenue} collected={k.totalRevenue} sub={`Collected (excl. cash) for ${meta.label}. Tap a month.`} />

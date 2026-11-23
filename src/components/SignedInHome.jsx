@@ -3,15 +3,15 @@ import { Modal, Pressable as RNPressable, View, useWindowDimensions } from 'reac
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
-import { ChevronRight, MailWarning, Settings, UserRound } from 'lucide-react-native';
+import { Bell, ChevronRight, MailWarning, Settings, UserRound } from 'lucide-react-native';
 import { Pressable } from './Pressable';
 import { ListRow } from './ListRow';
-import { Screen } from './Screen';
 import { Heading, Text } from './Text';
 import { Card } from './Card';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { useTheme } from '@/constants/theme';
+import { useGetUnreadCountQuery } from '@/services/notificationApi';
 
 const OPEN_MS = 200;
 const CLOSE_MS = 150;
@@ -67,6 +67,26 @@ function ProfileMenu({ user }) {
   );
 }
 
+// Client Home: bell with the unread count, opening the portal Inbox (clients have no Inbox tab).
+function InboxBell() {
+  const theme = useTheme();
+  const { data: unread = 0 } = useGetUnreadCountQuery();
+  return (
+    <Pressable
+      onPress={() => router.push('/portal/notifications')}
+      accessibilityLabel={unread ? `Inbox, ${unread} unread` : 'Inbox'}
+      className="h-11 w-11 items-center justify-center rounded-full border border-line bg-surface"
+    >
+      <Bell size={20} color={theme.ink} />
+      {unread > 0 && (
+        <View className="absolute -right-1 -top-1 min-w-[20px] items-center rounded-full bg-danger px-1.5">
+          <Text className="font-body-semibold text-xs text-bg">{unread > 99 ? '99+' : unread}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
 // Greeting + avatar, the designation pill, and the verify-email nudge; top of every Home.
 export function HomeHeader({ subtitle }) {
   const theme = useTheme();
@@ -79,7 +99,12 @@ export function HomeHeader({ subtitle }) {
           {!!subtitle && <Text className="mt-0.5 font-body-medium text-sm text-muted">{subtitle}</Text>}
           {!!user.profile?.designation && <Badge label={user.profile.designation} className="mt-1" />}
         </View>
-        {user.role === 'client' ? <Avatar name={user.name} uri={user.avatar} size={48} /> : <ProfileMenu user={user} />}
+        {user.role === 'client' ? (
+          <>
+            <InboxBell />
+            <Avatar name={user.name} uri={user.avatar} size={48} />
+          </>
+        ) : <ProfileMenu user={user} />}
       </View>
       {!user.isEmailVerified && (
         <Card onPress={() => router.push('/verify-email')} className="flex-row items-center gap-3 border-transparent bg-accent/15">
@@ -94,14 +119,5 @@ export function HomeHeader({ subtitle }) {
         </Card>
       )}
     </>
-  );
-}
-
-// shortcut: placeholder home for clients until the portal module. Account actions live in Profile.
-export function SignedInHome({ subtitle }) {
-  return (
-    <Screen tab scroll className="gap-5 pt-6">
-      <HomeHeader subtitle={subtitle} />
-    </Screen>
   );
 }

@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { useTheme } from '@/constants/theme';
 import { useLiveUpdates } from '@/hooks/useLiveUpdates';
 import { useClockTimer } from '@/hooks/useClockTimer';
+import { PushPrimer } from '@/components/PushPrimer';
 
 // Android: iOS-style slide with the screen behind easing away, and forms rising from the bottom. iOS keeps its native motion.
 const android = Platform.OS === 'android';
@@ -14,32 +15,35 @@ export default function StaffLayout() {
   useClockTimer();
   const theme = useTheme();
   return (
-    <Stack screenOptions={{ headerShown: false, animation: android ? 'ios_from_right' : 'default', contentStyle: { backgroundColor: theme.bg } }}>
-      <Stack.Screen name="attendance/clock-out" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
-      <Stack.Screen name="attendance/day" options={modal} />
-      <Stack.Screen name="attendance/regularize" options={modal} />
-      <Stack.Screen name="attendance/apply-leave" options={modal} />
-      <Stack.Screen name="attendance/edit" options={modal} />
-      <Stack.Screen name="attendance/holiday-form" options={modal} />
-      <Stack.Screen name="attendance/shift-form" options={modal} />
-      <Stack.Screen name="tasks/new" options={modal} />
-      <Stack.Screen name="tasks/reschedule" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
-      <Stack.Screen name="tasks/review-note" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
-      <Stack.Screen name="leads/new" options={modal} />
-      <Stack.Screen name="clients/new" options={modal} />
-      <Stack.Screen name="freelancers/new" options={modal} />
-      <Stack.Screen name="payments/edit" options={modal} />
-      <Stack.Screen name="quotations/edit" options={modal} />
-      <Stack.Screen name="quotations/new" options={modal} />
-      <Stack.Screen name="invoices/new" options={modal} />
-      <Stack.Screen name="invoices/pay" options={modal} />
-      <Stack.Screen name="document-preview" options={modal} />
-      <Stack.Screen name="meetings/new" options={modal} />
-      <Stack.Screen name="meetings/convert" options={modal} />
-      <Stack.Screen name="projects/new" options={modal} />
-      <Stack.Screen name="users/new" options={modal} />
-      <Stack.Screen name="leads/lost" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
-      <Stack.Screen name="leads/community" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
-    </Stack>
+    <>
+      <PushPrimer />
+      <Stack screenOptions={{ headerShown: false, animation: android ? 'ios_from_right' : 'default', contentStyle: { backgroundColor: theme.bg } }}>
+        <Stack.Screen name="attendance/clock-out" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
+        <Stack.Screen name="attendance/day" options={modal} />
+        <Stack.Screen name="attendance/regularize" options={modal} />
+        <Stack.Screen name="attendance/apply-leave" options={modal} />
+        <Stack.Screen name="attendance/edit" options={modal} />
+        <Stack.Screen name="attendance/holiday-form" options={modal} />
+        <Stack.Screen name="attendance/shift-form" options={modal} />
+        <Stack.Screen name="tasks/new" options={modal} />
+        <Stack.Screen name="tasks/reschedule" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
+        <Stack.Screen name="tasks/review-note" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
+        <Stack.Screen name="leads/new" options={modal} />
+        <Stack.Screen name="clients/new" options={modal} />
+        <Stack.Screen name="freelancers/new" options={modal} />
+        <Stack.Screen name="payments/edit" options={modal} />
+        <Stack.Screen name="quotations/edit" options={modal} />
+        <Stack.Screen name="quotations/new" options={modal} />
+        <Stack.Screen name="invoices/new" options={modal} />
+        <Stack.Screen name="invoices/pay" options={modal} />
+        <Stack.Screen name="document-preview" options={modal} />
+        <Stack.Screen name="meetings/new" options={modal} />
+        <Stack.Screen name="meetings/convert" options={modal} />
+        <Stack.Screen name="projects/new" options={modal} />
+        <Stack.Screen name="users/new" options={modal} />
+        <Stack.Screen name="leads/lost" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
+        <Stack.Screen name="leads/community" options={{ presentation: 'formSheet', sheetAllowedDetents: 'fitToContents', sheetGrabberVisible: true }} />
+      </Stack>
+    </>
   );
 }

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useDebouncedSearch } from '@/hooks/useDebouncedSearch';
 import { ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
@@ -17,17 +18,12 @@ import { canCreateProject } from '@/utils/projects';
 export default function Projects() {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
-  const [typed, setTyped] = useState('');
-  const [search, setSearch] = useState('');
+  const { typed, setTyped, search, setSearch } = useDebouncedSearch();
   const [stage, setStage] = useState('');
   const [brand, setBrand] = useState('');
   const [mine, setMine] = useState(me.role === 'employee');
 
   // Search as you type, once typing pauses.
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(typed.trim()), 350);
-    return () => clearTimeout(t);
-  }, [typed]);
 
   const LIMIT = 20;
   const listRef = useRef(null);

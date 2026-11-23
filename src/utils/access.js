@@ -1,3 +1,4 @@
+import { NAV_ITEMS } from '@/constants';
 const PAYROLL_EMAILS = ['jaimishchhowala@rudhramenterprises.com'];
 
 export const canWriteModule = (user, module) => Boolean(user) && !user.readOnlyModules?.includes(module);
@@ -19,6 +20,9 @@ export const canSeeNavItem = (user, item) => {
     && !user.readOnlyModules?.includes(item.path.slice(1))) return false;
   return true;
 };
+
+// True when this user's More menu has the page, so a dashboard tile may link to it (e.g. managers can't open Invoices).
+export const canOpenPath = (user, path) => NAV_ITEMS.some((i) => i.path === path && canSeeNavItem(user, i));
 
 export const canUseQuickAction = (user, action) =>
   canSeeNavItem(user, { path: `/${action.module}`, roles: action.roles }) && canWriteModule(user, action.module);

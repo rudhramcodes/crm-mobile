@@ -25,7 +25,8 @@ import { cleanParams } from "@/utils/leads";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { Plus, Search, ShieldAlert, UsersRound } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { ScrollView, View } from "react-native";
 import { useSelector } from "react-redux";
 
@@ -53,15 +54,10 @@ function UserList({ me }) {
   const theme = useTheme();
   const payroll = canAccessPayroll(me);
   const [role, setRole] = useState("");
-  const [typed, setTyped] = useState("");
-  const [search, setSearch] = useState("");
+  const { typed, setTyped, search, setSearch } = useDebouncedSearch();
   const [deleting, setDeleting] = useState(null);
   const [del, d] = useDeleteUserMutation();
 
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(typed.trim()), 350);
-    return () => clearTimeout(t);
-  }, [typed]);
 
   const listRef = useRef(null);
   const filters = cleanParams({ search, role });

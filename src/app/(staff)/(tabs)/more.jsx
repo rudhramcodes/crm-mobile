@@ -46,7 +46,7 @@ export default function More() {
       {results ? (
         results.length ? (
           <Card className="py-2">
-            {results.map((i) => <ListRow key={i.path} icon={i.icon} label={i.label} onPress={() => router.push(i.path)} />)}
+            {results.map((i) => <ListRow key={i.path} icon={i.icon} label={i.label} onPress={() => router.push(i.href ?? i.path)} />)}
           </Card>
         ) : (
           <EmptyState icon={Search} title="No matches" message={`Nothing called "${query.trim()}". Try ${items.slice(0, 3).map((i) => i.label).join(', ')}.`} />
@@ -57,7 +57,7 @@ export default function More() {
             <View key={s.label}>
               <Text className="mb-2 text-caption uppercase text-muted">{s.label}</Text>
               <Card className="py-2">
-                {s.items.map((i) => <ListRow key={i.path} icon={i.icon} label={i.label} onPress={() => router.push(i.path)} />)}
+                {s.items.map((i) => <ListRow key={i.path} icon={i.icon} label={i.label} onPress={() => router.push(i.href ?? i.path)} />)}
               </Card>
             </View>
           ))}

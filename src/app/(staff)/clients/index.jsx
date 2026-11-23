@@ -26,7 +26,8 @@ import { cleanParams } from "@/utils/leads";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
 import { Plus, Search, UserCheck } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { usePage, usePageNav } from "@/hooks/usePaged";
 import { View } from "react-native";
 import { useSelector } from "react-redux";
@@ -38,16 +39,11 @@ export default function Clients() {
   const can = clientAccess(me);
   const [status, setStatus] = useState("active");
   const [brand, setBrand] = useState("");
-  const [typed, setTyped] = useState("");
-  const [search, setSearch] = useState("");
+  const { typed, setTyped, search, setSearch } = useDebouncedSearch();
   const [deleting, setDeleting] = useState(null);
   const [del, d] = useDeleteClientMutation();
 
   // Search as you type, once typing pauses.
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(typed.trim()), 350);
-    return () => clearTimeout(t);
-  }, [typed]);
 
   // 20 per page from the server, with Previous / Next under the list.
   const LIMIT = 20;

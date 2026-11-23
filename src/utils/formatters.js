@@ -35,31 +35,6 @@ export function formatDateTime(date) {
   }).format(new Date(date));
 }
 
-export function getStatusColor(status) {
-  const colors = {
-    new: 'bg-sand text-brown',
-    contacted: 'bg-accent/15 text-accent-ink',
-    meeting_scheduled: 'bg-ink text-bg',
-    proposal_sent: 'bg-ink text-bg',
-    won: 'bg-success/15 text-success',
-    lost: 'bg-danger/15 text-danger',
-    todo: 'bg-surface-2 text-muted',
-    in_progress: 'bg-sand text-brown',
-    review: 'bg-accent/15 text-accent-ink',
-    done: 'bg-success/15 text-success',
-    completed: 'bg-success/15 text-success',
-    draft: 'bg-surface-2 text-muted',
-    sent: 'bg-sand text-brown',
-    paid: 'bg-success/15 text-success',
-    overdue: 'bg-danger/15 text-danger',
-    scheduled: 'bg-sand text-brown',
-    cancelled: 'bg-surface-2 text-muted',
-    active: 'bg-success/15 text-success',
-    planning: 'bg-ink text-bg',
-  };
-  return colors[status] || 'bg-surface-2 text-muted';
-}
-
 export function getInitials(name) {
   if (!name) return '??';
   return name

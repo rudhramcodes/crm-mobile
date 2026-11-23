@@ -19,7 +19,8 @@ import { teamName } from "@/utils/users";
 import { FlashList } from "@shopify/flash-list";
 import { useLocalSearchParams } from "expo-router";
 import { MapPin, Search } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { View } from "react-native";
 import { useSelector } from "react-redux";
 
@@ -32,13 +33,7 @@ export default function LocationTeam() {
   const me = useSelector((s) => s.auth.user);
   const admin = isAdmin(me);
   const valid = LOCATIONS.includes(location) || (location === "none" && admin);
-  const [typed, setTyped] = useState("");
-  const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    const t = setTimeout(() => setSearch(typed.trim()), 350);
-    return () => clearTimeout(t);
-  }, [typed]);
+  const { typed, setTyped, search, setSearch } = useDebouncedSearch();
 
   const listRef = useRef(null);
   const filters = cleanParams({ location, search, isActive: true });

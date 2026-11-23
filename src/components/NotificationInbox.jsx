@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -6,13 +6,20 @@ import { useDispatch } from 'react-redux';
 import { startOfDay, startOfMonth, startOfWeek } from 'date-fns';
 import * as Haptics from 'expo-haptics';
 import { BellOff, CheckCheck, CloudOff, Trash2 } from 'lucide-react-native';
-import { Chip, EmptyState, Heading, Pager, Pressable, Screen, Skeleton, Text, showToast } from '@/components';
+import { Chip } from './Chip';
+import { EmptyState } from './EmptyState';
+import { Heading, Text } from './Text';
+import { Pager } from './Pager';
+import { Pressable } from './Pressable';
+import { Screen } from './Screen';
+import { Skeleton } from './Skeleton';
+import { showToast } from './Toast';
+import { PageHeader } from './AttendanceParts';
 import { usePage, usePageNav } from '@/hooks/usePaged';
-import {
-  useDeleteNotificationMutation, useGetNotificationsQuery, useGetUnreadCountQuery, useMarkAllNotificationsReadMutation,
-} from '@/services/notificationApi';
+import { useGetNotificationsQuery, useGetUnreadCountQuery } from '@/services/notificationApi';
 import { notificationConfig } from '@/constants/notifications';
 import { openNotification } from '@/hooks/useLiveUpdates';
+import { sendOrQueue } from '@/utils/offlineQueue';
 import { getTimeAgo } from '@/utils/formatters';
 import { brand, useTheme } from '@/constants/theme';
 import { cn } from '@/utils/cn';
@@ -72,7 +79,8 @@ function Row({ item, onOpen, onDelete }) {
   );
 }
 
-export default function Inbox() {
+// The Inbox tab for staff and clients; `client` sends taps to portal pages.
+export function NotificationInbox({ client = false }) {
   const theme = useTheme();
   const dispatch = useDispatch();
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -90,8 +98,9 @@ export default function Inbox() {
   const meta = data?.pagination;
   const goTo = usePageNav(listRef, page, setPage, meta?.pages);
   const { data: unread = 0 } = useGetUnreadCountQuery();
-  const [markAll, { isLoading: markingAll }] = useMarkAllNotificationsReadMutation();
-  const [remove] = useDeleteNotificationMutation();
+  const [markingAll, setMarkingAll] = useState(false);
+  // Offline, deletes and "mark all read" wait and go out when the connection is back.
+  const remove = useCallback((id) => sendOrQueue(dispatch, 'deleteNotification', id).catch(() => {}), [dispatch]);
 
   const items = useMemo(() => (data?.data ?? []).filter((n) => !hidden.includes(n._id)), [data, hidden]);
 
@@ -121,8 +130,11 @@ export default function Inbox() {
   };
 
   const readAll = async () => {
-    const res = await markAll();
-    if (res.error) return showToast({ title: "Couldn't mark them read", message: 'Check your connection and try again.' });
+    setMarkingAll(true);
+    const res = await sendOrQueue(dispatch, 'markAllNotificationsRead');
+    setMarkingAll(false);
+    if (res.queued) return showToast({ title: "You're offline", message: "They'll be marked read when you're back online." });
+    if (res.error) return showToast({ title: "Couldn't mark them read", message: 'Please try again.' });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     showToast({ title: 'All caught up', message: 'Every notification is marked read.' });
   };
@@ -133,16 +145,20 @@ export default function Inbox() {
     setRefreshing(false);
   };
 
+  const markAllButton = unread > 0 && (
+    <Pressable onPress={readAll} disabled={markingAll} accessibilityLabel="Mark all as read" className="h-11 w-11 items-center justify-center rounded-full border border-line bg-surface">
+      <CheckCheck size={20} color={theme.ink} />
+    </Pressable>
+  );
+
   const header = (
-    <View className="gap-4 pb-4 pt-6">
-      <View className="flex-row items-center justify-between">
-        <Heading>Inbox</Heading>
-        {unread > 0 && (
-          <Pressable onPress={readAll} disabled={markingAll} accessibilityLabel="Mark all as read" className="h-11 w-11 items-center justify-center rounded-full border border-line bg-surface">
-            <CheckCheck size={20} color={theme.ink} />
-          </Pressable>
-        )}
-      </View>
+    <View className={cn('gap-4 pb-4', client ? 'pt-2' : 'pt-6')}>
+      {client ? <PageHeader caption="PORTAL" title="Inbox" fallback="/portal" right={markAllButton} /> : (
+        <View className="flex-row items-center justify-between">
+          <Heading>Inbox</Heading>
+          {markAllButton}
+        </View>
+      )}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2" className="-mx-5" contentContainerStyle={{ paddingHorizontal: 20 }}>
         <Chip label="All" active={!unreadOnly} onPress={() => setUnreadOnly(false)} />
         <Chip label="Unread" count={unread} active={unreadOnly} onPress={() => setUnreadOnly(true)} />
@@ -167,7 +183,7 @@ export default function Inbox() {
   );
 
   return (
-    <Screen tab className="px-0">
+    <Screen tab={!client} className="px-0">
       <FlashList
         ref={listRef}
         contentInsetAdjustmentBehavior="automatic"
@@ -175,7 +191,7 @@ export default function Inbox() {
         keyExtractor={(n) => n._id}
         renderItem={({ item }) => (
           <View className="pb-3">
-            <Row item={item} onOpen={() => openNotification(item, { dispatch })} onDelete={() => deleteLater(item._id)} />
+            <Row item={item} onOpen={() => openNotification(item, { dispatch, client })} onDelete={() => deleteLater(item._id)} />
           </View>
         )}
         ListHeaderComponent={header}

@@ -21,6 +21,7 @@ export * from './OfflineBanner';
 export * from './ListRow';
 export * from './ComingSoon';
 export * from './AccountSettings';
+export * from './PushPrimer';
 export * from './Chip';
 export * from './DashboardParts';
 export * from './AttendanceCard';

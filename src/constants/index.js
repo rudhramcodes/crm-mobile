@@ -197,8 +197,9 @@ export const LEAD_SOURCES = [
   { value: 'other', label: 'Other' },
 ];
 
+// `href` overrides where a row goes (Dashboard is the Home tab).
 export const NAV_ITEMS = [
-  { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['super_admin', 'admin', 'manager', 'employee'] },
+  { label: 'Dashboard', path: '/dashboard', href: '/', icon: LayoutDashboard, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Leads', path: '/leads', icon: Users, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Clients', path: '/clients', icon: UserCheck, roles: ['super_admin', 'admin', 'manager', 'employee'] },
   { label: 'Meetings', path: '/meetings', icon: Calendar, roles: ['super_admin', 'admin', 'manager', 'employee'] },

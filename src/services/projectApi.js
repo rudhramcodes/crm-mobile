@@ -69,18 +69,6 @@ export const projectApi = api.injectEndpoints({
         { type: 'Project', id }, 'Project', { type: 'ProjectActivities', id },
       ],
     }),
-    addProjectTask: builder.mutation({
-      query: ({ id, ...body }) => ({ url: `/projects/${id}/tasks`, method: 'POST', body }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Project', id }, 'Project'],
-    }),
-    updateProjectTask: builder.mutation({
-      query: ({ id, taskId, ...body }) => ({ url: `/projects/${id}/tasks/${taskId}`, method: 'PATCH', body }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Project', id }, 'Project'],
-    }),
-    deleteProjectTask: builder.mutation({
-      query: ({ id, taskId }) => ({ url: `/projects/${id}/tasks/${taskId}`, method: 'DELETE' }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Project', id }, 'Project'],
-    }),
     // Text, or multipart with up to 5 photos (field "images"), the same way task chat sends files.
     addProjectMessage: builder.mutation({
       query: ({ id, text, files = [] }) => {
@@ -115,9 +103,6 @@ export const {
   useUpdateProjectMutation,
   useDeleteProjectMutation,
   useGetProjectActivitiesQuery,
-  useAddProjectTaskMutation,
-  useUpdateProjectTaskMutation,
-  useDeleteProjectTaskMutation,
   useUpdateProjectMilestonesMutation,
   useChangeProjectStageMutation,
   useSaveProjectQualityCheckMutation,
