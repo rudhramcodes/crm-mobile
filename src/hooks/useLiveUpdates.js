@@ -31,7 +31,7 @@ const QUICK = {
 const DONE = { approve: 'Approved', start: 'Started', reply: 'Reply sent' };
 // Shown after a queued action finally goes through.
 const sendWaiting = (dispatch) => flushQueue(dispatch)
-  .then((n) => n && showToast({ title: 'Back online', message: n === 1 ? 'Sent 1 action you took offline.' : `Sent ${n} actions you took offline.` }))
+  .then((n) => n && showToast({ tone: 'success', title: 'Back online', message: n === 1 ? 'Sent 1 action you took offline.' : `Sent ${n} actions you took offline.` }))
   .catch(() => {});
 
 const runQuick = async (data, action, text, ctx) => {
@@ -41,7 +41,7 @@ const runQuick = async (data, action, text, ctx) => {
     const res = await sendOrQueue(ctx.dispatch, ...QUICK[action](id, text?.trim()));
     if (res.error) throw res.error;
     if (data.id) sendOrQueue(ctx.dispatch, 'markNotificationRead', data.id).catch(() => {});
-    showToast(res.queued ? { title: "You're offline", message: `${DONE[action]} as soon as you're back online.` } : { title: DONE[action] });
+    showToast(res.queued ? { title: "You're offline", message: `${DONE[action]} as soon as you're back online.` } : { tone: 'success', title: DONE[action] });
   } catch {
     showToast({ title: "Couldn't do that from the notification" });
     openNotification(data, ctx);
