@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Alert as RNAlert, Linking, View } from 'react-native';
-import { router } from 'expo-router';
 import { Building2, Check, ChevronDown, ChevronLeft, ChevronRight, MapPin, Repeat, Search, Trash2, User, Video, X } from 'lucide-react-native';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
@@ -12,6 +11,7 @@ import { Text } from './Text';
 import { BrandMark } from './DashboardParts';
 import { brandLabel } from './ClientParts';
 import { showToast } from './Toast';
+import { ZoomLink } from './ZoomLink';
 import { MEETING_STATUS, ROLE_LABELS } from '@/constants';
 import { useTheme } from '@/constants/theme';
 import { useGetMeetingsQuery, useUpdateMeetingMutation } from '@/services/meetingApi';
@@ -55,41 +55,43 @@ export function MeetingRow({ meeting: m, canManage, onDelete }) {
   const changeStatus = useMeetingStatus();
   const brand = meetingBrand(m);
   return (
-    <Pressable onPress={() => router.push(`/meetings/${m._id}`)} accessibilityLabel={`${m.title}, ${meetingDay(m)}, ${meetingTime(m)}, ${meetingStatus(m.status).label}`} className="gap-3 rounded-3xl border border-line bg-surface p-4">
-      <View className="flex-row items-center gap-2">
-        <Text className="flex-1 font-body-medium text-sm text-muted">{meetingDay(m)} · {meetingTime(m)}</Text>
-        {canManage ? (
-          <Pressable onPress={() => changeStatus(m)} accessibilityLabel={`Status ${meetingStatus(m.status).label}. Change`} hitSlop={6}>
-            <MeetingStatusBadge status={m.status} />
-          </Pressable>
-        ) : <MeetingStatusBadge status={m.status} />}
-      </View>
-      <View className="gap-1.5">
-        <Text numberOfLines={2} className="font-body-semibold">{m.title}</Text>
-        <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1.5">
-          {!!m.seriesId && <Meta icon={Repeat} text="Recurring" />}
-          {!!brand && (
-            <View className="flex-row items-center gap-1.5">
-              <BrandMark brand={brand} size={16} />
-              <Text className="text-xs text-muted">{brandLabel(brand)}</Text>
-            </View>
-          )}
-          {m.client ? <Meta icon={Building2} text={m.client.companyName} /> : m.lead ? <Meta icon={User} text={m.lead.name} /> : null}
-          {!!m.location && <Meta icon={MapPin} text={m.location} />}
+    <ZoomLink href={`/meetings/${m._id}`}>
+      <Pressable accessibilityLabel={`${m.title}, ${meetingDay(m)}, ${meetingTime(m)}, ${meetingStatus(m.status).label}`} className="gap-3 rounded-3xl border border-line bg-surface p-4">
+        <View className="flex-row items-center gap-2">
+          <Text className="flex-1 font-body-medium text-sm text-muted">{meetingDay(m)} · {meetingTime(m)}</Text>
+          {canManage ? (
+            <Pressable onPress={() => changeStatus(m)} accessibilityLabel={`Status ${meetingStatus(m.status).label}. Change`} hitSlop={6}>
+              <MeetingStatusBadge status={m.status} />
+            </Pressable>
+          ) : <MeetingStatusBadge status={m.status} />}
         </View>
-      </View>
-      <View className="flex-row items-center gap-2 border-t border-line pt-3">
-        {m.meetingLink ? (
-          <Button title="Join meeting" icon={Video} size="sm" variant="secondary" onPress={() => joinMeeting(m.meetingLink)} />
-        ) : <Text className="text-sm text-muted">In-person session</Text>}
-        <View className="flex-1" />
-        {!!onDelete && (
-          <Pressable onPress={() => onDelete(m)} accessibilityLabel={`Delete ${m.title}`} className="h-9 w-9 items-center justify-center rounded-full bg-surface-2">
-            <Trash2 size={16} color={theme.danger} />
-          </Pressable>
-        )}
-      </View>
-    </Pressable>
+        <View className="gap-1.5">
+          <Text numberOfLines={2} className="font-body-semibold">{m.title}</Text>
+          <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1.5">
+            {!!m.seriesId && <Meta icon={Repeat} text="Recurring" />}
+            {!!brand && (
+              <View className="flex-row items-center gap-1.5">
+                <BrandMark brand={brand} size={16} />
+                <Text className="text-xs text-muted">{brandLabel(brand)}</Text>
+              </View>
+            )}
+            {m.client ? <Meta icon={Building2} text={m.client.companyName} /> : m.lead ? <Meta icon={User} text={m.lead.name} /> : null}
+            {!!m.location && <Meta icon={MapPin} text={m.location} />}
+          </View>
+        </View>
+        <View className="flex-row items-center gap-2 border-t border-line pt-3">
+          {m.meetingLink ? (
+            <Button title="Join meeting" icon={Video} size="sm" variant="secondary" onPress={() => joinMeeting(m.meetingLink)} />
+          ) : <Text className="text-sm text-muted">In-person session</Text>}
+          <View className="flex-1" />
+          {!!onDelete && (
+            <Pressable onPress={() => onDelete(m)} accessibilityLabel={`Delete ${m.title}`} className="h-9 w-9 items-center justify-center rounded-full bg-surface-2">
+              <Trash2 size={16} color={theme.danger} />
+            </Pressable>
+          )}
+        </View>
+      </Pressable>
+    </ZoomLink>
   );
 }
 

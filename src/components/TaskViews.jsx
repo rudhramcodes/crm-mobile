@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
+import Animated, { FadeIn, FadeOut, LayoutAnimationConfig } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, CornerDownLeft, Plus, X } from 'lucide-react-native';
+import { CornerDownLeft, X } from 'lucide-react-native';
 import { Button } from './Button';
 import { Card } from './Card';
 import { Chip } from './Chip';
@@ -11,16 +12,16 @@ import { Pressable } from './Pressable';
 import { Text } from './Text';
 import { UserPicker } from './UserPicker';
 import { ConfirmDelete } from './AttendanceParts';
-import { TaskRow } from './TaskParts';
+import { ROW_LAYOUT, TaskRow } from './TaskParts';
 import { TASK_PRIORITY, TASK_STATUS } from '@/constants';
 import { useGetProjectsQuery } from '@/services/projectApi';
 import { useGetUsersQuery } from '@/services/userApi';
 import { useGetTeamsQuery } from '@/services/teamApi';
 import { dueText, parseQuickAdd } from '@/utils/quickAdd';
-import { useBulkUpdateTasksMutation, useCreateTaskMutation, useGetTasksQuery, useDeleteTaskMutation, useReorderTasksMutation, useUpdateTaskMutation } from '@/services/taskApi';
+import { useBulkUpdateTasksMutation, useCreateTaskMutation, useGetTasksQuery, useDeleteTaskMutation } from '@/services/taskApi';
 import { useTheme } from '@/constants/theme';
-import { isAdmin, runAction, ymd } from '@/utils/attendance';
-import { canManageTask, canReview, canWorkTask, isOverdue, myDay, reviewerOf, shareCsv } from '@/utils/tasks';
+import { isAdmin, runAction } from '@/utils/attendance';
+import { canManageTask, canReview, canWorkTask, myDay, shareCsv } from '@/utils/tasks';
 import { showToast } from './Toast';
 import { cn } from '@/utils/cn';
 
@@ -29,11 +30,11 @@ const newTask = (params) => router.push({ pathname: '/tasks/new', params });
 function Group({ title, tasks, tone, empty, hint }) {
   if (!tasks.length && !empty) return null;
   return (
-    <View className="gap-2">
+    <Animated.View layout={ROW_LAYOUT} entering={FadeIn.duration(200)} exiting={FadeOut.duration(180)} style={{ gap: 8 }}>
       <Text className={cn('text-caption', tone || 'text-muted')}>{title} · {tasks.length}</Text>
       {!!hint && !!tasks.length && <Text className="-mt-1 text-xs text-muted">{hint}</Text>}
       {tasks.length ? tasks.map((t) => <TaskRow key={t._id} task={t} />) : <Text className="text-sm text-muted">{empty}</Text>}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -101,7 +102,9 @@ export function MyDayView({ tasks }) {
   const focus = g.overdue.length + g.today.length + g.done.length;
   const pct = focus ? Math.round((g.done.length / focus) * 100) : 0;
 
+  // Only changes animate, never the first load or a tab switch.
   return (
+    <LayoutAnimationConfig skipEntering skipExiting>
     <View className="gap-5">
       <Card className="gap-3 p-4">
         {!!focus && (
@@ -111,7 +114,9 @@ export function MyDayView({ tasks }) {
               <Text className="font-body-semibold tabular-nums">{g.done.length} of {focus} done</Text>
             </View>
             <View className="h-1.5 overflow-hidden rounded-full bg-sand" accessible accessibilityLabel={`${pct}% of today's tasks done`}>
-              <View className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+              <Animated.View style={{ height: '100%', width: `${pct}%`, transitionProperty: 'width', transitionDuration: 400, transitionTimingFunction: 'ease-out' }}>
+                <View className="flex-1 rounded-full bg-accent" />
+              </Animated.View>
             </View>
           </>
         )}
@@ -124,15 +129,18 @@ export function MyDayView({ tasks }) {
       <Group title="WITH THE REVIEWER" tasks={waiting} hint="Nothing to do until they reply." />
       <Group title="DONE TODAY" tasks={g.done} />
     </View>
+    </LayoutAnimationConfig>
   );
 }
 
 // List with long-press (or Select) to pick several; the bulk bar sits above it.
 export function ListView({ tasks, selecting, selected, onToggle }) {
   return (
+    <LayoutAnimationConfig skipEntering skipExiting>
     <View className="gap-2">
-      {tasks.map((t) => <TaskRow key={t._id} task={t} selecting={selecting} selected={selected.includes(t._id)} onToggleSelect={onToggle} />)}
+        {tasks.map((t) => <TaskRow key={t._id} task={t} selecting={selecting} selected={selected.includes(t._id)} onToggleSelect={onToggle} />)}
     </View>
+    </LayoutAnimationConfig>
   );
 }
 
@@ -191,135 +199,7 @@ export function BulkBar({ tasks, selected, onClear }) {
   );
 }
 
-const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0);
-
-// Kanban: one column per status, side by side. Move mode shows arrows to change status and order (no drag on a phone).
-export function BoardView({ tasks }) {
-  const theme = useTheme();
-  const me = useSelector((s) => s.auth.user);
-  const [moving, setMoving] = useState(false);
-  const [update] = useUpdateTaskMutation();
-  const [reorder] = useReorderTasksMutation();
-
-  const shift = (t, dir) => {
-    const i = TASK_STATUS.findIndex((s) => s.value === t.status) + dir;
-    const next = TASK_STATUS[i]?.value;
-    if (!next) return;
-    if (next === 'done' && !canReview(t, me)) return showToast({ title: 'Only the reviewer can mark Done', message: `Ask ${reviewerOf(t)?.name || 'the creator'} to review it.` });
-    runAction(update({ id: t._id, status: next }), `Moved to ${TASK_STATUS[i].label}`, "Couldn't move the task");
-  };
-  const bump = (col, i, dir) => {
-    const ids = col.map((t) => t._id);
-    [ids[i], ids[i + dir]] = [ids[i + dir], ids[i]];
-    runAction(reorder({ status: col[0].status, orderedIds: ids }), null, "Couldn't reorder");
-  };
-
-  return (
-    <View className="gap-3">
-      <View className="flex-row items-center gap-2">
-        <Chip label={moving ? 'Done moving' : 'Move cards'} active={moving} onPress={() => setMoving((m) => !m)} />
-        <Text className="flex-1 text-sm text-muted">Swipe sideways for more columns.</Text>
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={292} decelerationRate="fast" className="-mx-5" contentContainerClassName="gap-3 px-5">
-        {TASK_STATUS.map((s, si) => {
-          const col = tasks.filter((t) => t.status === s.value).sort(byOrder);
-          return (
-            <View key={s.value} className="w-[280px] gap-2 rounded-3xl bg-surface-2 p-3">
-              <View className="flex-row items-center gap-2 px-1">
-                <Text className="flex-1 font-body-semibold">{s.label}</Text>
-                <Text className="text-sm text-muted tabular-nums">{col.length}</Text>
-                {['todo', 'in_progress'].includes(s.value) && <Pressable onPress={() => newTask({ status: s.value })} accessibilityLabel={`Add to ${s.label}`} className="h-9 w-9 items-center justify-center"><Plus size={18} color={theme.ink} /></Pressable>}
-              </View>
-              {col.map((t, i) => (
-                <View key={t._id} className="gap-1">
-                  <TaskRow task={t} swipe={false} />
-                  {moving && canWorkTask(t, me) && (
-                    <View className="flex-row justify-between px-1">
-                      <MoveBtn icon={ChevronLeft} label={si ? `Move to ${TASK_STATUS[si - 1].label}` : 'Already first column'} disabled={!si} onPress={() => shift(t, -1)} />
-                      <MoveBtn icon={ArrowUp} label="Move up" disabled={!i} onPress={() => bump(col, i, -1)} />
-                      <MoveBtn icon={ArrowDown} label="Move down" disabled={i === col.length - 1} onPress={() => bump(col, i, 1)} />
-                      <MoveBtn icon={ChevronRight} label={TASK_STATUS[si + 1] ? `Move to ${TASK_STATUS[si + 1].label}` : 'Already last column'} disabled={si === TASK_STATUS.length - 1} onPress={() => shift(t, 1)} />
-                    </View>
-                  )}
-                </View>
-              ))}
-              {!col.length && <Text className="px-1 py-6 text-center text-sm text-muted">No tasks</Text>}
-            </View>
-          );
-        })}
-      </ScrollView>
-    </View>
-  );
-}
-
-function MoveBtn({ icon: Icon, label, disabled, onPress }) {
-  const theme = useTheme();
-  return (
-    <Pressable onPress={onPress} disabled={disabled} accessibilityLabel={label} className={cn('h-11 w-14 items-center justify-center rounded-full bg-surface', disabled && 'opacity-30')}>
-      <Icon size={18} color={theme.ink} />
-    </Pressable>
-  );
-}
-
-const WEEK = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-// Month grid with a dot per due task; tap a day for its tasks or to add one on that date.
-export function CalendarView({ tasks }) {
-  const theme = useTheme();
-  const [{ y, m }, setYm] = useState(() => ({ y: new Date().getFullYear(), m: new Date().getMonth() }));
-  const [day, setDay] = useState(ymd());
-  const byDay = {};
-  for (const t of tasks) if (t.dueDate) (byDay[ymd(t.dueDate)] ||= []).push(t);
-  const lead = (new Date(y, m, 1).getDay() + 6) % 7;
-  const days = new Date(y, m + 1, 0).getDate();
-  const cells = [...Array(lead).fill(null), ...Array.from({ length: days }, (_, i) => ymd(new Date(y, m, i + 1)))];
-  const today = ymd();
-  const shift = (d) => setYm(({ y: yy, m: mm }) => { const n = new Date(yy, mm + d, 1); return { y: n.getFullYear(), m: n.getMonth() }; });
-  const list = byDay[day] || [];
-
-  return (
-    <View className="gap-4">
-      <Card className="gap-3 p-4">
-        <View className="flex-row items-center">
-          <Pressable onPress={() => shift(-1)} accessibilityLabel="Previous month" className="h-11 w-11 items-center justify-center"><ChevronLeft size={22} color={theme.ink} /></Pressable>
-          <Text className="flex-1 text-center font-body-semibold text-lg">{new Date(y, m, 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</Text>
-          <Pressable onPress={() => shift(1)} accessibilityLabel="Next month" className="h-11 w-11 items-center justify-center"><ChevronRight size={22} color={theme.ink} /></Pressable>
-        </View>
-        <View className="flex-row">{WEEK.map((w, i) => <Text key={i} className="flex-1 text-center text-caption text-muted">{w}</Text>)}</View>
-        <View className="flex-row flex-wrap">
-          {cells.map((d, i) => {
-            if (!d) return <View key={`x${i}`} className="aspect-square w-[14.28%]" />;
-            const due = byDay[d] || [];
-            const late = due.some(isOverdue);
-            return (
-              <View key={d} className="aspect-square w-[14.28%] p-0.5">
-                <Pressable
-                  onPress={() => setDay(d)}
-                  accessibilityLabel={`${Number(d.slice(8))}, ${due.length} ${due.length === 1 ? 'task' : 'tasks'} due`}
-                  accessibilityState={{ selected: d === day }}
-                  className={cn('flex-1 items-center justify-center gap-1 rounded-xl', d === day ? 'bg-ink' : d === today && 'border-[1.5px] border-accent')}
-                >
-                  <Text className={cn('font-body-medium text-sm tabular-nums', d === day && 'text-bg')}>{Number(d.slice(8))}</Text>
-                  <View className="h-1.5 flex-row gap-0.5">
-                    {due.slice(0, 3).map((t) => <View key={t._id} className={cn('h-1.5 w-1.5 rounded-full', late ? 'bg-danger' : t.status === 'done' ? 'bg-success' : 'bg-accent')} />)}
-                  </View>
-                </Pressable>
-              </View>
-            );
-          })}
-        </View>
-      </Card>
-      <View className="flex-row items-center">
-        <Text className="flex-1 text-caption text-muted">DUE {new Date(`${day}T00:00:00`).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase()} · {list.length}</Text>
-        <Button title="Add" icon={Plus} size="sm" variant="secondary" onPress={() => newTask({ dueDate: day })} />
-      </View>
-      {list.map((t) => <TaskRow key={t._id} task={t} />)}
-      {!list.length && <Text className="text-sm text-muted">Nothing due this day.</Text>}
-    </View>
-  );
-}
-
-// Filters: status, priority, project, assignee, watching. Search lives above it.
+// Filters: status, priority, project, assignee. Search lives above it.
 export function FilterPanel({ f, set }) {
   const me = useSelector((s) => s.auth.user);
   const [picking, setPicking] = useState(false);
@@ -348,11 +228,6 @@ export function FilterPanel({ f, set }) {
           : <Chip key="pick" label="Someone else…" onPress={() => setPicking(true)} />,
       ])}
       {picking && <UserPicker label="Assigned to" onPick={(u) => { set({ assignedTo: u._id, assigneeName: u.name }); setPicking(false); }} onCancel={() => setPicking(false)} />}
-      <Text className="text-caption text-muted">SHOW</Text>
-      {row([
-        <Chip key="all" label="All tasks" active={!f.watching} onPress={() => set({ watching: false })} />,
-        <Chip key="w" label="Watching" active={f.watching} onPress={() => set({ watching: true })} />,
-      ])}
     </Card>
   );
 }
