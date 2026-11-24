@@ -90,26 +90,16 @@ Steps:
 
 ### 2.1 Production API URL (very important)
 
-Your `.env` file points to `localhost`. **EAS cloud builds never see your local `.env` file**, so a store build would have no API URL and the app would not be able to log in.
+Your `.env` file points to `localhost`, and **EAS cloud builds never see your local `.env` file**. So the `preview` and `production` profiles in `eas.json` set the URLs themselves under `env`:
 
-1. Your backend must be deployed on a public **HTTPS** address (e.g. `https://api.rudhramenterprises.com`). Apple and Android block plain `http://` by default.
-2. Store the values in EAS (replace the URLs with your real ones):
-   ```bash
-   npx eas-cli@latest env:set --name EXPO_PUBLIC_API_URL --value https://api.yourdomain.com/api --environment production --visibility plaintext
-   ```
-   ```bash
-   npx eas-cli@latest env:set --name EXPO_PUBLIC_SOCKET_URL --value https://api.yourdomain.com --environment production --visibility plaintext
-   ```
-   (`env:set` creates or updates the variable. Older guides use `env:create`, which EAS now marks as deprecated.)
-   These are the only two variables the app reads (`EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_SOCKET_URL`, see `.env.example`).
-3. Tell the production build to use these values — in `eas.json`, change the `production` profile to:
-   ```json
-   "production": {
-     "autoIncrement": true,
-     "environment": "production"
-   }
-   ```
-   You can see/edit these later on https://expo.dev → your project → **Environment variables**.
+```json
+"env": {
+  "EXPO_PUBLIC_API_URL": "https://rudhramgroup.com/api",
+  "EXPO_PUBLIC_SOCKET_URL": "https://rudhramgroup.com"
+}
+```
+
+These are the only two variables the app reads (see `.env.example`). To change the server, edit them there, in both profiles. The backend must be on **HTTPS**, because Apple and Android block plain `http://` by default.
 
 ### 2.2 Push notifications (the app uses `expo-notifications`)
 
