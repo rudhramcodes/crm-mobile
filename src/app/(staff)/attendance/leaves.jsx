@@ -4,24 +4,28 @@ import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { Check, Plane, Plus, X } from 'lucide-react-native';
 import {
-  Avatar, BalanceCards, Button, Card, Chip, DashboardState, EmptyState, Input, PageHeader, RequestBadge, Screen, Text, leaveDays, longDate, usePullRefresh,
+  Avatar, BalanceCards, Button, Card, Chip, ConfirmDialog, DashboardState, EmptyState, Input, PageHeader, RequestBadge, Screen, Text, leaveDays, longDate, usePullRefresh,
 } from '@/components';
-import { useApproveLeaveMutation, useGetLeaveBalanceQuery, useGetLeavesQuery, useRejectLeaveMutation } from '@/services/attendanceApi';
+import { useApproveLeaveMutation, useCancelLeaveMutation, useGetLeaveBalanceQuery, useGetLeavesQuery, useRejectLeaveMutation } from '@/services/attendanceApi';
 import { LEAVE_TYPES } from '@/constants';
 import { isLead, runAction, ymd } from '@/utils/attendance';
 
 const typeLabel = (v) => LEAVE_TYPES.find((t) => t.value === v)?.label || v;
-const STATUS = [['pending', 'Pending'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['all', 'All']];
+const STATUS = [['pending', 'Pending'], ['approved', 'Approved'], ['rejected', 'Rejected'], ['cancelled', 'Cancelled'], ['all', 'All']];
 
 // One request; admins and managers can approve or reject someone else's pending leave with an optional comment.
-function LeaveCard({ l, canReview, showName }) {
+function LeaveCard({ l, canReview, showName, mine, lead }) {
   const [approve, a] = useApproveLeaveMutation();
   const [reject, r] = useRejectLeaveMutation();
+  const [cancel, c] = useCancelLeaveMutation();
+  const [confirming, setConfirming] = useState(false);
   const [acting, setActing] = useState(null);
   const [comment, setComment] = useState('');
   const s = ymd(l.startDate);
   const e = ymd(l.endDate);
   const days = leaveDays(s, e);
+  // Same rule as the server: own pending any time, own approved before it starts; managers can cancel any approved leave.
+  const canCancel = mine ? l.status === 'pending' || (l.status === 'approved' && s > ymd()) : lead && l.status === 'approved';
   const go = () => runAction((acting === 'approve' ? approve : reject)({ id: l._id, comment: comment.trim() || undefined }), acting === 'approve' ? 'Leave approved' : 'Leave rejected');
 
   return (
@@ -30,7 +34,7 @@ function LeaveCard({ l, canReview, showName }) {
         {showName && <Avatar name={l.employee?.name || '?'} uri={l.employee?.avatar} size={40} />}
         <View className="flex-1">
           <Text className="font-body-semibold">{showName ? l.employee?.name : `${typeLabel(l.leaveType)} leave`}</Text>
-          <Text className="text-sm text-muted">{showName ? `${typeLabel(l.leaveType)} · ` : ''}{days} {days === 1 ? 'day' : 'days'}</Text>
+          <Text className="text-sm text-muted">{showName ? `${typeLabel(l.leaveType)} · ` : ''}{l.halfDay ? `Half day (${l.halfDay} half)` : `${days} ${days === 1 ? 'day' : 'days'}`}</Text>
         </View>
         <RequestBadge status={l.status} />
       </View>
@@ -51,6 +55,20 @@ function LeaveCard({ l, canReview, showName }) {
           <Button title="Approve" icon={Check} size="sm" className="flex-1" onPress={() => setActing('approve')} />
         </View>
       ))}
+      {canCancel && <Button title="Cancel leave" variant="ghost" size="sm" onPress={() => setConfirming(true)} />}
+      <ConfirmDialog
+        visible={confirming}
+        title="Cancel this leave?"
+        message={l.status === 'approved' ? 'The days go back to the leave balance and become normal working days.' : 'The request is withdrawn.'}
+        confirmLabel="Cancel leave"
+        cancelLabel="Keep leave"
+        loading={c.isLoading}
+        onCancel={() => setConfirming(false)}
+        onConfirm={async () => {
+          await runAction(cancel(l._id), 'Leave cancelled');
+          setConfirming(false);
+        }}
+      />
     </Card>
   );
 }
@@ -86,7 +104,7 @@ export default function Leaves() {
 
       {list.isLoading || list.isError ? <DashboardState isLoading={list.isLoading} isError={list.isError} refetch={list.refetch} /> : leaves.length ? (
         <View className="gap-3">
-          {leaves.map((l) => <LeaveCard key={l._id} l={l} showName={team} canReview={lead && (l.employee?._id || l.employee) !== me._id} />)}
+          {leaves.map((l) => <LeaveCard key={l._id} l={l} showName={team} lead={lead} mine={(l.employee?._id || l.employee) === me._id} canReview={lead && (l.employee?._id || l.employee) !== me._id} />)}
         </View>
       ) : (
         <EmptyState icon={Plane} title={status === 'pending' ? 'Nothing pending' : 'No leave requests'} message="Requests show up here with their status." actionTitle="Apply for leave" onAction={() => router.push('/attendance/apply-leave')} />
