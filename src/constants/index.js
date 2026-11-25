@@ -272,6 +272,7 @@ export const REQUEST_STATUS = [
   { value: 'pending', label: 'Pending', color: 'bg-accent/15 text-accent-ink' },
   { value: 'approved', label: 'Approved', color: 'bg-success/15 text-success' },
   { value: 'rejected', label: 'Rejected', color: 'bg-danger/15 text-danger' },
+  { value: 'cancelled', label: 'Cancelled', color: 'bg-surface-2 text-muted' },
 ];
 
 export const HOLIDAY_TYPES = [

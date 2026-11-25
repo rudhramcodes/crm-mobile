@@ -70,10 +70,10 @@ export const runAction = async (promise, done, failTitle = "Couldn't save") => {
   }
 };
 
-// Web formula: present + WFH over working days with a record; leave and holidays don't count.
+// Web formula: present + WFH + half of each half day, over working days with a record; leave and holidays don't count.
 export const attendanceRate = (s = {}) => {
   const denom = (s.present || 0) + (s.wfh || 0) + (s.absent || 0) + (s.half_day || 0);
-  return denom ? Math.round((((s.present || 0) + (s.wfh || 0)) / denom) * 100) : null;
+  return denom ? Math.round((((s.present || 0) + (s.wfh || 0) + (s.half_day || 0) * 0.5) / denom) * 100) : null;
 };
 
 export const monthRange = (year, month) => ({ dateFrom: ymd(new Date(year, month - 1, 1)), dateTo: ymd(new Date(year, month, 0)) });

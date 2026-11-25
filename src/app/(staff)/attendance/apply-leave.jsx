@@ -8,7 +8,9 @@ import { runAction, ymd } from '@/utils/attendance';
 import { apiError } from '@/utils/apiError';
 import { getFieldError } from '@/utils/getFieldError';
 
-// Type, date range and reason. Casual and sick are checked against the balance here and again on the server.
+const HALVES = [{ value: '', label: 'Full day' }, { value: 'first', label: 'First half' }, { value: 'second', label: 'Second half' }];
+
+// Type, full or half day, date range and reason. Casual and sick are checked against the balance here and again on the server.
 export default function ApplyLeave() {
   const me = useSelector((s) => s.auth.user);
   const { data } = useGetLeaveBalanceQuery(me._id);
@@ -16,16 +18,17 @@ export default function ApplyLeave() {
   const [leaveType, setType] = useState('casual');
   const [startDate, setStart] = useState(ymd());
   const [endDate, setEnd] = useState(ymd());
+  const [halfDay, setHalfDay] = useState(''); // '' = full day(s), else 'first' | 'second'
   const [reason, setReason] = useState('');
   const { message, fieldErrors } = apiError(error);
   const err = (f) => getFieldError(fieldErrors, f);
 
-  const days = startDate && endDate && endDate >= startDate ? leaveDays(startDate, endDate) : 0;
+  const days = halfDay ? 0.5 : startDate && endDate && endDate >= startDate ? leaveDays(startDate, endDate) : 0;
   const left = data?.data?.balance?.[leaveType]?.balance;
   const over = left != null && days > left;
 
   const submit = async () => {
-    const ok = await runAction(apply({ leaveType, startDate, endDate, reason: reason.trim() }), 'Leave requested', "Couldn't apply for leave");
+    const ok = await runAction(apply({ leaveType, startDate, endDate: halfDay ? startDate : endDate, halfDay: halfDay || undefined, reason: reason.trim() }), 'Leave requested', "Couldn't apply for leave");
     if (ok) backTo();
   };
 
@@ -39,12 +42,18 @@ export default function ApplyLeave() {
           {LEAVE_TYPES.map((t) => <Chip key={t.value} label={t.label} active={leaveType === t.value} onPress={() => setType(t.value)} />)}
         </View>
       </View>
-      <DateField label="From" value={startDate} onChange={(d) => { setStart(d); if (d > endDate) setEnd(d); }} error={err('startDate')} />
-      <DateField label="To" value={endDate} onChange={setEnd} minDate={startDate} error={err('endDate')} />
+      <View className="gap-1.5">
+        <Text className="font-body-medium text-sm">Duration</Text>
+        <View className="flex-row flex-wrap gap-2">
+          {HALVES.map((h) => <Chip key={h.value} label={h.label} active={halfDay === h.value} onPress={() => setHalfDay(h.value)} />)}
+        </View>
+      </View>
+      <DateField label={halfDay ? 'Date' : 'From'} value={startDate} onChange={(d) => { setStart(d); if (d > endDate) setEnd(d); }} error={err('startDate')} />
+      {!halfDay && <DateField label="To" value={endDate} onChange={setEnd} minDate={startDate} error={err('endDate')} />}
       {days > 0 && (
         <Alert
           tone={over ? 'error' : 'info'}
-          message={`${days} ${days === 1 ? 'day' : 'days'}${left != null ? `. ${left} ${leaveType} ${left === 1 ? 'day' : 'days'} left.` : ', not counted against a balance.'}${over ? ' This exceeds your balance.' : ''}`}
+          message={`${halfDay ? 'Half day' : `${days} ${days === 1 ? 'day' : 'days'}`}${left != null ? `. ${left} ${leaveType} ${left === 1 ? 'day' : 'days'} left.` : ', not counted against a balance.'}${over ? ' This exceeds your balance.' : ''}`}
         />
       )}
       <Input
