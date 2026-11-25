@@ -2,18 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useSelector } from 'react-redux';
-import { CalendarClock, Check, ChevronDown, ChevronLeft, ChevronUp, Eye, Repeat, X } from 'lucide-react-native';
+import { CalendarClock, ChevronDown, ChevronLeft, ChevronUp, Repeat, X } from 'lucide-react-native';
 import {
   ActivityLog, Avatar, Button, Card, Checklist, Chip, ConfirmDelete, FilesStrip, DashboardState, DateField, Dependencies, Input, PageHeader, PeoplePicker, Pressable, Screen,
   Subtasks, TaskChat, TaskFlow, Text, TimeTracker, backTo, openReschedule, showToast, usePullRefresh,
 } from '@/components';
 import { TASK_PRIORITY } from '@/constants';
-import { useDeleteTaskMutation, useGetTaskByIdQuery, useUnwatchTaskMutation, useUpdateTaskMutation, useWatchTaskMutation } from '@/services/taskApi';
+import { useDeleteTaskMutation, useGetTaskByIdQuery, useUpdateTaskMutation } from '@/services/taskApi';
 import { useEntityRoom } from '@/hooks/useEntityRoom';
 import { setViewing } from '@/services/push';
 import { useTheme } from '@/constants/theme';
 import { isAdmin, runAction, ymd } from '@/utils/attendance';
-import { canManageTask, dueLabel, idOf, isOnTask, isOverdue, reviewerOf, taskPriority } from '@/utils/tasks';
+import { canManageTask, dueLabel, idOf, isOnTask, isOverdue, taskPriority } from '@/utils/tasks';
 import { cn } from '@/utils/cn';
 
 const Label = ({ children }) => <Text className="text-caption text-muted">{children}</Text>;
@@ -36,8 +36,6 @@ function TaskBody({ task: t }) {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
   const [update] = useUpdateTaskMutation();
-  const [watch] = useWatchTaskMutation();
-  const [unwatch] = useUnwatchTaskMutation();
   const [del, d] = useDeleteTaskMutation();
   const [title, setTitle, titleFocus, titleDone] = useSynced(t.title);
   const [description, setDescription, descFocus, descDone] = useSynced(t.description || '');
@@ -45,12 +43,8 @@ function TaskBody({ task: t }) {
   const [tag, setTag] = useState('');
   const [people, setPeople] = useState(null); // draft { owner, helpers } while editing
   const [more, setMore] = useState(false);
-  const watching = (t.watchers || []).some((w) => idOf(w) === me._id);
   const manage = canManageTask(t, me); // plan it: title, priority, people
   const work = manage || isOnTask(t, me); // move it along: status, dates, details
-  // Follow is for people outside the task (a manager keeping an eye on it, say): the owner, helpers,
-  // creator and reviewer already get all its updates.
-  const outsider = !isOnTask(t, me) && ![idOf(t.createdBy), idOf(reviewerOf(t))].includes(me._id);
   const save = (body, done) => runAction(update({ id: t._id, ...body }), done, "Couldn't save");
 
   const saveTitle = async () => {
@@ -71,18 +65,6 @@ function TaskBody({ task: t }) {
         <Pressable onPress={() => backTo('/tasks')} accessibilityLabel="Back" className="-ml-2 h-11 w-11 items-center justify-center">
           <ChevronLeft size={26} color={theme.ink} />
         </Pressable>
-        {outsider && (
-          <Pressable
-            onPress={() => runAction(watching ? unwatch(t._id) : watch(t._id), watching ? 'Unfollowed' : "Following: you'll get its updates")}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: watching }}
-            accessibilityLabel="Follow this task"
-            className={cn('h-11 flex-row items-center gap-1.5 rounded-full px-4', watching ? 'bg-ink' : 'bg-surface-2')}
-          >
-            {watching ? <Check size={16} color={theme.bg} /> : <Eye size={16} color={theme.ink} />}
-            <Text className={cn('font-body-semibold text-sm', watching && 'text-bg')}>{watching ? 'Following' : 'Follow'}</Text>
-          </Pressable>
-        )}
       </View>
       <View className="-mt-3 gap-1">
         {!!t.parent && (

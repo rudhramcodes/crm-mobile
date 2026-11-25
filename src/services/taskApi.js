@@ -28,6 +28,21 @@ export const taskApi = api.injectEndpoints({
     updateTask: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/tasks/${id}`, method: 'PATCH', body }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
+      // Optimistic: lists move the row (Today → Done today, say) the moment you act, so it can animate away
+      // at once; the refetch then confirms it, and a failure puts it back. Only plain fields: the rest wait.
+      async onQueryStarted({ id, ...body }, { dispatch, getState, queryFulfilled }) {
+        const now = {};
+        for (const k of ['status', 'priority', 'dueDate', 'progress']) if (k in body) now[k] = body[k];
+        if (!Object.keys(now).length) return;
+        if (now.status === 'done') now.completedAt = new Date().toISOString();
+        const patches = taskApi.util.selectInvalidatedBy(getState(), ['Task'])
+          .filter((e) => e.endpointName === 'getTasks')
+          .map((e) => dispatch(taskApi.util.updateQueryData('getTasks', e.originalArgs, (d) => {
+            const t = d?.data?.find((x) => x._id === id);
+            if (t) Object.assign(t, now);
+          })));
+        queryFulfilled.catch(() => patches.forEach((p) => p.undo()));
+      },
     }),
     deleteTask: builder.mutation({
       query: (id) => ({ url: `/tasks/${id}`, method: 'DELETE' }),
@@ -77,18 +92,6 @@ export const taskApi = api.injectEndpoints({
       query: ({ id, itemId }) => ({ url: `/tasks/${id}/checklist/${itemId}`, method: 'DELETE' }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
     }),
-    watchTask: builder.mutation({
-      query: (id) => ({ url: `/tasks/${id}/watch`, method: 'POST' }),
-      invalidatesTags: (result, error, id) => [{ type: 'Task', id }, 'Task'],
-    }),
-    unwatchTask: builder.mutation({
-      query: (id) => ({ url: `/tasks/${id}/watch`, method: 'DELETE' }),
-      invalidatesTags: (result, error, id) => [{ type: 'Task', id }, 'Task'],
-    }),
-    getWatchedTasks: builder.query({
-      query: (params) => ({ url: '/tasks/watching', params }),
-      providesTags: ['Task'],
-    }),
     addTimeEntry: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/tasks/${id}/time`, method: 'POST', body }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
@@ -96,10 +99,6 @@ export const taskApi = api.injectEndpoints({
     removeTimeEntry: builder.mutation({
       query: ({ id, entryId }) => ({ url: `/tasks/${id}/time/${entryId}`, method: 'DELETE' }),
       invalidatesTags: (result, error, { id }) => [{ type: 'Task', id }, 'Task'],
-    }),
-    reorderTasks: builder.mutation({
-      query: (body) => ({ url: '/tasks/reorder', method: 'PATCH', body }),
-      invalidatesTags: ['Task'],
     }),
     bulkUpdateTasks: builder.mutation({
       query: (body) => ({ url: '/tasks/bulk', method: 'PATCH', body }),
@@ -116,7 +115,6 @@ export const {
   useAddDependencyMutation, useRemoveDependencyMutation,
   useAddTaskCommentMutation, useDeleteTaskCommentMutation,
   useAddChecklistItemMutation, useUpdateChecklistItemMutation, useRemoveChecklistItemMutation,
-  useWatchTaskMutation, useUnwatchTaskMutation, useGetWatchedTasksQuery,
   useAddTimeEntryMutation, useRemoveTimeEntryMutation,
-  useReorderTasksMutation, useBulkUpdateTasksMutation,
+  useBulkUpdateTasksMutation,
 } = taskApi;

@@ -17,6 +17,7 @@ import { HomeHeader } from './SignedInHome';
 import { AttendanceCard } from './AttendanceCard';
 import { CalendarCard } from './WorkCalendar';
 import { ActivityRow, BarList, BrandMark, MonthBars, Ring, Section, StatTile, StatusCounts, shortDate } from './DashboardParts';
+import { ZoomLink } from './ZoomLink';
 import { useGetDashboardOverviewQuery, useGetEmployeeDashboardQuery } from '@/services/dashboardApi';
 import { useGetMeetingsQuery } from '@/services/meetingApi';
 import { useGetLeaveBalanceQuery } from '@/services/attendanceApi';
@@ -116,19 +117,19 @@ export function MeetingsSection({ meetings, loading, sub, max = 5 }) {
       {loading ? <Skeleton className="h-16 rounded-2xl" /> : sorted.length ? (
         <View>
           {sorted.map((m, i) => (
-            <ActivityRow
-              key={m._id || i}
-              icon={Calendar}
-              title={m.title}
-              description={[`${shortDate(m.date)}, ${toDisplay(m.startTime)}–${toDisplay(m.endTime)}`, m.lead?.name || m.client?.companyName].filter(Boolean).join(' · ')}
-              onPress={m._id ? () => router.push(`/meetings/${m._id}`) : undefined}
-              right={(
-                <View className="flex-row gap-1.5">
-                  {!!m.meetingLink && <Video size={16} color={theme.muted} />}
-                  {!!m.location && <MapPin size={16} color={theme.muted} />}
-                </View>
-              )}
-            />
+            <ZoomLink href={m._id && `/meetings/${m._id}`} key={m._id || i}>
+              <ActivityRow
+                icon={Calendar}
+                title={m.title}
+                description={[`${shortDate(m.date)}, ${toDisplay(m.startTime)}–${toDisplay(m.endTime)}`, m.lead?.name || m.client?.companyName].filter(Boolean).join(' · ')}
+                right={(
+                  <View className="flex-row gap-1.5">
+                    {!!m.meetingLink && <Video size={16} color={theme.muted} />}
+                    {!!m.location && <MapPin size={16} color={theme.muted} />}
+                  </View>
+                )}
+              />
+            </ZoomLink>
           ))}
         </View>
       ) : (
@@ -173,13 +174,13 @@ export function AdminDashboard() {
           <Section title="Ventures" sub="Clients per brand. Tap one for its dashboard.">
             <View>
               {BRANDS.map((b) => (
-                <ListRow
-                  key={b.value}
-                  icon={() => <BrandMark brand={b.value} />}
-                  label={b.label}
-                  hint={`${byBrand[b.value] || 0} clients`}
-                  onPress={() => router.push(`/dashboard/venture/${b.value}`)}
-                />
+                <ZoomLink href={`/dashboard/venture/${b.value}`} key={b.value}>
+                  <ListRow
+                    icon={() => <BrandMark brand={b.value} />}
+                    label={b.label}
+                    hint={`${byBrand[b.value] || 0} clients`}
+                  />
+                </ZoomLink>
               ))}
             </View>
           </Section>
@@ -242,14 +243,14 @@ export function EmployeeDashboard() {
             {tasks.items?.length ? (
               <View className="border-t border-line pt-2">
                 {tasks.items.map((t) => (
-                  <ActivityRow
-                    key={t._id}
-                    icon={ListTodo}
-                    title={t.title}
-                    description={[t.project?.name, t.dueDate && `Due ${shortDate(t.dueDate)}`].filter(Boolean).join(' · ')}
-                    onPress={() => router.push(`/tasks/${t._id}`)}
-                    right={<Badge label={labelOf(TASK_PRIORITY, t.priority)} color={TASK_PRIORITY.find((p) => p.value === t.priority)?.color} />}
-                  />
+                  <ZoomLink href={`/tasks/${t._id}`} key={t._id}>
+                    <ActivityRow
+                      icon={ListTodo}
+                      title={t.title}
+                      description={[t.project?.name, t.dueDate && `Due ${shortDate(t.dueDate)}`].filter(Boolean).join(' · ')}
+                      right={<Badge label={labelOf(TASK_PRIORITY, t.priority)} color={TASK_PRIORITY.find((p) => p.value === t.priority)?.color} />}
+                    />
+                  </ZoomLink>
                 ))}
               </View>
             ) : tasks.total - tasks.done === 0 && (

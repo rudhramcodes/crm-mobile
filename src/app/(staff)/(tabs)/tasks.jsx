@@ -1,25 +1,28 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { ActionSheetIOS, ActivityIndicator, Alert, Platform, View } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
-import { BarChart3, Download, ListTodo, Plus, Search, SlidersHorizontal } from 'lucide-react-native';
+import { Ellipsis, ListTodo, Plus, Search, SlidersHorizontal } from 'lucide-react-native';
 import {
-  BoardView, BulkBar, Button, CalendarView, Chip, DashboardState, EmptyState, FilterPanel, Heading, Input, ListView, MyDayView, Pressable, Screen, SwipeIntro, Text, showToast, usePullRefresh,
+  BulkBar, Button, DashboardState, EmptyState, FilterPanel, Heading, Input, ListView, MyDayView, Pressable, SELECT_HINT_KEY, Screen, SelectHint, SwipeIntro, Tabs, Text, showToast, usePullRefresh,
 } from '@/components';
-import { useGetTasksQuery, useGetWatchedTasksQuery } from '@/services/taskApi';
+import { useGetTasksQuery } from '@/services/taskApi';
 import { useTheme } from '@/constants/theme';
 import { shareCsv } from '@/utils/tasks';
+import { setPref } from '@/utils/prefs';
 
-const VIEWS = [['day', 'My Day'], ['list', 'List'], ['board', 'Board'], ['calendar', 'Calendar']];
-const EMPTY = { status: '', priority: '', project: '', assignedTo: '', assigneeName: '', watching: false };
+const VIEWS = [{ value: 'day', label: 'My Day' }, { value: 'list', label: 'All tasks' }];
+const EMPTY = { status: '', priority: '', project: '', assignedTo: '', assigneeName: '' };
 // Start on what still needs doing; employees start on their own work, managers and admins on everyone's.
 const startFilters = (me) => ({ ...EMPTY, status: 'open', ...(me.role === 'employee' && { assignedTo: me._id, assigneeName: 'Me' }) });
 
-// Tasks hub: four views over one filtered list, plus search, filters, bulk select, insights and CSV export.
+// Tasks hub: My Day (my work) and All tasks (filtered list), plus search, bulk select, and Insights / CSV export in the ⋯ menu.
 export default function TasksTab() {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
   const [view, setView] = useState('day');
+  const [switched, setSwitched] = useState(false); // the first load just appears; only a tab switch crossfades
   const [f, setF] = useState(() => startFilters(me));
   const start = startFilters(me);
   const [showFilters, setShowFilters] = useState(false);
@@ -39,42 +42,50 @@ export default function TasksTab() {
       status: f.status === 'open' ? undefined : f.status || undefined, open: f.status === 'open' ? 'true' : undefined,
       project: f.project || undefined, assignedTo: f.assignedTo || undefined,
     };
-  const watchingNow = !day && f.watching;
-  const all = useGetTasksQuery(params, { skip: watchingNow });
-  const watched = useGetWatchedTasksQuery(params, { skip: !watchingNow });
+  const q = useGetTasksQuery(params);
   const [startOfToday] = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.toISOString(); });
   const doneToday = useGetTasksQuery({ page: 1, limit: 100, assignedTo: me._id, doneSince: startOfToday }, { skip: !day });
-  const q = watchingNow ? watched : all;
   const refreshControl = usePullRefresh(() => Promise.all([q.refetch(), day && doneToday.refetch()]));
-  const tasks = [...(q.data?.data || []), ...(day ? doneToday.data?.data || [] : [])];
+  // By id: a task just finished can sit in both lists until both refetch.
+  const tasks = [...new Map([...(q.data?.data || []), ...(day ? doneToday.data?.data || [] : [])].map((t) => [t._id, t])).values()];
   const total = q.data?.pagination?.total ?? tasks.length;
-  const active = day ? 0 : ['status', 'priority', 'project', 'assignedTo', 'watching'].filter((k) => f[k] !== start[k]).length;
+  const active = day ? 0 : ['status', 'priority', 'project', 'assignedTo'].filter((k) => f[k] !== start[k]).length;
   const round = 'h-11 w-11 items-center justify-center rounded-full bg-surface-2';
 
   // A new filter or search clears any selection, so hidden tasks are never bulk-changed.
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setSelecting(false); setSelected([]); };
   const toggle = (id) => {
     setSelecting(true);
+    setPref(SELECT_HINT_KEY, '1');
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   };
   const clear = () => { setSelecting(false); setSelected([]); };
   const exportAll = () => (tasks.length ? shareCsv(tasks).catch((e) => showToast({ title: "Couldn't export", message: e.message })) : showToast({ title: 'No tasks to export' }));
+  const insights = () => router.push({ pathname: '/tasks/insights', params: { q: JSON.stringify(params) } });
+  // Rarely used, so they live behind ⋯ instead of taking header space every day.
+  const menu = () => {
+    const actions = [['Insights', insights], ['Export as CSV', exportAll]];
+    if (Platform.OS === 'ios') {
+      return ActionSheetIOS.showActionSheetWithOptions(
+        { options: [...actions.map(([t]) => t), 'Cancel'], cancelButtonIndex: actions.length, tintColor: theme.ink },
+        (i) => actions[i]?.[1](),
+      );
+    }
+    Alert.alert('Tasks', undefined, [...actions.map(([text, onPress]) => ({ text, onPress })), { text: 'Cancel', style: 'cancel' }], { cancelable: true });
+  };
 
   return (
     <Screen tab scroll className="gap-4 pt-6" refreshControl={refreshControl}>
       <View className="flex-row items-end gap-3">
         <View className="flex-1">
-          <Text className="text-sm text-muted">{day ? `${total} on my plate` : `${total} ${total === 1 ? 'task' : 'tasks'}${f.watching ? ' watched' : ''}`}</Text>
+          <Text className="text-sm text-muted">{day ? `${total} on my plate` : `${total} ${total === 1 ? 'task' : 'tasks'}`}</Text>
           <Heading>Tasks</Heading>
         </View>
-        <Pressable onPress={() => router.push({ pathname: '/tasks/insights', params: { q: JSON.stringify({ ...params, watching: f.watching }) } })} accessibilityLabel="Insights" className={round}><BarChart3 size={20} color={theme.ink} /></Pressable>
-        <Pressable onPress={exportAll} accessibilityLabel="Export as CSV" className={round}><Download size={20} color={theme.ink} /></Pressable>
+        <Pressable onPress={menu} accessibilityLabel="More: Insights, Export" className={round}><Ellipsis size={20} color={theme.ink} /></Pressable>
         <Button title="New" icon={Plus} size="sm" onPress={() => router.push('/tasks/new')} />
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-5" contentContainerClassName="gap-2 px-5">
-        {VIEWS.map(([v, l]) => <Chip key={v} label={l} active={view === v} onPress={() => { setView(v); clear(); }} />)}
-      </ScrollView>
+      <Tabs tabs={VIEWS} value={view} onChange={(v) => { setSwitched(true); setView(v); clear(); setShowFilters(false); }} />
 
       <View className="flex-row items-start gap-2">
         <Input
@@ -100,18 +111,14 @@ export default function TasksTab() {
       {showFilters && !day && <FilterPanel f={f} set={set} />}
 
 
-      {q.isLoading || q.isError ? <DashboardState isLoading={q.isLoading} isError={q.isError} refetch={q.refetch} /> : (
-        <>
-          {view === 'list' && !!tasks.length && !selecting && (
-            <Pressable onPress={() => setSelecting(true)} accessibilityRole="button" className="-my-1 self-end py-1">
-              <Text className="font-body-semibold text-sm text-accent-ink">Select several</Text>
-            </Pressable>
-          )}
+      {/* Plain native spinner while the first page loads. */}
+      {q.isLoading ? <ActivityIndicator color={theme.accent} style={{ paddingVertical: 40 }} /> : q.isError ? <DashboardState isError refetch={q.refetch} /> : (
+        // A quick crossfade between views, like a segmented control switching pages in Settings.
+        <Animated.View key={view} entering={switched ? FadeIn.duration(180) : undefined} style={{ gap: 16 }}>
+          {view === 'list' && !!tasks.length && !selecting && <SelectHint />}
           {selecting && <BulkBar tasks={tasks} selected={selected} onClear={clear} />}
           {(view === 'day' || view === 'list') && !selecting && !!tasks.length && <SwipeIntro />}
           {view === 'day' && <MyDayView tasks={tasks} />}
-          {view === 'board' && <BoardView tasks={tasks} />}
-          {view === 'calendar' && <CalendarView tasks={tasks} />}
           {view === 'list' && (tasks.length ? <ListView tasks={tasks} selecting={selecting} selected={selected} onToggle={toggle} /> : (
             <EmptyState
               icon={ListTodo}
@@ -121,7 +128,7 @@ export default function TasksTab() {
               onAction={() => (search || active ? (setF(start), setTyped(''), setSearch('')) : router.push('/tasks/new'))}
             />
           ))}
-        </>
+        </Animated.View>
       )}
     </Screen>
   );

@@ -1,15 +1,16 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Modal, Pressable as RNPressable, View, useWindowDimensions } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { router } from 'expo-router';
-import { useSelector } from 'react-redux';
-import { Bell, ChevronRight, MailWarning, Settings, UserRound } from 'lucide-react-native';
+import { Link, router } from 'expo-router';
+import { useDispatch, useSelector } from 'react-redux';
+import { Bell, ChevronRight, LogOut, MailWarning, UserRound } from 'lucide-react-native';
 import { Pressable } from './Pressable';
 import { ListRow } from './ListRow';
 import { Heading, Text } from './Text';
 import { Card } from './Card';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
+import { confirmSignOut } from './AccountSettings';
 import { useTheme } from '@/constants/theme';
 import { useGetUnreadCountQuery } from '@/services/notificationApi';
 
@@ -17,9 +18,12 @@ const OPEN_MS = 200;
 const CLOSE_MS = 150;
 
 // Staff avatar: tap opens a small menu under it that grows from the top-right corner, and shrinks away on close.
+// The avatar is also the source of iOS's zoom: Profile grows out of it, and shrinks back into it on the way back.
+// Android has no zoom transition, so there Profile just pushes as usual.
 function ProfileMenu({ user }) {
-  const theme = useTheme();
+  const dispatch = useDispatch();
   const anchor = useRef(null);
+  const zoomNav = useRef(null); // the Link's own (zoom-aware) navigation, handed up by AvatarButton
   const { width } = useWindowDimensions();
   const [pos, setPos] = useState(null); // { top, right } while the menu is open
   const p = useSharedValue(0);
@@ -33,6 +37,7 @@ function ProfileMenu({ user }) {
     p.set(withTiming(0, { duration: CLOSE_MS, easing: Easing.in(Easing.cubic) }));
     setTimeout(() => { setPos(null); then?.(); }, CLOSE_MS);
   };
+  const openProfile = () => (zoomNav.current ? zoomNav.current() : router.push('/settings/profile'));
   const backdrop = useAnimatedStyle(() => ({ opacity: p.get() }));
   const menu = useAnimatedStyle(() => ({
     opacity: p.get(),
@@ -41,29 +46,38 @@ function ProfileMenu({ user }) {
 
   return (
     <>
-      <Pressable ref={anchor} collapsable={false} onPress={open} accessibilityLabel="Account menu" className="rounded-full">
-        <Avatar ring name={user.name} uri={user.avatar || undefined} size={44} />
-      </Pressable>
+      {/* Only the avatar sits inside the zoom source; the menu's Modal stays outside it. */}
+      <Link href="/settings/profile" asChild>
+        <Link.AppleZoom>
+          <AvatarButton user={user} anchor={anchor} onOpen={open} navRef={zoomNav} />
+        </Link.AppleZoom>
+      </Link>
       <Modal visible={!!pos} transparent animationType="none" statusBarTranslucent onRequestClose={() => close()}>
         <Animated.View style={[{ flex: 1 }, backdrop]}>
           <RNPressable onPress={() => close()} accessibilityLabel="Close menu" className="absolute inset-0 bg-black/20" />
         </Animated.View>
         {pos && (
           <Animated.View accessibilityViewIsModal style={[{ position: 'absolute', top: pos.top, right: pos.right, width: 240, transformOrigin: 'top right' }, menu]} className="rounded-3xl border border-line bg-surface px-4 py-2 shadow-lg">
-            <View className="flex-row items-center gap-3 border-b border-line py-3">
-              <View className="h-10 w-10 items-center justify-center rounded-xl bg-surface-2">
-                <UserRound size={20} color={theme.ink} />
-              </View>
-              <View className="flex-1">
-                <Text className="font-body-semibold" numberOfLines={1}>{user.name}</Text>
-                <Text className="text-sm text-muted" numberOfLines={1}>{user.email}</Text>
-              </View>
+            <View className="border-b border-line py-3">
+              <Text className="font-body-semibold" numberOfLines={1}>{user.name}</Text>
+              <Text className="text-sm text-muted" numberOfLines={1}>{user.email}</Text>
             </View>
-            <ListRow icon={Settings} label="Settings" onPress={() => close(() => router.push('/settings'))} />
+            <ListRow icon={UserRound} label="Profile" onPress={() => close(openProfile)} />
+            <ListRow icon={LogOut} label="Sign out" danger onPress={() => close(() => confirmSignOut(dispatch))} />
           </Animated.View>
         )}
       </Modal>
     </>
+  );
+}
+
+// The Link passes its navigation as `onPress`; keep it for the menu's Profile row, and open the menu on tap instead.
+function AvatarButton({ user, anchor, onOpen, navRef, onPress }) {
+  useEffect(() => { navRef.current = onPress; });
+  return (
+    <Pressable ref={anchor} collapsable={false} onPress={onOpen} accessibilityLabel="Account menu" className="rounded-full">
+      <Avatar ring name={user.name} uri={user.avatar || undefined} size={44} />
+    </Pressable>
   );
 }
 

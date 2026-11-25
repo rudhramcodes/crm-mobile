@@ -1,9 +1,8 @@
 import { useRef } from 'react';
 import { View } from 'react-native';
-import { router } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
 import { CalendarClock, ChevronRight, FolderOpen } from 'lucide-react-native';
-import { Button, DashboardState, EmptyState, Heading, Pager, Pressable, Screen, StageMeter, Text, usePullRefresh } from '@/components';
+import { Button, DashboardState, EmptyState, Heading, Pager, Pressable, Screen, StageMeter, Text, usePullRefresh, ZoomLink } from '@/components';
 import { useTheme } from '@/constants/theme';
 import { usePage, usePageNav } from '@/hooks/usePaged';
 import { useGetProjectsQuery } from '@/services/projectApi';
@@ -14,29 +13,30 @@ function PortalProjectRow({ project: p }) {
   const theme = useTheme();
   const stage = stageOf(p.stage)?.label || 'In progress';
   return (
-    <Pressable
-      onPress={() => router.push(`/portal/projects/${p._id}`)}
-      accessibilityRole="link"
-      accessibilityLabel={`${p.title}, ${stage}${p.deadline ? `, target ${shortDate(p.deadline)}` : ''}. Open project`}
-      className="gap-3 rounded-3xl border border-line bg-surface p-4"
-    >
-      <View className="flex-row items-center gap-2">
-        <Text numberOfLines={2} className="flex-1 font-body-semibold">{p.title}</Text>
-        <ChevronRight size={18} color={theme.muted} />
-      </View>
-      <View className="gap-1.5">
-        <StageMeter stage={p.stage} />
+    <ZoomLink href={`/portal/projects/${p._id}`}>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={`${p.title}, ${stage}${p.deadline ? `, target ${shortDate(p.deadline)}` : ''}. Open project`}
+        className="gap-3 rounded-3xl border border-line bg-surface p-4"
+      >
         <View className="flex-row items-center gap-2">
-          <Text className="flex-1 text-sm text-muted">{stage}</Text>
-          {!!p.deadline && (
-            <View className="flex-row items-center gap-1">
-              <CalendarClock size={14} color={theme.muted} />
-              <Text className="text-sm text-muted">{shortDate(p.deadline)}</Text>
-            </View>
-          )}
+          <Text numberOfLines={2} className="flex-1 font-body-semibold">{p.title}</Text>
+          <ChevronRight size={18} color={theme.muted} />
         </View>
-      </View>
-    </Pressable>
+        <View className="gap-1.5">
+          <StageMeter stage={p.stage} />
+          <View className="flex-row items-center gap-2">
+            <Text className="flex-1 text-sm text-muted">{stage}</Text>
+            {!!p.deadline && (
+              <View className="flex-row items-center gap-1">
+                <CalendarClock size={14} color={theme.muted} />
+                <Text className="text-sm text-muted">{shortDate(p.deadline)}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Pressable>
+    </ZoomLink>
   );
 }
 

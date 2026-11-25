@@ -13,6 +13,7 @@ import { Text } from './Text';
 import { ConfirmDelete } from './AttendanceParts';
 import { BrandMark } from './DashboardParts';
 import { showToast } from './Toast';
+import { ZoomLink } from './ZoomLink';
 import { LEAD_BRANDS, LEAD_SOURCES, LEAD_STATUS } from '@/constants';
 import { useBulkDeleteLeadsMutation, useBulkUpdateLeadsMutation, useUpdateLeadMutation } from '@/services/leadApi';
 import { useTheme } from '@/constants/theme';
@@ -56,37 +57,39 @@ export function useLeadStatus() {
 // Name, company or email, stage, unread dot. Long-press starts selecting.
 export function LeadRow({ lead: l, selecting, selected, onToggleSelect }) {
   const theme = useTheme();
-  const open = selecting ? () => onToggleSelect(l._id) : () => router.push(`/leads/${l._id}`);
+  const open = () => onToggleSelect(l._id); // while selecting; otherwise the row is a zoom link
   return (
-    <Pressable
-      onPress={open}
-      onLongPress={onToggleSelect && !selecting ? () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onToggleSelect(l._id); } : undefined}
-      accessibilityLabel={`${l.name}${l.isRead === false ? ', unread' : ''}, ${leadStatus(l.status).label}${l.company ? `, ${l.company}` : ''}`}
-      accessibilityState={selecting ? { selected: !!selected } : undefined}
-      className={cn('flex-row items-center gap-3 rounded-3xl border bg-surface p-4', selected ? 'border-accent' : 'border-line')}
-    >
-      {selecting ? (
-        <View className={cn('h-6 w-6 items-center justify-center rounded-full border-[1.5px]', selected ? 'border-ink bg-ink' : 'border-line')}>
-          {selected && <Check size={14} color={theme.bg} />}
+    <ZoomLink href={selecting ? null : `/leads/${l._id}`}>
+      <Pressable
+        onPress={selecting ? open : undefined}
+        onLongPress={onToggleSelect && !selecting ? () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onToggleSelect(l._id); } : undefined}
+        accessibilityLabel={`${l.name}${l.isRead === false ? ', unread' : ''}, ${leadStatus(l.status).label}${l.company ? `, ${l.company}` : ''}`}
+        accessibilityState={selecting ? { selected: !!selected } : undefined}
+        className={cn('flex-row items-center gap-3 rounded-3xl border bg-surface p-4', selected ? 'border-accent' : 'border-line')}
+      >
+        {selecting ? (
+          <View className={cn('h-6 w-6 items-center justify-center rounded-full border-[1.5px]', selected ? 'border-ink bg-ink' : 'border-line')}>
+            {selected && <Check size={14} color={theme.bg} />}
+          </View>
+        ) : <Avatar name={l.name} size={36} />}
+        <View className="flex-1 gap-1">
+          <View className="flex-row items-center gap-2">
+            {l.isRead === false && <View className="h-2 w-2 rounded-full bg-accent" />}
+            <Text numberOfLines={1} className={cn('flex-1', l.isRead === false ? 'font-body-semibold' : 'font-body-medium')}>{l.name}</Text>
+            {!!l.brand && (
+              <View className="max-w-[45%] flex-row items-center gap-1.5">
+                <BrandMark brand={l.brand} size={18} />
+                <Text numberOfLines={1} className="shrink text-xs text-muted">{labelOf(LEAD_BRANDS, l.brand)}</Text>
+              </View>
+            )}
+          </View>
+          <Text numberOfLines={1} className="text-sm text-muted">
+            {[l.company || l.email, labelOf(LEAD_SOURCES, l.source)].filter(Boolean).join(' · ')}
+          </Text>
+          <LeadStatusBadge status={l.status} />
         </View>
-      ) : <Avatar name={l.name} size={36} />}
-      <View className="flex-1 gap-1">
-        <View className="flex-row items-center gap-2">
-          {l.isRead === false && <View className="h-2 w-2 rounded-full bg-accent" />}
-          <Text numberOfLines={1} className={cn('flex-1', l.isRead === false ? 'font-body-semibold' : 'font-body-medium')}>{l.name}</Text>
-          {!!l.brand && (
-            <View className="max-w-[45%] flex-row items-center gap-1.5">
-              <BrandMark brand={l.brand} size={18} />
-              <Text numberOfLines={1} className="shrink text-xs text-muted">{labelOf(LEAD_BRANDS, l.brand)}</Text>
-            </View>
-          )}
-        </View>
-        <Text numberOfLines={1} className="text-sm text-muted">
-          {[l.company || l.email, labelOf(LEAD_SOURCES, l.source)].filter(Boolean).join(' · ')}
-        </Text>
-        <LeadStatusBadge status={l.status} />
-      </View>
-    </Pressable>
+      </Pressable>
+    </ZoomLink>
   );
 }
 

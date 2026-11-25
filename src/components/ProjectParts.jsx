@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { View } from 'react-native';
-import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { CalendarClock, Check, Trash2 } from 'lucide-react-native';
 import { Avatar } from './Avatar';
@@ -13,6 +12,7 @@ import { Pressable } from './Pressable';
 import { Text } from './Text';
 import { BrandMark } from './DashboardParts';
 import { brandLabel } from './ClientParts';
+import { ZoomLink } from './ZoomLink';
 import { PROJECT_STAGES } from '@/constants';
 import { useTheme } from '@/constants/theme';
 import { useAddProjectMessageMutation, useChangeProjectStageMutation, useDeleteProjectMessageMutation, useGetProjectMessagesQuery } from '@/services/projectApi';
@@ -41,39 +41,40 @@ export function ProjectRow({ project: p }) {
   const late = isProjectLate(p);
   const team = p.teamMembers || [];
   return (
-    <Pressable
-      onPress={() => router.push(`/projects/${p._id}`)}
-      accessibilityLabel={`${p.title}, ${p.client?.companyName || ''}, ${stageOf(p.stage)?.label || 'no stage'}${p.deadline ? `, due ${shortDate(p.deadline)}` : ''}${late ? ', late' : ''}`}
-      className="gap-3 rounded-3xl border border-line bg-surface p-4"
-    >
-      <View className="flex-row items-start gap-3">
-        <View className="flex-1 gap-0.5">
-          <Text numberOfLines={2} className="font-body-semibold">{p.title}</Text>
-          <View className="flex-row items-center gap-1.5">
-            {!!p.client?.brand && <BrandMark brand={p.client.brand} size={16} />}
-            <Text numberOfLines={1} className="shrink text-sm text-muted">{[p.client?.companyName, brandLabel(p.client?.brand)].filter(Boolean).join(' · ')}</Text>
+    <ZoomLink href={`/projects/${p._id}`}>
+      <Pressable
+        accessibilityLabel={`${p.title}, ${p.client?.companyName || ''}, ${stageOf(p.stage)?.label || 'no stage'}${p.deadline ? `, due ${shortDate(p.deadline)}` : ''}${late ? ', late' : ''}`}
+        className="gap-3 rounded-3xl border border-line bg-surface p-4"
+      >
+        <View className="flex-row items-start gap-3">
+          <View className="flex-1 gap-0.5">
+            <Text numberOfLines={2} className="font-body-semibold">{p.title}</Text>
+            <View className="flex-row items-center gap-1.5">
+              {!!p.client?.brand && <BrandMark brand={p.client.brand} size={16} />}
+              <Text numberOfLines={1} className="shrink text-sm text-muted">{[p.client?.companyName, brandLabel(p.client?.brand)].filter(Boolean).join(' · ')}</Text>
+            </View>
           </View>
+          {!!p.projectCode && <Text className="font-body-medium text-xs tabular-nums text-muted">{p.projectCode}</Text>}
         </View>
-        {!!p.projectCode && <Text className="font-body-medium text-xs tabular-nums text-muted">{p.projectCode}</Text>}
-      </View>
-      <View className="gap-1.5">
-        <StageMeter stage={p.stage} />
-        <Text className="text-xs text-muted">{stageOf(p.stage)?.label || 'Needs SOP migration (web)'}</Text>
-      </View>
-      <View className="flex-row items-center gap-2">
-        {!!p.deadline && (
-          <View className="flex-row items-center gap-1.5">
-            <CalendarClock size={14} color={late ? theme.danger : theme.muted} />
-            <Text className={cn('text-sm', late ? 'font-body-semibold text-danger' : 'text-muted')}>{late ? 'Late · ' : ''}{shortDate(p.deadline)}</Text>
+        <View className="gap-1.5">
+          <StageMeter stage={p.stage} />
+          <Text className="text-xs text-muted">{stageOf(p.stage)?.label || 'Needs SOP migration (web)'}</Text>
+        </View>
+        <View className="flex-row items-center gap-2">
+          {!!p.deadline && (
+            <View className="flex-row items-center gap-1.5">
+              <CalendarClock size={14} color={late ? theme.danger : theme.muted} />
+              <Text className={cn('text-sm', late ? 'font-body-semibold text-danger' : 'text-muted')}>{late ? 'Late · ' : ''}{shortDate(p.deadline)}</Text>
+            </View>
+          )}
+          <View className="flex-1" />
+          <View className="flex-row">
+            {team.slice(0, 4).map((m, i) => <View key={m._id || i} style={{ marginLeft: i ? -8 : 0 }}><Avatar name={m.user?.name || '?'} uri={m.user?.avatar} size={24} /></View>)}
           </View>
-        )}
-        <View className="flex-1" />
-        <View className="flex-row">
-          {team.slice(0, 4).map((m, i) => <View key={m._id || i} style={{ marginLeft: i ? -8 : 0 }}><Avatar name={m.user?.name || '?'} uri={m.user?.avatar} size={24} /></View>)}
+          {team.length > 4 && <Text className="text-xs text-muted">+{team.length - 4}</Text>}
         </View>
-        {team.length > 4 && <Text className="text-xs text-muted">+{team.length - 4}</Text>}
-      </View>
-    </Pressable>
+      </Pressable>
+    </ZoomLink>
   );
 }
 
@@ -233,25 +234,3 @@ export function ProjectChat({ project: p }) {
 }
 
 // Segmented tabs for a long page: one short label each, with an optional count. Keeps the page to one job at a time.
-export function Tabs({ tabs, value, onChange }) {
-  return (
-    <View accessibilityRole="tablist" className="flex-row gap-1 rounded-full bg-surface-2 p-1">
-      {tabs.map((t) => {
-        const active = t.value === value;
-        return (
-          <Pressable
-            key={t.value}
-            onPress={() => onChange(t.value)}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
-            accessibilityLabel={t.count ? `${t.label}, ${t.count}` : t.label}
-            className={cn('h-10 flex-1 flex-row items-center justify-center gap-1 rounded-full px-1', active && 'bg-ink')}
-          >
-            <Text numberOfLines={1} className={cn('font-body-medium text-sm', active ? 'text-bg' : 'text-ink')}>{t.label}</Text>
-            {!!t.count && <Text className={cn('text-xs tabular-nums', active ? 'text-bg/70' : 'text-muted')}>{t.count > 99 ? '99+' : t.count}</Text>}
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}

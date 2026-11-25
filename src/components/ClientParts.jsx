@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Linking, View } from 'react-native';
-import { router } from 'expo-router';
 import { Mail, MessageCircle, Phone, Trash2, X } from 'lucide-react-native';
 import { Avatar } from './Avatar';
 import { Badge } from './Badge';
@@ -10,6 +9,7 @@ import { Text } from './Text';
 import { useGetClientsQuery } from '@/services/clientApi';
 import { BrandMark } from './DashboardParts';
 import { showToast } from './Toast';
+import { ZoomLink } from './ZoomLink';
 import { BRANDS, CLIENT_STATUS } from '@/constants';
 import { useTheme } from '@/constants/theme';
 import { canWriteModule } from '@/utils/access';
@@ -82,38 +82,39 @@ function IconAction({ icon: Icon, label, onPress, color }) {
 export function ClientRow({ client: c, onDelete }) {
   const theme = useTheme();
   return (
-    <Pressable
-      onPress={() => router.push(`/clients/${c._id}`)}
-      accessibilityLabel={`${c.companyName}, ${c.contactPerson || ''}, ${c.status}`}
-      className="gap-3 rounded-3xl border border-line bg-surface p-4"
-    >
-      <View className="flex-row items-center gap-3">
-        <Avatar name={c.companyName} size={36} />
-        <View className="flex-1 gap-0.5">
-          <View className="flex-row items-center gap-2">
-            <Text numberOfLines={1} className="flex-1 font-body-semibold">{c.companyName}</Text>
-            {!!c.brand && (
-              <View className="max-w-[45%] flex-row items-center gap-1.5">
-                <BrandMark brand={c.brand} size={18} />
-                <Text numberOfLines={1} className="shrink text-xs text-muted">{brandLabel(c.brand)}</Text>
-              </View>
-            )}
+    <ZoomLink href={`/clients/${c._id}`}>
+      <Pressable
+        accessibilityLabel={`${c.companyName}, ${c.contactPerson || ''}, ${c.status}`}
+        className="gap-3 rounded-3xl border border-line bg-surface p-4"
+      >
+        <View className="flex-row items-center gap-3">
+          <Avatar name={c.companyName} size={36} />
+          <View className="flex-1 gap-0.5">
+            <View className="flex-row items-center gap-2">
+              <Text numberOfLines={1} className="flex-1 font-body-semibold">{c.companyName}</Text>
+              {!!c.brand && (
+                <View className="max-w-[45%] flex-row items-center gap-1.5">
+                  <BrandMark brand={c.brand} size={18} />
+                  <Text numberOfLines={1} className="shrink text-xs text-muted">{brandLabel(c.brand)}</Text>
+                </View>
+              )}
+            </View>
+            <Text numberOfLines={1} className="text-sm text-muted">{c.contactPerson || 'No contact person'}</Text>
           </View>
-          <Text numberOfLines={1} className="text-sm text-muted">{c.contactPerson || 'No contact person'}</Text>
         </View>
-      </View>
-      <View className="flex-row flex-wrap items-center gap-2">
-        <ClientStatusBadge status={c.status} />
-        {!!c.clientId && <Text className="font-body-medium text-xs tabular-nums text-muted">{c.clientId}</Text>}
-        {!!c.gstNumber && <Text className="text-xs tabular-nums text-muted">GST {c.gstNumber}</Text>}
-      </View>
-      <View className="flex-row items-center gap-2 border-t border-line pt-3">
-        {!!c.phone && <IconAction icon={Phone} label={`Call ${c.companyName}`} onPress={() => contactClient(c, 'call')} />}
-        {!!c.phone && <IconAction icon={MessageCircle} label={`WhatsApp ${c.companyName}`} onPress={() => contactClient(c, 'whatsapp')} />}
-        {!!c.email && <IconAction icon={Mail} label={`Email ${c.companyName}`} onPress={() => contactClient(c, 'email')} />}
-        <View className="flex-1" />
-        {!!onDelete && <IconAction icon={Trash2} label={`Delete ${c.companyName}`} color={theme.danger} onPress={() => onDelete(c)} />}
-      </View>
-    </Pressable>
+        <View className="flex-row flex-wrap items-center gap-2">
+          <ClientStatusBadge status={c.status} />
+          {!!c.clientId && <Text className="font-body-medium text-xs tabular-nums text-muted">{c.clientId}</Text>}
+          {!!c.gstNumber && <Text className="text-xs tabular-nums text-muted">GST {c.gstNumber}</Text>}
+        </View>
+        <View className="flex-row items-center gap-2 border-t border-line pt-3">
+          {!!c.phone && <IconAction icon={Phone} label={`Call ${c.companyName}`} onPress={() => contactClient(c, 'call')} />}
+          {!!c.phone && <IconAction icon={MessageCircle} label={`WhatsApp ${c.companyName}`} onPress={() => contactClient(c, 'whatsapp')} />}
+          {!!c.email && <IconAction icon={Mail} label={`Email ${c.companyName}`} onPress={() => contactClient(c, 'email')} />}
+          <View className="flex-1" />
+          {!!onDelete && <IconAction icon={Trash2} label={`Delete ${c.companyName}`} color={theme.danger} onPress={() => onDelete(c)} />}
+        </View>
+      </Pressable>
+    </ZoomLink>
   );
 }
