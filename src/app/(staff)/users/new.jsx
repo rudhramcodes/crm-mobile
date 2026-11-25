@@ -28,7 +28,7 @@ import { Platform, View } from "react-native";
 import { useSelector } from "react-redux";
 
 // The existing Super Admin is the only one, so it can't be picked (the server refuses it too).
-const CREATABLE = Object.keys(ROLE_LABELS).filter((r) => r !== "super_admin");
+const CREATABLE = Object.keys(ROLE_LABELS).filter((r) => r !== "super_admin" && r !== "client");
 
 const Section = ({ title, hint, right }) => (
   <View className="gap-1 border-t border-line pt-4">

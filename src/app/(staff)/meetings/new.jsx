@@ -126,16 +126,10 @@ function MeetingForm({ meeting, defaults }) {
   const leads = useGetLeadsQuery({ limit: 100 }).data?.data || [];
   const client = clients.find((x) => x._id === f.client);
 
-  // Picking a client fills an empty venture and invites the client's portal user (web behaviour).
+  // Picking a client fills an empty venture.
   const pickClient = (id) => {
     const x = clients.find((k) => k._id === id);
-    const portal = x && users.find((p) => p._id === x.user || (x.email && p.email?.toLowerCase() === x.email.toLowerCase()));
-    setF((s) => ({
-      ...s,
-      client: id,
-      brand: s.brand || x?.brand || "",
-      attendees: portal && !s.attendees.includes(portal._id) ? [...s.attendees, portal._id] : s.attendees,
-    }));
+    setF((s) => ({ ...s, client: id, brand: s.brand || x?.brand || "" }));
   };
   const setStart = (t) => {
     setStartRaw(toDisplay(t));
@@ -227,7 +221,6 @@ function MeetingForm({ meeting, defaults }) {
           <Text className="text-sm">
             {client.companyName}{client.contactPerson ? ` (${client.contactPerson})` : ""} {client.email ? `<${client.email}>` : ""}
           </Text>
-          <Text className="text-xs text-muted">Session automatically syncs to Client Portal timeline & calendar invites.</Text>
         </View>
       )}
       <SearchPick

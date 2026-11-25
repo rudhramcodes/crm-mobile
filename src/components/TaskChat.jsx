@@ -297,8 +297,7 @@ export function TaskChat({ task }) {
   const [replyTo, setReplyTo] = useState(null);
   const [viewing, setViewing] = useState(null);
   const mention = text.match(/@(\w{1,20})$/)?.[1];
-  const client = me.role === 'client'; // clients chat with the team but can't look up staff to @mention
-  const users = useGetUsersQuery({ search: mention, isActive: true, limit: 5 }, { skip: !mention || client });
+  const users = useGetUsersQuery({ search: mention, isActive: true, limit: 5 }, { skip: !mention });
   const people = (mention ? users.data?.data?.users || [] : []).filter((u) => u.role !== 'client');
   const pick = (u) => setText((t) => t.replace(/@\w{1,20}$/, `@[${u.name}](${u._id}) `));
   const comments = task.comments || [];
@@ -315,7 +314,6 @@ export function TaskChat({ task }) {
         <Text className="flex-1 font-display text-title">Chat</Text>
         <Text className="text-sm text-muted tabular-nums">{comments.length}</Text>
       </View>
-      {!client && !!task.project?.client && <Text className="-mt-2 text-xs text-muted">The client can read this chat.</Text>}
 
       {comments.length > shown && (
         <Button title={`Show ${Math.min(20, comments.length - shown)} earlier`} variant="ghost" size="sm" onPress={() => setShown((n) => n + 20)} />
@@ -351,7 +349,7 @@ export function TaskChat({ task }) {
           </View>
         );
       })}
-      {!comments.length && <Text className="text-sm text-muted">{client ? 'No messages yet. Ask the team anything here.' : 'No messages yet. Share an update, a photo or a PDF.'}</Text>}
+      {!comments.length && <Text className="text-sm text-muted">No messages yet. Share an update, a photo or a PDF.</Text>}
       <ConfirmDialog
         visible={!!deleting}
         title="Delete this message?"
@@ -369,7 +367,7 @@ export function TaskChat({ task }) {
           </View>
         )}
         <PendingFiles files={files} remove={att.remove} />
-        <Input value={text} onChangeText={setText} placeholder={client ? 'Write a message' : 'Write a message. Type @ to mention.'} accessibilityLabel="Message" multiline maxLength={5000} style={{ minHeight: 52, height: undefined, paddingTop: 14, paddingBottom: 14, textAlignVertical: 'top' }} />
+        <Input value={text} onChangeText={setText} placeholder="Write a message. Type @ to mention." accessibilityLabel="Message" multiline maxLength={5000} style={{ minHeight: 52, height: undefined, paddingTop: 14, paddingBottom: 14, textAlignVertical: 'top' }} />
         {people.map((u) => (
           <Pressable key={u._id} onPress={() => pick(u)} accessibilityLabel={`Mention ${u.name}`} className="flex-row items-center gap-3 rounded-2xl bg-surface-2 px-3 py-2">
             <Avatar name={u.name} uri={u.avatar} size={28} />

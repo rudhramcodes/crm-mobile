@@ -1,6 +1,6 @@
 // Self-check for where notification taps go: `node src/utils/notificationRoute.check.js`
 import assert from 'node:assert/strict';
-import { appPath, clientRoute, staffRoute } from './notificationRoute.js';
+import { appPath, staffRoute } from './notificationRoute.js';
 
 // Staff: the item decides first.
 assert.equal(staffRoute({ type: 'task_assigned', referenceModel: 'Task', referenceId: 't1', link: '/projects/p1' }), '/tasks/t1');
@@ -14,7 +14,6 @@ assert.equal(staffRoute({ type: 'payment_received', referenceModel: 'Payment', r
 assert.equal(staffRoute({ type: 'meeting_reminder', referenceModel: 'Meeting', referenceId: 'm1' }), '/meetings/m1');
 assert.equal(staffRoute({ type: 'task_due_soon', referenceModel: 'Task', referenceId: 't1', link: '/projects/p1' }), '/tasks/t1');
 assert.equal(staffRoute({ type: 'task_due_soon', link: '/tasks' }), '/tasks'); // several tasks due: the Tasks tab
-assert.equal(clientRoute({ type: 'task_due_soon', referenceModel: 'Task', referenceId: 't1' }), '/portal/tasks/t1');
 assert.equal(staffRoute({ type: null, link: '/attendance' }), '/attendance'); // a null type never crashes
 // Types with fixed screens.
 assert.equal(staffRoute({ type: 'leave_applied', referenceModel: 'LeaveRequest', referenceId: 'x' }), '/attendance/leaves');
@@ -31,14 +30,8 @@ assert.equal(staffRoute({ type: 'system', link: 'javascript:alert(1)' }), '/noti
 assert.equal(staffRoute({ type: 'system' }), '/notifications');
 assert.equal(staffRoute(), '/notifications');
 
-// Client: portal pages only.
-assert.equal(clientRoute({ referenceModel: 'Task', referenceId: 't1' }), '/portal/tasks/t1');
-assert.equal(clientRoute({ referenceModel: 'Project', referenceId: 'p1', link: '/portal/projects/p1' }), '/portal/projects/p1');
-assert.equal(clientRoute({ link: '/projects/p2' }), '/portal/projects/p2');
-assert.equal(clientRoute({ referenceModel: 'Meeting', referenceId: 'm1' }), '/portal/meetings');
-assert.equal(clientRoute({ referenceModel: 'Invoice', referenceId: 'i1' }), '/portal/invoices');
-assert.equal(clientRoute({ link: '/leads/l1' }), '/portal/notifications');
-assert.equal(clientRoute({}), '/portal/notifications');
+// Old client-portal links have no screen here.
+assert.equal(staffRoute({ type: 'system', link: '/portal/projects/p1' }), '/notifications');
 
 assert.equal(appPath('//evil.com/x'), null);
 assert.equal(appPath(''), null);

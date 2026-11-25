@@ -50,18 +50,4 @@ export function staffRoute({ type: rawType, link, referenceModel, referenceId } 
   return '/notifications';
 }
 
-// Clients only have the portal: tasks and projects open their portal pages, meetings and invoices their tabs.
-export function clientRoute({ link, referenceModel, referenceId } = {}) {
-  if (referenceId && referenceModel === 'Task') return `/portal/tasks/${referenceId}`;
-  if (referenceId && referenceModel === 'Project') return `/portal/projects/${referenceId}`;
-  if (referenceModel === 'Meeting') return '/portal/meetings';
-  if (referenceModel === 'Invoice' || referenceModel === 'Payment') return '/portal/invoices';
-  const path = appPath(link);
-  if (path?.startsWith('/portal')) return path;
-  const m = path?.match(/^\/(tasks|projects)\/([A-Za-z0-9]+)/);
-  if (m) return `/portal/${m[1]}/${m[2]}`;
-  if (path && /^\/(meetings|invoices)\b/.test(path)) return `/portal/${section(path)}`;
-  return '/portal/notifications';
-}
-
-export const notificationRoute = (n, { client = false } = {}) => (client ? clientRoute(n) : staffRoute(n));
+export const notificationRoute = staffRoute;

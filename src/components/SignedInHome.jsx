@@ -3,7 +3,7 @@ import { Modal, Pressable as RNPressable, View, useWindowDimensions } from 'reac
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { Link, router } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { Bell, ChevronRight, LogOut, MailWarning, UserRound } from 'lucide-react-native';
+import { ChevronRight, LogOut, MailWarning, UserRound } from 'lucide-react-native';
 import { Pressable } from './Pressable';
 import { ListRow } from './ListRow';
 import { Heading, Text } from './Text';
@@ -12,7 +12,6 @@ import { Avatar } from './Avatar';
 import { Badge } from './Badge';
 import { confirmSignOut } from './AccountSettings';
 import { useTheme } from '@/constants/theme';
-import { useGetUnreadCountQuery } from '@/services/notificationApi';
 
 const OPEN_MS = 200;
 const CLOSE_MS = 150;
@@ -81,26 +80,6 @@ function AvatarButton({ user, anchor, onOpen, navRef, onPress }) {
   );
 }
 
-// Client Home: bell with the unread count, opening the portal Inbox (clients have no Inbox tab).
-function InboxBell() {
-  const theme = useTheme();
-  const { data: unread = 0 } = useGetUnreadCountQuery();
-  return (
-    <Pressable
-      onPress={() => router.push('/portal/notifications')}
-      accessibilityLabel={unread ? `Inbox, ${unread} unread` : 'Inbox'}
-      className="h-11 w-11 items-center justify-center rounded-full border border-line bg-surface"
-    >
-      <Bell size={20} color={theme.ink} />
-      {unread > 0 && (
-        <View className="absolute -right-1 -top-1 min-w-[20px] items-center rounded-full bg-danger px-1.5">
-          <Text className="font-body-semibold text-xs text-bg">{unread > 99 ? '99+' : unread}</Text>
-        </View>
-      )}
-    </Pressable>
-  );
-}
-
 // Greeting + avatar, the designation pill, and the verify-email nudge; top of every Home.
 export function HomeHeader({ subtitle }) {
   const theme = useTheme();
@@ -113,12 +92,7 @@ export function HomeHeader({ subtitle }) {
           {!!subtitle && <Text className="mt-0.5 font-body-medium text-sm text-muted">{subtitle}</Text>}
           {!!user.profile?.designation && <Badge label={user.profile.designation} className="mt-1" />}
         </View>
-        {user.role === 'client' ? (
-          <>
-            <InboxBell />
-            <Avatar name={user.name} uri={user.avatar} size={48} />
-          </>
-        ) : <ProfileMenu user={user} />}
+        <ProfileMenu user={user} />
       </View>
       {!user.isEmailVerified && (
         <Card onPress={() => router.push('/verify-email')} className="flex-row items-center gap-3 border-transparent bg-accent/15">
