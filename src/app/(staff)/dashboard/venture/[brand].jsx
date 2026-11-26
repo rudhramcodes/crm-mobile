@@ -2,10 +2,10 @@ import { ScrollView, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import {
-  Badge, BarList, BrandMark, Chip, DashboardState, Heading, ListRow, PipelineSection, Pressable, RevenueSection, Screen, Section, StatTile,
-  TasksSection, Text, usePullRefresh, ZoomLink } from '@/components';
+  Badge, BarList, BrandMark, Chip, DashboardState, Hatch, Heading, KpiTile, ListRow, PipelineSection, Pressable, RevenueSection, Screen, Section,
+  SourcesSection, SplitBar, TasksSection, Text, usePullRefresh, ZoomLink } from '@/components';
 import { useGetVentureDashboardQuery } from '@/services/dashboardApi';
-import { BRANDS, BRAND_METAS, LEAD_SOURCES, LEAD_STATUS } from '@/constants';
+import { BRANDS, BRAND_METAS } from '@/constants';
 import { useTheme } from '@/constants/theme';
 import { formatCompactCurrency, formatCurrency } from '@/utils/formatters';
 import { canOpenPath } from '@/utils/access';
@@ -44,19 +44,21 @@ export default function VentureDashboard() {
 
       {!d || (isFetching && d.brand !== brand) ? <DashboardState isLoading={isLoading || isFetching} isError={isError} refetch={refetch} /> : (
         <>
-          <View className="flex-row flex-wrap gap-3">
-            <StatTile label="TOTAL LEADS" value={k.totalLeads ?? 0} onPress={go('/leads')} />
-            <StatTile label="WON DEALS" value={k.wonLeads ?? 0} onPress={go('/leads')} />
-            <StatTile label="ACTIVE CLIENTS" value={k.activeClients ?? 0} onPress={go('/clients')} />
-            <StatTile label="CONVERSION" value={`${k.conversionRate ?? 0}%`} onPress={go('/leads')} />
-            <StatTile label="REVENUE" value={formatCompactCurrency(k.totalRevenue)} sub={`${formatCurrency(k.totalRevenue)}, excl. cash`} onPress={go('/payments')} />
-            <StatTile label="CASH COLLECTED" value={formatCompactCurrency(k.cashCollected)} sub={`${formatCurrency(k.cashCollected)}, separate`} />
-            <StatTile label="OUTSTANDING" value={formatCompactCurrency(k.totalOutstanding)} sub={formatCurrency(k.totalOutstanding)} alert={k.totalOutstanding > 0} onPress={go('/invoices')} />
+          {/* Same 2×2 tiles as Home; won deals, conversion and cash ride along inside them instead of 3 more tiles. */}
+          <View className="flex-row gap-3">
+            <KpiTile label="Total leads" value={k.totalLeads ?? 0} sub={`${k.wonLeads ?? 0} won`} onPress={go('/leads')}>
+              <SplitBar pct={k.conversionRate} label="converted" />
+            </KpiTile>
+            <KpiTile label="Revenue" value={formatCompactCurrency(k.totalRevenue)} sub={`+ ${formatCompactCurrency(k.cashCollected)} cash`} onPress={go('/payments')} />
+          </View>
+          <View className="flex-row gap-3">
+            <KpiTile label="Active clients" value={k.activeClients ?? 0} onPress={go('/clients')} />
+            <KpiTile label="Outstanding" value={formatCompactCurrency(k.totalOutstanding)} alert={k.totalOutstanding > 0} onPress={go('/invoices')} />
           </View>
 
-          <RevenueSection revenue={d.revenue} collected={k.totalRevenue} sub={`Collected (excl. cash) for ${meta.label}. Tap a month.`} />
-          <PipelineSection sub={`Leads at each stage for ${meta.label}`} rows={d.pipeline?.byStatus} list={LEAD_STATUS} />
-          <PipelineSection title="Lead sources" sub="Top intake channels" rows={d.pipeline?.bySource} list={LEAD_SOURCES} />
+          <RevenueSection revenue={d.revenue} collected={k.totalRevenue} sub={`Excl. cash, for ${meta.label}. Tap a month.`} onOpen={go('/payments')} />
+          <PipelineSection sub={`Leads at each stage for ${meta.label}`} rows={d.pipeline?.byStatus} />
+          <SourcesSection rows={d.pipeline?.bySource} />
           <TasksSection tasks={d.tasks} title="Task velocity" sub="Milestones and deliverables" />
 
           <Section title="Venture benchmark" sub="Leads and won deals across all brands">
@@ -70,7 +72,8 @@ export default function VentureDashboard() {
                   <Text className={cn('text-sm', c.brand === brand && 'font-body-semibold')}>{BRAND_METAS[c.brand]?.label || c.brand}</Text>
                   <Text className="text-sm tabular-nums text-muted">{c.leads} · {c.won}</Text>
                 </View>
-                <View className="h-2 overflow-hidden rounded-full bg-surface-2">
+                <View className="h-3 overflow-hidden rounded-full bg-surface-2/50">
+                  <Hatch />
                   <View className="h-full rounded-full bg-sand" style={{ width: `${(c.leads / top) * 100}%` }}>
                     <View className="h-full rounded-full bg-accent" style={{ width: `${c.leads ? (c.won / c.leads) * 100 : 0}%` }} />
                   </View>

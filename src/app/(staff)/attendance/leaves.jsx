@@ -80,7 +80,8 @@ export default function Leaves() {
   const [status, setStatus] = useState(lead ? 'pending' : 'all');
   const [team, setTeam] = useState(lead);
   // shortcut: newest 50 only; add paging when a filter routinely holds more.
-  const list = useGetLeavesQuery({ status, page: 1, limit: 50, employee: team ? undefined : me._id });
+  // "All" means no status filter: the server only accepts the four real statuses and 400s on 'all'.
+  const list = useGetLeavesQuery({ status: status === 'all' ? undefined : status, page: 1, limit: 50, employee: team ? undefined : me._id });
   const bal = useGetLeaveBalanceQuery(me._id);
   const refreshControl = usePullRefresh(() => Promise.all([list.refetch(), bal.refetch()]));
   const leaves = list.data?.data || [];
