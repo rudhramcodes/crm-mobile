@@ -1,6 +1,7 @@
 import {
   Button,
   Chip,
+  clientAccess,
   ClientRow,
   ConfirmDialog,
   DashboardState,
@@ -10,12 +11,13 @@ import {
   PageHeader,
   Pager,
   Screen,
-  VentureChips,
-  clientAccess,
   usePullRefresh,
+  VentureChips,
 } from "@/components";
 import { CLIENT_STATUS } from "@/constants";
 import { useTheme } from "@/constants/theme";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
+import { usePage, usePageNav } from "@/hooks/usePaged";
 import {
   useDeleteClientMutation,
   useGetClientsQuery,
@@ -25,10 +27,8 @@ import { isAdmin, runAction } from "@/utils/attendance";
 import { cleanParams } from "@/utils/leads";
 import { FlashList } from "@shopify/flash-list";
 import { router } from "expo-router";
-import { Download, Plus, Search, UserCheck } from "lucide-react-native";
+import { Download, Search, UserCheck } from "lucide-react-native";
 import { useRef, useState } from "react";
-import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
-import { usePage, usePageNav } from "@/hooks/usePaged";
 import { View } from "react-native";
 import { useSelector } from "react-redux";
 
@@ -78,19 +78,16 @@ export default function Clients() {
         title="Clients"
         fallback="/more"
         right={
-          <View className="flex-row gap-2">
-            {isAdmin(me) && (
-              <Button title="Save to contacts" icon={Download} size="sm" variant="secondary" accessibilityLabel="Save client contacts to this phone" onPress={() => router.push("/clients/save-contacts")} />
-            )}
-            {can.manage && (
-              <Button
-                title="New"
-                icon={Plus}
-                size="sm"
-                onPress={() => router.push("/clients/new")}
-              />
-            )}
-          </View>
+          isAdmin(me) && (
+            <Button
+              title="Save to contacts"
+              icon={Download}
+              size="sm"
+              variant="secondary"
+              accessibilityLabel="Save client contacts to this phone"
+              onPress={() => router.push("/clients/save-contacts")}
+            />
+          )
         }
       />
 
@@ -147,7 +144,11 @@ export default function Clients() {
 
   const empty =
     q.isLoading || q.isError ? (
-      <DashboardState isLoading={q.isLoading} isError={q.isError} refetch={q.refetch} />
+      <DashboardState
+        isLoading={q.isLoading}
+        isError={q.isError}
+        refetch={q.refetch}
+      />
     ) : (
       <EmptyState
         icon={UserCheck}
@@ -174,16 +175,31 @@ export default function Clients() {
         keyExtractor={(c) => c._id}
         renderItem={({ item }) => (
           <View className={q.isFetching ? "pb-2 opacity-50" : "pb-2"}>
-            <ClientRow client={item} onDelete={can.remove ? setDeleting : undefined} />
+            <ClientRow
+              client={item}
+              onDelete={can.remove ? setDeleting : undefined}
+            />
           </View>
         )}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
         ListFooterComponent={
           q.isError && clients.length ? (
-            <Button title="Couldn't load this page. Try again" variant="ghost" size="sm" onPress={q.refetch} />
+            <Button
+              title="Couldn't load this page. Try again"
+              variant="ghost"
+              size="sm"
+              onPress={q.refetch}
+            />
           ) : (
-            <Pager page={page} pages={meta?.pages} total={total} limit={LIMIT} loading={q.isFetching} onChange={goTo} />
+            <Pager
+              page={page}
+              pages={meta?.pages}
+              total={total}
+              limit={LIMIT}
+              loading={q.isFetching}
+              onChange={goTo}
+            />
           )
         }
         refreshControl={refreshControl}

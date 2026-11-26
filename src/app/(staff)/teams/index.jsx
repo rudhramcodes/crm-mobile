@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
-import { router } from 'expo-router';
 import { ChevronRight, MapPin, Plus, UsersRound } from 'lucide-react-native';
-import { Button, Card, ConfirmDelete, DashboardState, EmptyState, Input, PageHeader, PeoplePicker, Pressable, Screen, Text, usePullRefresh } from '@/components';
+import { Button, Card, ConfirmDelete, DashboardState, EmptyState, Input, PageHeader, PeoplePicker, Pressable, Screen, Text, usePullRefresh, ZoomLink } from '@/components';
 import { LOCATIONS } from '@/constants';
 import { useTheme } from '@/constants/theme';
 import { useDeleteTeamMutation, useGetTeamsQuery, useSaveTeamMutation } from '@/services/teamApi';
@@ -21,17 +20,19 @@ function LocationTeamCard({ location }) {
   if (location === 'none' && !total) return null;
   const name = teamName(location);
   return (
-    <Pressable onPress={() => router.push(`/teams/${location}`)} accessibilityLabel={`${name}, ${total} people`}>
-      <Card className="gap-3 p-4">
-        <View className="flex-row items-center gap-3">
-          <MapPin size={18} color={location === 'none' ? theme.danger : theme.accent} />
-          <Text className="flex-1 font-body-semibold text-base">{name}</Text>
-          <Text className="text-sm text-muted tabular-nums">{isLoading ? '…' : `${total} ${total === 1 ? 'person' : 'people'}`}</Text>
-          <ChevronRight size={18} color={theme.muted} />
-        </View>
-        {location === 'none' && <Text className="text-sm text-muted">Staff without a location. Tap to set one.</Text>}
-      </Card>
-    </Pressable>
+    <ZoomLink href={`/teams/${location}`}>
+      <Pressable accessibilityLabel={`${name}, ${total} people`}>
+        <Card className="gap-3 p-4">
+          <View className="flex-row items-center gap-3">
+            <MapPin size={18} color={location === 'none' ? theme.danger : theme.accent} />
+            <Text className="flex-1 font-body-semibold text-base">{name}</Text>
+            <Text className="text-sm text-muted tabular-nums">{isLoading ? '…' : `${total} ${total === 1 ? 'person' : 'people'}`}</Text>
+            <ChevronRight size={18} color={theme.muted} />
+          </View>
+          {location === 'none' && <Text className="text-sm text-muted">Staff without a location. Tap to set one.</Text>}
+        </Card>
+      </Pressable>
+    </ZoomLink>
   );
 }
 

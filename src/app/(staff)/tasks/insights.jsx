@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { BarList, Card, DashboardState, PageHeader, Ring, Screen, Section, StatTile, StatusCounts, Text, usePullRefresh } from '@/components';
 import { TASK_PRIORITY } from '@/constants';
-import { useGetTasksQuery, useGetWatchedTasksQuery } from '@/services/taskApi';
+import { useGetTasksQuery } from '@/services/taskApi';
 import { formatHours } from '@/utils/formatters';
 import { isOverdue } from '@/utils/tasks';
 
@@ -14,10 +14,7 @@ const LABELS = { todo: 'To do', in_progress: 'In progress', review: 'In review',
 // Same tasks the Tasks tab shows (its filters come in `q`): completion, overdue, hours, priority mix and team workload.
 export default function TaskInsights() {
   const { q: raw } = useLocalSearchParams();
-  const { watching, ...params } = JSON.parse(raw || '{}');
-  const all = useGetTasksQuery(params, { skip: !!watching });
-  const watched = useGetWatchedTasksQuery(params, { skip: !watching });
-  const q = watching ? watched : all;
+  const q = useGetTasksQuery(JSON.parse(raw || '{}'));
   const refreshControl = usePullRefresh(q.refetch);
   const tasks = q.data?.data || [];
 

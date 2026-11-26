@@ -22,6 +22,7 @@ const STAFF_TYPE = {
   leave_applied: '/attendance/leaves',
   leave_approved: '/attendance/leaves',
   leave_rejected: '/attendance/leaves',
+  leave_cancelled: '/attendance/leaves',
 };
 
 // First path segments a server link may open. Anything else (an unknown or absolute web URL) goes to the inbox.

@@ -3,8 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
 import {
   Badge, BarList, BrandMark, Chip, DashboardState, Heading, ListRow, PipelineSection, Pressable, RevenueSection, Screen, Section, StatTile,
-  TasksSection, Text, usePullRefresh,
-} from '@/components';
+  TasksSection, Text, usePullRefresh, ZoomLink } from '@/components';
 import { useGetVentureDashboardQuery } from '@/services/dashboardApi';
 import { BRANDS, BRAND_METAS, LEAD_SOURCES, LEAD_STATUS } from '@/constants';
 import { useTheme } from '@/constants/theme';
@@ -90,13 +89,13 @@ export default function VentureDashboard() {
             <Section title={`Top clients`} sub={`${d.clients.topClients.length} key accounts`}>
               <View>
                 {d.clients.topClients.map((c) => (
-                  <ListRow
-                    key={c._id}
-                    label={c.companyName}
-                    hint={[c.clientId, c.contactPerson, c.email].filter(Boolean).join(' · ')}
-                    right={<Badge label={c.status} variant={c.status === 'active' ? 'success' : 'default'} />}
-                    onPress={() => router.push(`/clients/${c._id}`)}
-                  />
+                  <ZoomLink href={`/clients/${c._id}`} key={c._id}>
+                    <ListRow
+                      label={c.companyName}
+                      hint={[c.clientId, c.contactPerson, c.email].filter(Boolean).join(' · ')}
+                      right={<Badge label={c.status} variant={c.status === 'active' ? 'success' : 'default'} />}
+                    />
+                  </ZoomLink>
                 ))}
               </View>
             </Section>

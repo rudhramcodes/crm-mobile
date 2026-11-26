@@ -39,6 +39,7 @@ export const NOTIFICATION_CONFIG = {
   leave_applied: { icon: Plane, tone: 'accent', label: 'Leave' },
   leave_approved: { icon: CalendarCheck, tone: 'success', label: 'Leave' },
   leave_rejected: { icon: CalendarX, tone: 'danger', label: 'Leave' },
+  leave_cancelled: { icon: CalendarX, tone: 'sand', label: 'Leave' },
   system: { icon: Bell, tone: 'sand', label: 'System' },
 };
 

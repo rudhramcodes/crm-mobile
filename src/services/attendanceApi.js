@@ -157,6 +157,11 @@ export const attendanceApi = api.injectEndpoints({
       invalidatesTags: ['Leave', 'LeaveBalance', 'Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 
+    cancelLeave: builder.mutation({
+      query: (id) => ({ url: `/attendance/leaves/${id}/cancel`, method: 'PATCH' }),
+      invalidatesTags: ['Leave', 'LeaveBalance', 'Attendance', 'AttendanceToday', 'AttendanceStats'],
+    }),
+
     rejectLeave: builder.mutation({
       query: ({ id, comment }) => ({
         url: `/attendance/leaves/${id}/reject`,
@@ -290,6 +295,7 @@ export const {
   useGetLeaveByIdQuery,
   useApproveLeaveMutation,
   useRejectLeaveMutation,
+  useCancelLeaveMutation,
   useGetLeaveBalanceQuery,
   useGetShiftsQuery,
   useCreateShiftMutation,
