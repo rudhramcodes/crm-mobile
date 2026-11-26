@@ -30,7 +30,7 @@ export const ROLES = {
 // Office a person works from (server LOCATIONS); teams are grouped by it.
 export const LOCATIONS = ['Surat', 'Mumbai', 'Delhi'];
 
-export const ROLE_LABELS = { super_admin: 'Super admin', admin: 'Admin', manager: 'Manager', employee: 'Employee', client: 'Client' };
+export const ROLE_LABELS = { super_admin: 'Super admin', admin: 'Admin', manager: 'Manager', employee: 'Employee' };
 
 export const LEAD_STATUS = [
   { value: 'new', label: 'New', color: 'bg-sand text-brown' },
@@ -307,5 +307,4 @@ export const ROLE_DESCRIPTIONS = {
   admin: 'Manage operations, people, and settings',
   manager: 'Coordinate teams, work, and reports',
   employee: 'Access assigned work and collaboration tools',
-  client: 'View shared projects, tasks, and billing',
 };

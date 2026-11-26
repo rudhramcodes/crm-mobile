@@ -190,7 +190,7 @@ export function RecordRow({ r }) {
     <Pressable
       onPress={() => router.push({ pathname: '/attendance/day', params: { date, employee: r.employee?._id || r.employee, name } })}
       accessibilityLabel={`${name}, ${day.toDateString()}, ${statusMeta(r.status).label}`}
-      className="flex-row items-center gap-3 py-3"
+      className="flex-row items-center gap-3 py-4"
     >
       <View className="flex-1 gap-0.5">
         <Text numberOfLines={1} className="font-body-semibold">{name}</Text>

@@ -17,8 +17,8 @@ import { isAdmin } from "@/utils/attendance";
 import { cleanParams } from "@/utils/leads";
 import { teamName } from "@/utils/users";
 import { FlashList } from "@shopify/flash-list";
-import { useLocalSearchParams } from "expo-router";
-import { MapPin, Search } from "lucide-react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { MapPin, Plus, Search } from "lucide-react-native";
 import { useRef } from "react";
 import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { View } from "react-native";
@@ -60,6 +60,16 @@ export default function LocationTeam() {
         caption={`${total} ${total === 1 ? "PERSON" : "PEOPLE"}`}
         title={teamName(location)}
         fallback="/teams"
+        right={
+          admin ? (
+            <Button
+              title="Add User"
+              icon={Plus}
+              size="sm"
+              onPress={() => router.push({ pathname: "/users/new", params: { location } })}
+            />
+          ) : undefined
+        }
       />
       <Input
         value={typed}
