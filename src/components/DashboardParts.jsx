@@ -185,7 +185,7 @@ export function HatchBars({ months, value, short }) {
 }
 
 // Counts by stage as one segmented bar and a two-column legend: reads faster than a ring.
-export function StageBar({ items }) {
+export function SegmentBar({ items }) {
   const total = items.reduce((n, s) => n + s.count, 0);
   return (
     <View className="gap-4">
@@ -197,7 +197,7 @@ export function StageBar({ items }) {
   );
 }
 
-// Dot, label and count in two columns, under a StageBar or DotGrid.
+// Dot, label and count in two columns, under a SegmentBar or DotGrid.
 export function Legend({ items }) {
   return (
     <View className="flex-row flex-wrap gap-y-2.5">

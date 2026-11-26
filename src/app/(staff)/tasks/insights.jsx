@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { BarList, DashboardState, KpiTile, Numeral, PageHeader, Screen, Section, StageBar, Text, usePullRefresh } from '@/components';
+import { BarList, DashboardState, KpiTile, Numeral, PageHeader, Screen, Section, SegmentBar, Text, usePullRefresh } from '@/components';
 import { TASK_PRIORITY } from '@/constants';
 import { useGetTasksQuery } from '@/services/taskApi';
 import { formatHours } from '@/utils/formatters';
@@ -41,7 +41,7 @@ export default function TaskInsights() {
         <>
           <Section title="Progress" sub={`${done} of ${tasks.length} done`}>
             <Numeral value={`${tasks.length ? Math.round((done / tasks.length) * 100) : 0}%`} />
-            <StageBar items={Object.keys(LABELS).map((k) => ({ key: k, label: LABELS[k], dot: DOTS[k], count: count((t) => t.status === k) }))} />
+            <SegmentBar items={Object.keys(LABELS).map((k) => ({ key: k, label: LABELS[k], dot: DOTS[k], count: count((t) => t.status === k) }))} />
           </Section>
           <View className="gap-3">
             <View className="flex-row gap-3">

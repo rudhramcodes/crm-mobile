@@ -17,7 +17,7 @@ import { AttendanceCard } from './AttendanceCard';
 import { CalendarCard } from './WorkCalendar';
 import { leaveDays } from './AttendanceParts';
 import {
-  ActivityRow, BarList, BrandMark, DotGrid, HatchBars, KpiTile, Legend, Numeral, Section, SplitBar, StageBar, shortDate,
+  ActivityRow, BarList, BrandMark, DotGrid, HatchBars, KpiTile, Legend, Numeral, Section, SplitBar, SegmentBar, shortDate,
 } from './DashboardParts';
 import { ZoomLink } from './ZoomLink';
 import { useGetDashboardOverviewQuery, useGetEmployeeDashboardQuery } from '@/services/dashboardApi';
@@ -105,7 +105,7 @@ export function PipelineSection({ sub, rows }) {
         <Numeral value={`${total ? Math.round((won / total) * 100) : 0}%`} />
         <Text className="text-sm text-muted">{won} of {total} won</Text>
       </View>
-      <StageBar items={items} />
+      <SegmentBar items={items} />
     </Section>
   );
 }
@@ -139,7 +139,7 @@ export function TasksSection({ tasks, title = 'Tasks', sub, children }) {
         <Numeral value={`${total ? Math.round((done / total) * 100) : 0}%`} />
         <Text className="text-sm text-muted">{done} of {total} done</Text>
       </View>
-      <StageBar items={taskCounts(tasks?.byStatus)} />
+      <SegmentBar items={taskCounts(tasks?.byStatus)} />
       {children}
     </Section>
   );
