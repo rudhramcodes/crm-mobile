@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { BarChart3, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import {
-  BarList, Card, Chip, DashboardState, EmptyState, PageHeader, Pressable, RecordRow, Screen, Section, StatTile, Text, fromYmd, longDate, statusMeta, usePullRefresh,
+  BarList, Card, Chip, DashboardState, EmptyState, PageHeader, Pressable, RecordRow, Screen, Section, KpiTile, Text, fromYmd, longDate, statusMeta, usePullRefresh,
 } from '@/components';
 import { useGetDailyReportQuery, useGetMonthlyReportQuery, useGetWeeklyReportQuery } from '@/services/attendanceApi';
 import { useTheme } from '@/constants/theme';
@@ -61,12 +61,12 @@ export default function Reports() {
         <>
           <View className="gap-3">
             <View className="flex-row gap-3">
-              <StatTile label="PEOPLE" value={s.totalEmployees} sub={`${s.totalRecords} records`} />
-              <StatTile label="PRESENT" value={s.presentRecords} sub="incl. WFH and half days" />
+              <KpiTile label="People" value={s.totalEmployees} sub={`${s.totalRecords} records`} />
+              <KpiTile label="Present" value={s.presentRecords} sub="incl. WFH and half days" />
             </View>
             <View className="flex-row gap-3">
-              <StatTile label="ABSENT" value={s.absentRecords} alert={s.absentRecords > 0} sub={`${s.leaveRecords} on leave`} />
-              <StatTile label="HOURS" value={formatHours(s.workedHours)} sub={s.workedRecords ? `${formatHours(s.workedHours / s.workedRecords)} a day avg.` : undefined} />
+              <KpiTile label="Absent" value={s.absentRecords} alert={s.absentRecords > 0} sub={`${s.leaveRecords} on leave`} />
+              <KpiTile label="Hours" value={formatHours(s.workedHours)} sub={s.workedRecords ? `${formatHours(s.workedHours / s.workedRecords)} a day avg.` : undefined} />
             </View>
           </View>
           {!!statusRows.length && <Section title="By status"><BarList rows={statusRows} /></Section>}

@@ -6,12 +6,12 @@ import { Text } from './Text';
 import { useTheme } from '@/constants/theme';
 import { cn } from '@/utils/cn';
 
-// Categorical series colours (dataviz reference palette), validated against this app's surfaces with
-// validate_palette.js: light on #fffcf3, dark on #2a1a0f, all checks pass. A few light steps sit under 3:1 on cream,
-// so every chart shows its values as text beside the colour (legend rows / tapped values): never colour alone.
+// Categorical series colours from the brand palette only (DESIGN.md §1: no other hues): ochre, brown/beige, sand,
+// green, red, then muted steps. Neighbours are close in hue, so every chart shows its values as text beside the colour
+// (legend rows / tapped values): never colour alone.
 const SERIES = {
-  light: ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#0f7f8c', '#e34948'],
-  dark: ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#0ca30c', '#22a3b3', '#e66767'],
+  light: ['#b47737', '#3b2515', '#dcc19d', '#456b33', '#b3412e', '#7a6552', '#8a5524', '#c9a77a'],
+  dark: ['#c98d4e', '#f6f1e0', '#dcc19d', '#8fb878', '#e07a63', '#a8957f', '#d29a5e', '#8a6a4a'],
 };
 export const useSeriesColors = () => SERIES[useColorScheme() === 'dark' ? 'dark' : 'light'];
 
@@ -129,7 +129,7 @@ export function ColumnChart({ data, series, value, format = (v) => String(v), ti
                     y={height - h}
                     width={barW}
                     height={h}
-                    rx={Math.min(3, barW / 2)}
+                    rx={barW / 2}
                     fill={colors[s.slot % colors.length]}
                     opacity={i === picked ? 1 : 0.55}
                   />

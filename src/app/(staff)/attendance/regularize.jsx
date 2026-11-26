@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 import { Alert, Button, DateField, Input, Screen, SheetHeader, backTo } from '@/components';
@@ -27,7 +28,7 @@ export default function RegularizeForm() {
   };
 
   return (
-    <Screen scroll edges={['bottom']} className="gap-4 pt-6">
+    <Screen scroll edges={Platform.OS === 'android' ? ['top', 'bottom'] : ['bottom']} className="gap-4 pt-6">
       <SheetHeader title="Request a correction" sub="Your manager reviews it and the day updates once approved." closeLabel="Cancel" />
       <Alert message={fieldErrors.length ? '' : message} />
       <DateField label="Day" value={date} onChange={setDate} maxDate={ymd()} error={err('attendanceId') || err('date')} />

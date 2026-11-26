@@ -41,13 +41,13 @@ const Section = ({ title, hint, right }) => (
 );
 
 // Same sections, fields and rules as the web UserFormModal, plus an Active switch on edit.
-function UserForm({ user }) {
+function UserForm({ user, location }) {
   const editing = !!user;
   const me = useSelector((s) => s.auth.user);
   const payroll = canAccessPayroll(me);
   const [create, c] = useCreateUserMutation();
   const [update, u] = useUpdateUserMutation();
-  const [f, setF] = useState(() => userForm(user));
+  const [f, setF] = useState(() => ({ ...userForm(user), ...(!user && location && { location }) }));
   const [error, setError] = useState("");
   const set = (k) => (v) => setF((x) => ({ ...x, [k]: v }));
   const { message, fieldErrors } = apiError(c.error || u.error);
@@ -173,7 +173,7 @@ function UserForm({ user }) {
 
 // Create, or edit with ?id=. Android shows modals full screen under the status bar, so it needs the top inset; iOS sheets don't.
 export default function NewUser() {
-  const { id } = useLocalSearchParams();
+  const { id, location } = useLocalSearchParams();
   const me = useSelector((s) => s.auth.user);
   const { data, isLoading, isError, refetch } = useGetUserByIdQuery(id, { skip: !id });
   const user = data?.data?.user;
@@ -184,7 +184,7 @@ export default function NewUser() {
       {locked ? (
         <EmptyState icon={Lock} title="Only the Super Admin can edit this account" message="Ask them to update it from their own login." actionTitle="Go back" onAction={() => backTo("/users")} />
       ) : !id || user ? (
-        <UserForm key={user?._id || "new"} user={user} />
+        <UserForm key={user?._id || "new"} user={user} location={LOCATIONS.includes(location) ? location : ""} />
       ) : (
         <DashboardState isLoading={isLoading} isError={isError || !isLoading} refetch={refetch} />
       )}

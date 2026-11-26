@@ -215,7 +215,8 @@ function LeadForm({ lead }) {
           )),
         )}
       </Field>
-      <Field label="Pipeline Stage">
+      {/* New leads always start as "new"; the stage is only changed when editing. */}
+      {editing && <Field label="Pipeline Stage">
         {chipRow(
           LEAD_STATUS.map((s) => (
             <Chip
@@ -230,7 +231,7 @@ function LeadForm({ lead }) {
             />
           )),
         )}
-      </Field>
+      </Field>}
 
       <Field label="Assigned Representative">
         <View className="flex-row items-center gap-3 rounded-2xl bg-surface-2 px-4 py-3">

@@ -24,7 +24,6 @@ import { useTheme } from "@/constants/theme";
 import {
   useDeleteClientMutation,
   useGetClientByIdQuery,
-  useInviteClientMutation,
   useUpdateClientMutation,
 } from "@/services/clientApi";
 import { runAction } from "@/utils/attendance";
@@ -34,7 +33,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import {
   Calendar,
   Copy,
-  KeyRound,
   Mail,
   MapPin,
   MessageCircle,
@@ -86,10 +84,8 @@ function ClientBody({ client: c }) {
   const me = useSelector((s) => s.auth.user);
   const can = clientAccess(me);
   const [update, u] = useUpdateClientMutation();
-  const [invite, i] = useInviteClientMutation();
   const [del, d] = useDeleteClientMutation();
   const [confirming, setConfirming] = useState(false);
-  const portalActive = !!c.user; // same test as the web
   const address = addressOf(c.address);
   const notes = [...(c.notes || [])].reverse();
   const edit = () =>
@@ -130,10 +126,6 @@ function ClientBody({ client: c }) {
 
       <View className="flex-row flex-wrap items-center gap-2">
         <ClientStatusBadge status={c.status} />
-        <Badge
-          label={portalActive ? "Portal active" : "Portal inactive"}
-          variant={portalActive ? "success" : "default"}
-        />
         {!!c.convertedFrom && (
           <Badge label="Converted from lead" variant="info" />
         )}
@@ -217,42 +209,19 @@ function ClientBody({ client: c }) {
           </View>
         </View>
       )}
-      {(can.meet || (can.manage && !portalActive)) && (
-        <View className="flex-row gap-2">
-          {/* Opens the M7 meeting form with this client picked; shows "coming soon" until M7 ships. */}
-          {can.meet && (
-            <Button
-              title="Schedule meeting"
-              icon={Calendar}
-              size="sm"
-              variant="secondary"
-              className="flex-1"
-              onPress={() =>
-                router.push({
-                  pathname: "/meetings/new",
-                  params: { client: c._id },
-                })
-              }
-            />
-          )}
-          {can.manage && !portalActive && (
-            <Button
-              title="Send portal invite"
-              icon={KeyRound}
-              size="sm"
-              variant="secondary"
-              className="flex-1"
-              loading={i.isLoading}
-              onPress={() =>
-                runAction(
-                  invite(c._id),
-                  `Portal invite sent to ${c.email}`,
-                  "Couldn't send the portal invite",
-                )
-              }
-            />
-          )}
-        </View>
+      {can.meet && (
+        <Button
+          title="Schedule meeting"
+          icon={Calendar}
+          size="sm"
+          variant="secondary"
+          onPress={() =>
+            router.push({
+              pathname: "/meetings/new",
+              params: { client: c._id },
+            })
+          }
+        />
       )}
 
       <Card className="gap-3 p-4">

@@ -109,7 +109,7 @@ function ClientForm({ client }) {
         sub={
           editing
             ? client?.companyName
-            : "Register a corporate or individual client profile with billing and portal access"
+            : "Register a corporate or individual client profile with billing details"
         }
         closeLabel="Cancel"
       />

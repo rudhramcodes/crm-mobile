@@ -18,8 +18,15 @@ const offerBiometrics = async () => {
   ]);
 };
 
+// The client portal is gone: client accounts can't use the app.
+const NO_CLIENTS = ['Staff only', 'Rudhram CRM is for the Rudhram team. Please contact us if you need project updates.'];
+
 // The login user carries mustChangePassword and isEmailVerified, which pick the first screen.
 export const signIn = ({ user, accessToken, refreshToken }) => async (dispatch) => {
+  if (user?.role === 'client') {
+    dispatch(authApi.endpoints.logout.initiate(refreshToken)).catch(() => {});
+    return Alert.alert(...NO_CLIENTS);
+  }
   await saveRefreshToken(refreshToken);
   dispatch(setCredentials({ status: 'signedIn', accessToken, user, locked: false }));
   offerBiometrics();
@@ -32,6 +39,10 @@ export const restoreSession = () => async (dispatch) => {
 
   const res = await dispatch(authApi.endpoints.getMe.initiate(undefined, { forceRefetch: true }));
   res.unsubscribe?.();
+  if (res.data?.role === 'client') {
+    Alert.alert(...NO_CLIENTS);
+    return dispatch(signOut());
+  }
   if (res.data) {
     // Locks even if the fingerprints were removed since; the lock screen then falls back to the passcode or sign-out.
     const locked = (await getBiometricPref()) === 'on';

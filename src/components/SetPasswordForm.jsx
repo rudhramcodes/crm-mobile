@@ -8,7 +8,7 @@ import { Button } from './Button';
 import { apiError } from '@/utils/apiError';
 import { getFieldError } from '@/utils/getFieldError';
 
-// Reset-password and accept-invite are the same form: a token from the email link plus a new password.
+// The reset-password form: a token from the email link plus a new password.
 export function SetPasswordForm({ title, subtitle, action, done, useMutation }) {
   const { token } = useLocalSearchParams();
   const [password, setPassword] = useState('');

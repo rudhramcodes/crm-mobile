@@ -211,7 +211,7 @@ export function SearchPick({ label, placeholder, searchPlaceholder, items, value
   );
 }
 
-// Multi-select of people with search (staff and client portal users, as on the web).
+// Multi-select of people with search (as on the web).
 export function AttendeePicker({ users, value, onChange, loading }) {
   const theme = useTheme();
   const [q, setQ] = useState('');

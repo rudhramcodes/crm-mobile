@@ -14,11 +14,10 @@ import { playNotificationSound } from '@/utils/notificationSound';
 import { flushQueue, sendOrQueue } from '@/utils/offlineQueue';
 
 // Mark read and open; push data carries `id`, socket/REST notifications carry `_id`.
-export const openNotification = (n, { dispatch, client }) => {
+export const openNotification = (n, { dispatch }) => {
   const id = n._id ?? n.id;
   if (id && !n.read) sendOrQueue(dispatch, 'markNotificationRead', id).catch(() => {});
-  // Clients get portal pages only (see utils/notificationRoute.js).
-  router.push(notificationRoute(n, { client }));
+  router.push(notificationRoute(n));
 };
 
 // Buttons under a notification (see CATEGORIES in services/push.js). Offline, they wait and send when the
@@ -49,7 +48,7 @@ const runQuick = async (data, action, text, ctx) => {
 };
 
 // Signed-in shells only: live socket, push registration, and taps on push notifications.
-export function useLiveUpdates({ client = false } = {}) {
+export function useLiveUpdates() {
   const store = useStore();
   const dispatch = useDispatch();
 
@@ -69,7 +68,7 @@ export function useLiveUpdates({ client = false } = {}) {
         return;
       }
       playNotificationSound().catch(() => {});
-      showToast({ title: n.title || 'New notification', message: n.message, onPress: () => openNotification(n, { dispatch, client }) });
+      showToast({ title: n.title || 'New notification', message: n.message, onPress: () => openNotification(n, { dispatch }) });
     });
     // A repeat folded into an earlier notification: refresh the list, no toast or sound.
     socket.on('notification:updated', () => dispatch(api.util.invalidateTags(['Notification'])));
@@ -82,7 +81,7 @@ export function useLiveUpdates({ client = false } = {}) {
       sendWaiting(dispatch);
     });
     return () => { sub.remove(); net.remove(); disconnectSocket(); };
-  }, [store, dispatch, client]);
+  }, [store, dispatch]);
 
-  usePushTaps(useCallback((data, action, text) => runQuick(data, action, text, { dispatch, client }), [dispatch, client]));
+  usePushTaps(useCallback((data, action, text) => runQuick(data, action, text, { dispatch }), [dispatch]));
 }

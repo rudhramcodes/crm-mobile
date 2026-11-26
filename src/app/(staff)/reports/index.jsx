@@ -8,7 +8,8 @@ import {
   PageHeader,
   Screen,
   Section,
-  StatTile,
+  KpiTile,
+  TileGrid,
   Text,
   brandLabel,
   usePullRefresh,
@@ -19,7 +20,7 @@ import { isAdmin } from "@/utils/attendance";
 import { formatCompactCurrency, formatCurrency } from "@/utils/formatters";
 import { labelOf } from "@/utils/payments";
 import { RANGES, REPORT_TABS, countOf, ordered, pct, rangeFor, revenueView } from "@/utils/reports";
-import { Activity, AlertTriangle, CheckCircle2, Clock, FileText, IndianRupee, ListTodo, ShieldAlert, Target, TrendingUp, UserCheck, Users, Wallet } from "lucide-react-native";
+import { ShieldAlert } from "lucide-react-native";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSelector } from "react-redux";
@@ -34,7 +35,7 @@ const slicesOf = (rows, list, field = "status", fmt) =>
   });
 const monthsOf = (rows) => (rows || []).map((m) => ({ ...m, key: m.month, label: monthShort(m.month) }));
 const money = (v) => formatCompactCurrency(v);
-const Tiles = ({ children }) => <View className="flex-row flex-wrap gap-3">{children}</View>;
+const Tiles = TileGrid;
 const Empty = ({ children }) => <Text className="text-sm text-muted">{children}</Text>;
 const rateTone = (r) => (r >= 80 ? "text-success" : r >= 50 ? "text-accent-ink" : "text-danger");
 
@@ -67,10 +68,10 @@ function Revenue({ data, rangeKey }) {
     <>
       <ChipRow options={[{ value: false, label: "Without cash" }, { value: true, label: "With cash" }]} value={withCash} onChange={setWithCash} />
       <Tiles>
-        <StatTile label={withCash ? "COLLECTION (WITH CASH)" : "REVENUE (EXCL. CASH)"} icon={IndianRupee} tone="success" value={formatCompactCurrency(v.collected)} sub={`${v.rate}% collection rate`} />
-        <StatTile label="CASH (SEPARATE)" icon={Wallet} tone="success" value={formatCompactCurrency(v.cash)} sub={withCash ? "Included above" : "Excluded from revenue"} />
-        <StatTile label="OUTSTANDING" icon={Clock} value={formatCompactCurrency(v.outstanding)} sub="Pending payments" />
-        <StatTile label="TOTAL INVOICED" icon={FileText} value={formatCompactCurrency(v.invoiced)} sub="Gross invoice value" />
+        <KpiTile label={withCash ? "Collection (with cash)" : "Revenue (excl. cash)"} value={formatCompactCurrency(v.collected)} sub={`${v.rate}% collection rate`} />
+        <KpiTile label="Cash (separate)" value={formatCompactCurrency(v.cash)} sub={withCash ? "Included above" : "Excluded from revenue"} />
+        <KpiTile label="Outstanding" value={formatCompactCurrency(v.outstanding)} sub="Pending payments" />
+        <KpiTile label="Total invoiced" value={formatCompactCurrency(v.invoiced)} sub="Gross invoice value" />
       </Tiles>
       <Section title={withCash ? "Monthly collection (with cash)" : "Monthly revenue (excl. cash)"} sub="Collected vs outstanding. Tap a month.">
         {v.months.length ? (
@@ -127,10 +128,10 @@ function Pipeline({ data }) {
   return (
     <>
       <Tiles>
-        <StatTile label="TOTAL LEADS" icon={Users} value={String(total)} sub="All leads in pipeline" />
-        <StatTile label="WON" icon={CheckCircle2} tone="success" value={String(s.wonLeads || 0)} sub="Converted to client" />
-        <StatTile label="CONVERSION" icon={TrendingUp} value={`${s.conversionRate || 0}%`} sub={`${s.lostLeads || 0} lost`} />
-        <StatTile label="AVG. CONVERSION" icon={Clock} value={s.avgConversionDays ? `${s.avgConversionDays}d` : "—"} sub="Lead to client" />
+        <KpiTile label="Total leads" value={String(total)} sub="All leads in pipeline" />
+        <KpiTile label="Won" value={String(s.wonLeads || 0)} sub="Converted to client" />
+        <KpiTile label="Conversion" value={`${s.conversionRate || 0}%`} sub={`${s.lostLeads || 0} lost`} />
+        <KpiTile label="Avg. conversion" value={s.avgConversionDays ? `${s.avgConversionDays}d` : "—"} sub="Lead to client" />
       </Tiles>
       <Section title="Pipeline by status" sub={`${total} total`}>
         {total ? (
@@ -159,10 +160,10 @@ function Clients({ data, rangeKey }) {
     <>
       <Text className="-mb-2 text-xs text-muted">Totals, status and brands are all-time; only new clients follow the date range (same as the website).</Text>
       <Tiles>
-        <StatTile label="TOTAL CLIENTS" icon={Users} value={String(s.total || 0)} sub="All registered clients" />
-        <StatTile label="ACTIVE" icon={UserCheck} tone="success" value={String(s.active || 0)} sub="Currently active" />
-        <StatTile label="INACTIVE" icon={Clock} value={String(countOf(c.byStatus, "inactive"))} sub="Inactive accounts" />
-        <StatTile label="CONVERTED" icon={Target} value={String(s.converted || 0)} sub="From leads" />
+        <KpiTile label="Total clients" value={String(s.total || 0)} sub="All registered clients" />
+        <KpiTile label="Active" value={String(s.active || 0)} sub="Currently active" />
+        <KpiTile label="Inactive" value={String(countOf(c.byStatus, "inactive"))} sub="Inactive accounts" />
+        <KpiTile label="Converted" value={String(s.converted || 0)} sub="From leads" />
       </Tiles>
       <Section title="Client status">
         {(c.byStatus || []).length ? (
@@ -198,10 +199,10 @@ function Invoices({ data, rangeKey }) {
   return (
     <>
       <Tiles>
-        <StatTile label="TOTAL INVOICES" icon={FileText} value={String(s.totalInvoices || 0)} sub={`Avg ${formatCurrency(s.avgValue)}`} />
-        <StatTile label="PAID" icon={CheckCircle2} tone="success" value={String(s.paidInvoices || 0)} sub="Fully paid" />
-        <StatTile label="OVERDUE" icon={AlertTriangle} tone="danger" value={String(s.overdueCount || 0)} sub="Past due date" alert={(s.overdueCount || 0) > 0} />
-        <StatTile label="PENDING" icon={Clock} value={String(pending)} sub="Awaiting payment" />
+        <KpiTile label="Total invoices" value={String(s.totalInvoices || 0)} sub={`Avg ${formatCurrency(s.avgValue)}`} />
+        <KpiTile label="Paid" value={String(s.paidInvoices || 0)} sub="Fully paid" />
+        <KpiTile label="Overdue" value={String(s.overdueCount || 0)} sub="Past due date" alert={(s.overdueCount || 0) > 0} />
+        <KpiTile label="Pending" value={String(pending)} sub="Awaiting payment" />
       </Tiles>
       <Section title="Invoice status">
         {(c.byStatus || []).length ? (
@@ -251,10 +252,10 @@ function Productivity({ data }) {
   return (
     <>
       <Tiles>
-        <StatTile label="TOTAL TASKS" icon={ListTodo} value={String(s.total || 0)} sub="All tasks" />
-        <StatTile label="COMPLETED" icon={CheckCircle2} tone="success" value={String(s.done || 0)} sub={`${s.completionRate || 0}% done`} />
-        <StatTile label="IN PROGRESS" icon={Activity} value={String(countOf(c.byStatus, "in_progress"))} sub="Currently active" />
-        <StatTile label="OVERDUE" icon={AlertTriangle} tone="danger" value={String(s.overdue || 0)} sub="Past due date" alert={(s.overdue || 0) > 0} />
+        <KpiTile label="Total tasks" value={String(s.total || 0)} sub="All tasks" />
+        <KpiTile label="Completed" value={String(s.done || 0)} sub={`${s.completionRate || 0}% done`} />
+        <KpiTile label="In progress" value={String(countOf(c.byStatus, "in_progress"))} sub="Currently active" />
+        <KpiTile label="Overdue" value={String(s.overdue || 0)} sub="Past due date" alert={(s.overdue || 0) > 0} />
       </Tiles>
       <Section title="Tasks by status">
         {s.total ? (

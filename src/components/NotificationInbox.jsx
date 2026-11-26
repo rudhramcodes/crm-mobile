@@ -14,7 +14,6 @@ import { Pressable } from './Pressable';
 import { Screen } from './Screen';
 import { Skeleton } from './Skeleton';
 import { showToast } from './Toast';
-import { PageHeader } from './AttendanceParts';
 import { usePage, usePageNav } from '@/hooks/usePaged';
 import { useGetNotificationsQuery, useGetUnreadCountQuery } from '@/services/notificationApi';
 import { notificationConfig } from '@/constants/notifications';
@@ -79,8 +78,8 @@ function Row({ item, onOpen, onDelete }) {
   );
 }
 
-// The Inbox tab for staff and clients; `client` sends taps to portal pages.
-export function NotificationInbox({ client = false }) {
+// The Inbox tab.
+export function NotificationInbox() {
   const theme = useTheme();
   const dispatch = useDispatch();
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -158,13 +157,11 @@ export function NotificationInbox({ client = false }) {
   );
 
   const header = (
-    <View className={cn('gap-4 pb-4', client ? 'pt-2' : 'pt-6')}>
-      {client ? <PageHeader caption="PORTAL" title="Inbox" fallback="/portal" right={markAllButton} /> : (
-        <View className="flex-row items-center justify-between">
-          <Heading>Inbox</Heading>
-          {markAllButton}
-        </View>
-      )}
+    <View className="gap-4 pb-4 pt-6">
+      <View className="flex-row items-center justify-between">
+        <Heading>Inbox</Heading>
+        {markAllButton}
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2" className="-mx-5" contentContainerStyle={{ paddingHorizontal: 20 }}>
         <Chip label="All" active={!unreadOnly} onPress={() => setUnreadOnly(false)} />
         <Chip label="Unread" count={unread} active={unreadOnly} onPress={() => setUnreadOnly(true)} />
@@ -189,7 +186,7 @@ export function NotificationInbox({ client = false }) {
   );
 
   return (
-    <Screen tab={!client} className="px-0">
+    <Screen tab className="px-0">
       <FlashList
         ref={listRef}
         contentInsetAdjustmentBehavior="automatic"
@@ -197,7 +194,7 @@ export function NotificationInbox({ client = false }) {
         keyExtractor={(n) => n._id}
         renderItem={({ item }) => (
           <View className="pb-3">
-            <Row item={item} onOpen={() => openNotification(item, { dispatch, client })} onDelete={() => deleteLater(item._id)} />
+            <Row item={item} onOpen={() => openNotification(item, { dispatch })} onDelete={() => deleteLater(item._id)} />
           </View>
         )}
         ListHeaderComponent={header}
