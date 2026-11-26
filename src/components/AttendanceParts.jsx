@@ -14,7 +14,9 @@ import { attendanceRate, clockTime, placeOf, ymd } from '@/utils/attendance';
 import { formatHours, formatMinutes } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 
-export const statusMeta = (v) => ATTENDANCE_STATUS.find((s) => s.value === v) || { value: v, label: v || 'No record', color: 'bg-surface-2 text-muted', dot: 'bg-surface-2' };
+// Not a stored status: the server adds it on today's Records list for staff with no record yet.
+const NOT_CLOCKED_IN = { value: 'not_clocked_in', label: 'Not clocked in', color: 'border border-line bg-surface-2 text-ink', dot: 'bg-muted' };
+export const statusMeta = (v) => ATTENDANCE_STATUS.find((s) => s.value === v) || (v === NOT_CLOCKED_IN.value && NOT_CLOCKED_IN) || { value: v, label: v || 'No record', color: 'bg-surface-2 text-muted', dot: 'bg-surface-2' };
 export const requestMeta = (v) => REQUEST_STATUS.find((s) => s.value === v) || REQUEST_STATUS[0];
 
 export const backTo = (fallback = '/attendance') => (router.canGoBack() ? router.back() : router.replace(fallback));

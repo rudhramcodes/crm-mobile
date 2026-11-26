@@ -13,19 +13,26 @@ import { usePage } from '@/hooks/usePaged';
 import { isAdmin, ymd } from '@/utils/attendance';
 
 const LIMIT = 20;
-const STATUSES = [{ value: '', label: 'All' }, ...ATTENDANCE_STATUS, { value: 'late', label: 'Late' }];
+// Holiday and weekend days aren't worth filtering a team's records by.
+const STATUSES = [{ value: '', label: 'All' }, ...ATTENDANCE_STATUS.filter((s) => s.value !== 'holiday' && s.value !== 'weekend'), { value: 'late', label: 'Late' }];
+const NOT_CLOCKED_IN = { value: 'not_clocked_in', label: 'Not clocked in' };
 
-// Admins and managers: everyone's records by status, name and date range. A tile on the tab opens it pre-filtered to today.
+// Admins and managers: everyone's records for one day (today by default), by status and name.
 export default function Records() {
   const theme = useTheme();
   const p = useLocalSearchParams();
   const me = useSelector((s) => s.auth.user);
   const [status, setStatus] = useState(p.status || '');
-  const [from, setFrom] = useState(() => (p.status ? ymd() : ymd(Date.now() - 6 * 864e5)));
-  const [to, setTo] = useState(ymd());
+  const [date, setDate] = useState(ymd());
   const [typed, setTyped] = useState('');
   const [search, setSearch] = useState('');
-  const filters = { status: status || undefined, search: search || undefined, dateFrom: from, dateTo: to };
+  const today = date === ymd();
+  // Only today's list knows who hasn't clocked in (the server adds them when includeMissing is set).
+  const shownStatus = !today && status === NOT_CLOCKED_IN.value ? '' : status;
+  const chips = today ? [...STATUSES, NOT_CLOCKED_IN] : STATUSES;
+  const filters = {
+    status: shownStatus || undefined, search: search || undefined, dateFrom: date, dateTo: date, includeMissing: today ? 'true' : undefined,
+  };
   const [page, setPage] = usePage(JSON.stringify(filters));
   const { data, isLoading, isFetching, isError, refetch } = useGetAttendanceListQuery({ ...filters, page, limit: LIMIT });
   const refreshControl = usePullRefresh(refetch);
@@ -40,6 +47,7 @@ export default function Records() {
         title="Records"
         right={isAdmin(me) ? <Button title="Add" icon={Plus} size="sm" onPress={() => router.push('/attendance/edit')} /> : undefined}
       />
+      <DateField label="Date" value={date} onChange={setDate} maxDate={ymd()} relative />
       <Input
         value={typed}
         onChangeText={setTyped}
@@ -49,17 +57,19 @@ export default function Records() {
         accessibilityLabel="Search by name or email"
         returnKeyType="search"
         autoCapitalize="none"
-        right={<Search size={18} color={theme.muted} />}
+        right={
+          <View className="h-11 w-11 items-center justify-center">
+            <Search size={18} color={theme.muted} />
+          </View>
+        }
       />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-5 -mt-2" contentContainerClassName="gap-2 px-5">
-        {STATUSES.map((s) => <Chip key={s.value || 'all'} label={s.label} active={status === s.value} onPress={() => setStatus(s.value)} />)}
+        {chips.map((s) => <Chip key={s.value || 'all'} label={s.label} active={shownStatus === s.value} onPress={() => setStatus(s.value)} />)}
       </ScrollView>
-      <DateField label="From" value={from} onChange={(d) => { setFrom(d); if (d > to) setTo(d); }} maxDate={ymd()} />
-      <DateField label="To" value={to} onChange={setTo} minDate={from} maxDate={ymd()} />
 
       {isLoading || isError ? <DashboardState isLoading={isLoading} isError={isError} refetch={refetch} /> : rows.length ? (
         <View className="gap-2">
-          <Text className="text-caption text-muted">{isFetching ? 'UPDATING…' : `${total} ${total === 1 ? 'RECORD' : 'RECORDS'}`}</Text>
+          <Text className="text-caption text-muted">{isFetching ? 'UPDATING…' : `${total} ${today ? (total === 1 ? 'PERSON' : 'PEOPLE') : total === 1 ? 'RECORD' : 'RECORDS'}`}</Text>
           <Card className="py-1">
             {rows.map((r, i) => (
               <View key={r._id} className={i ? 'border-t border-line' : undefined}><RecordRow r={r} /></View>
@@ -68,7 +78,7 @@ export default function Records() {
           <Pager page={page} pages={pages} total={total} limit={LIMIT} loading={isFetching} onChange={setPage} />
         </View>
       ) : (
-        <EmptyState icon={ListChecks} title="No records" message="Nothing matches these filters. Try a wider date range." />
+        <EmptyState icon={ListChecks} title="No records" message="Nothing matches these filters. Try another date." />
       )}
     </Screen>
   );
