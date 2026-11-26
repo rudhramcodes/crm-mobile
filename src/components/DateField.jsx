@@ -6,27 +6,36 @@ import { Pressable } from './Pressable';
 import { Text } from './Text';
 import { useTheme } from '@/constants/theme';
 import { cn } from '@/utils/cn';
+import { ymd } from '@/utils/attendance';
 
 // "2026-11-18" read as a local day, not UTC midnight.
 export const fromYmd = (s) => (s ? new Date(`${s.slice(0, 10)}T00:00:00`) : null);
 export const longDate = (s) => (s ? new Intl.DateTimeFormat('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).format(fromYmd(s)) : '');
+// "Today" / "Yesterday" for those two days, the long date otherwise.
+const relativeDate = (s) => {
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  return s === ymd() ? 'Today' : s === ymd(y) ? 'Yesterday' : longDate(s);
+};
 
-// Field that opens a month calendar inline; value and onChange use "YYYY-MM-DD". Pass onClear to allow "not set".
-export function DateField({ label, value, onChange, onClear, minDate, maxDate, error, disabled, placeholder = 'Pick a date' }) {
+// Field that opens a month calendar inline; value and onChange use "YYYY-MM-DD". Pass onClear to allow "not set",
+// `relative` to show Today / Yesterday.
+export function DateField({ label, value, onChange, onClear, minDate, maxDate, error, disabled, relative, placeholder = 'Pick a date' }) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
+  const shown = value ? (relative ? relativeDate(value) : longDate(value)) : '';
   return (
     <View className="gap-1.5">
       {!!label && <Text className="font-body-medium text-sm">{label}</Text>}
       <Pressable
         onPress={() => setOpen((o) => !o)}
         disabled={disabled}
-        accessibilityLabel={`${label || 'Date'}: ${value ? longDate(value) : 'not set'}`}
+        accessibilityLabel={`${label || 'Date'}: ${shown || 'not set'}`}
         accessibilityState={{ expanded: open }}
         className={cn('h-[52px] flex-row items-center gap-3 rounded-2xl border-[1.5px] bg-surface-2 px-4', error ? 'border-danger' : open ? 'border-accent' : 'border-transparent')}
       >
         <CalendarDays size={18} color={theme.muted} />
-        <Text className={cn('flex-1 text-[15px]', !value && 'text-muted')}>{value ? longDate(value) : placeholder}</Text>
+        <Text className={cn('flex-1 text-[15px]', !value && 'text-muted')}>{shown || placeholder}</Text>
         {!!value && !!onClear && !disabled && (
           <Pressable onPress={() => { onClear(); setOpen(false); }} hitSlop={10} accessibilityLabel={`Clear ${label || 'date'}`} className="-mr-2 h-11 w-11 items-center justify-center">
             <X size={18} color={theme.muted} />
