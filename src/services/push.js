@@ -54,6 +54,7 @@ const CATEGORIES = {
   task_new: [{ identifier: 'start', buttonTitle: 'Start work', options: { opensAppToForeground: true } }, { identifier: 'open', buttonTitle: 'Open' }],
   chat: [{ identifier: 'reply', buttonTitle: 'Reply', textInput: { submitButtonTitle: 'Send', placeholder: 'Write a reply' }, options: { opensAppToForeground: true } }],
   open: [{ identifier: 'open', buttonTitle: 'Open' }],
+  clock_out: [{ identifier: 'clock_out', buttonTitle: 'Clock out', options: { opensAppToForeground: true } }],
 };
 
 if (Platform.OS !== 'web') {
@@ -83,6 +84,7 @@ const CATEGORY_OF = {
   task_comment: 'chat', mention: 'chat',
   task_changes_requested: 'open', task_due_soon: 'open', task_reassigned: 'open', task_rescheduled: 'open',
   lead_assigned: 'open', meeting_requested: 'open', meeting_reminder: 'open', leave_applied: 'open', regularization_request: 'open',
+  clock_out_reminder: 'clock_out',
 };
 // Follows the in-app sound setting and quiet hours, like the server pushes do through the foreground handler.
 export async function showLocalNotification(n) {

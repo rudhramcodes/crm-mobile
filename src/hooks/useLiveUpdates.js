@@ -4,6 +4,7 @@ import { addNetworkStateListener } from 'expo-network';
 import { router } from 'expo-router';
 import { useDispatch, useStore } from 'react-redux';
 import { api } from '@/services/api';
+import { attendanceApi } from '@/services/attendanceApi';
 import { notificationApi } from '@/services/notificationApi';
 import { connectSocket, disconnectSocket } from '@/services/socket';
 import { hasPush, registerPush, showLocalNotification } from '@/services/push';
@@ -12,6 +13,9 @@ import { showToast } from '@/components/Toast';
 import { notificationRoute } from '@/utils/notificationRoute';
 import { playNotificationSound } from '@/utils/notificationSound';
 import { flushQueue, sendOrQueue } from '@/utils/offlineQueue';
+import { apiError } from '@/utils/apiError';
+import { clockTime, getLocation } from '@/utils/attendance';
+import { formatHours } from '@/utils/formatters';
 
 // Mark read and open; push data carries `id`, socket/REST notifications carry `_id`.
 export const openNotification = (n, { dispatch }) => {
@@ -33,7 +37,21 @@ const sendWaiting = (dispatch) => flushQueue(dispatch)
   .then((n) => n && showToast({ tone: 'success', title: 'Back online', message: n === 1 ? 'Sent 1 action you took offline.' : `Sent ${n} actions you took offline.` }))
   .catch(() => {});
 
+// "Clock out" on the 6:10 PM reminder: clocks out right away, never queued, since the server stamps the time it arrives.
+const quickClockOut = async (dispatch) => {
+  try {
+    const res = await dispatch(attendanceApi.endpoints.clockOut.initiate({ location: await getLocation() })).unwrap();
+    const a = res?.data?.attendance;
+    const out = a?.sessions?.at(-1)?.clockOut?.time;
+    showToast({ tone: 'success', title: out ? `Clocked out at ${clockTime(out)}` : 'Clocked out', message: a ? `Worked ${formatHours(a.workHours)} today.` : undefined });
+  } catch (e) {
+    showToast({ tone: 'error', title: "Couldn't clock out", message: apiError(e).message });
+    router.push('/attendance');
+  }
+};
+
 const runQuick = async (data, action, text, ctx) => {
+  if (action === 'clock_out') return quickClockOut(ctx.dispatch);
   const id = data.referenceModel === 'Task' && data.referenceId;
   if (!QUICK[action] || !id || (action === 'reply' && !text?.trim())) return openNotification(data, ctx);
   try {
