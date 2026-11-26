@@ -298,7 +298,7 @@ export function CalendarCard() {
   const start = mondayOf(day);
   const { byDay, isFetching } = useCalendarItems(start, addDays(start, 6));
   return (
-    <Section title="My calendar" action="Open" onAction={() => router.push({ pathname: '/calendar', params: { day } })}>
+    <Section title="My calendar" action="Open calendar" onAction={() => router.push({ pathname: '/calendar', params: { day } })}>
       <View className={cn(isFetching && 'opacity-80')}><WeekStrip day={day} onSelect={setDay} byDay={byDay} /></View>
       <DayAgenda day={day} items={byDay[day]} />
     </Section>

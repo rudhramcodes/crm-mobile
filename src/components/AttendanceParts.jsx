@@ -6,9 +6,8 @@ import { ChevronLeft, Coffee, MapPin, Trash2 } from 'lucide-react-native';
 import { Pressable } from './Pressable';
 import { Heading, Text } from './Text';
 import { Badge } from './Badge';
-import { Card } from './Card';
 import { Button } from './Button';
-import { StatTile } from './DashboardParts';
+import { KpiTile, SplitBar, TileGrid } from './DashboardParts';
 import { ATTENDANCE_STATUS, REQUEST_STATUS } from '@/constants';
 import { useTheme } from '@/constants/theme';
 import { attendanceRate, clockTime, placeOf, ymd } from '@/utils/attendance';
@@ -132,12 +131,12 @@ export function SessionList({ sessions = [] }) {
 export function MonthStats({ stats, onPress }) {
   const rate = attendanceRate(stats);
   return (
-    <View className="flex-row flex-wrap gap-3">
-      <StatTile label="ATTENDANCE RATE" value={rate == null ? '—' : `${rate}%`} sub="Present incl. WFH" onPress={onPress} />
-      <StatTile label="LATE ARRIVALS" value={stats?.late ?? 0} alert={stats?.late > 0} onPress={onPress} />
-      <StatTile label="DAYS PRESENT" value={(stats?.present || 0) + (stats?.wfh || 0)} sub={`${stats?.wfh || 0} WFH · ${stats?.half_day || 0} half · ${stats?.absent || 0} absent`} onPress={onPress} />
-      <StatTile label="HOURS WORKED" value={formatHours(stats?.totalWorkHours)} sub={`${formatHours(stats?.totalOvertime)} overtime`} onPress={onPress} />
-    </View>
+    <TileGrid>
+      <KpiTile label="Attendance rate" value={rate == null ? '—' : `${rate}%`} sub="Present incl. WFH" onPress={onPress} />
+      <KpiTile label="Late arrivals" value={stats?.late ?? 0} alert={stats?.late > 0} onPress={onPress} />
+      <KpiTile label="Days present" value={(stats?.present || 0) + (stats?.wfh || 0)} sub={`${stats?.wfh || 0} WFH · ${stats?.half_day || 0} half · ${stats?.absent || 0} absent`} onPress={onPress} />
+      <KpiTile label="Hours worked" value={formatHours(stats?.totalWorkHours)} sub={`${formatHours(stats?.totalOvertime)} overtime`} onPress={onPress} />
+    </TileGrid>
   );
 }
 
@@ -146,14 +145,14 @@ export const leaveDays = (a, b) => Math.round((new Date(`${b}T00:00:00`) - new D
 export function BalanceCards({ balance }) {
   return (
     <View className="flex-row gap-3">
-      {[['casual', 'CASUAL', 'Accrues 1 a month'], ['sick', 'SICK', 'Per year']].map(([k, label, note]) => (
-        <Card key={k} className="flex-1 gap-1 p-4" accessible accessibilityLabel={`${label} leave: ${balance?.[k]?.balance ?? 0} left, ${balance?.[k]?.used ?? 0} used of ${balance?.[k]?.total ?? 0}`}>
-          <Text className="text-caption text-muted">{label}</Text>
-          <Text className="font-display text-numeral tabular-nums">{balance?.[k]?.balance ?? '—'}</Text>
-          <Text className="text-xs text-muted">{`left · ${balance?.[k]?.used ?? 0} of ${balance?.[k]?.total ?? 0} used`}</Text>
-          <Text className="text-xs text-muted">{note}</Text>
-        </Card>
-      ))}
+      {[['casual', 'Casual', 'Accrues 1 a month'], ['sick', 'Sick', 'Per year']].map(([k, label, note]) => {
+        const b = balance?.[k];
+        return (
+          <KpiTile key={k} label={`${label} leave`} value={b?.balance ?? '—'} sub={`${b?.used ?? 0} of ${b?.total ?? 0} used · ${note}`}>
+            <SplitBar pct={b?.total ? (b.balance / b.total) * 100 : 0} label="left" />
+          </KpiTile>
+        );
+      })}
     </View>
   );
 }

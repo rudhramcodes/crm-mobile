@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { BarChart3, CalendarDays, CalendarHeart, Clock3, FilePenLine, ListChecks, Plane } from 'lucide-react-native';
-import { Badge, ClockPanel, Heading, ListRow, MonthStats, Screen, Section, StatTile, Text, usePullRefresh } from '@/components';
+import { Badge, ClockPanel, Heading, ListRow, MonthStats, Screen, Section, KpiTile, Text, TileGrid, usePullRefresh } from '@/components';
 import {
   useGetAttendanceOverviewStatsQuery, useGetAttendanceStatsQuery, useGetLeavesQuery, useGetRegularizationRequestsQuery, useGetTodayStatusQuery,
 } from '@/services/attendanceApi';
@@ -33,7 +33,7 @@ export default function AttendanceTab() {
 
       <ClockPanel />
 
-      <Section title="This month" sub="Your attendance so far" action="Calendar" onAction={() => router.push('/attendance/calendar')}>
+      <Section title="This month" sub="Your attendance so far" action="Open calendar" onAction={() => router.push('/attendance/calendar')}>
         <MonthStats stats={stats.data?.data} onPress={() => router.push('/attendance/calendar')} />
       </Section>
 
@@ -46,13 +46,13 @@ export default function AttendanceTab() {
 
       {lead && (
         <>
-          <Section title="Team today" sub={o ? `${o.totalEmployees} staff` : 'Loading…'} action="Records" onAction={() => router.push('/attendance/records')}>
-            <View className="flex-row flex-wrap gap-3">
-              <StatTile label="PRESENT" value={o?.presentCount ?? '—'} sub={`${o?.wfhCount ?? 0} working from home`} onPress={() => router.push({ pathname: '/attendance/records', params: { status: 'present' } })} />
-              <StatTile label="ABSENT" value={o?.absentCount ?? '—'} alert={o?.absentCount > 0} onPress={() => router.push({ pathname: '/attendance/records', params: { status: 'absent' } })} />
-              <StatTile label="ON LEAVE" value={o?.leaveCount ?? '—'} onPress={() => router.push({ pathname: '/attendance/records', params: { status: 'leave' } })} />
-              <StatTile label="LATE" value={o?.lateCount ?? '—'} onPress={() => router.push({ pathname: '/attendance/records', params: { status: 'late' } })} />
-            </View>
+          <Section title="Team today" sub={o ? `${o.totalEmployees} staff` : 'Loading…'} action="Open records" onAction={() => router.push('/attendance/records')}>
+            <TileGrid>
+              <KpiTile label="Present" value={o?.presentCount ?? '—'} sub={`${o?.wfhCount ?? 0} working from home`} onPress={() => router.push({ pathname: '/attendance/records', params: { status: 'present' } })} />
+              <KpiTile label="Absent" value={o?.absentCount ?? '—'} alert={o?.absentCount > 0} onPress={() => router.push({ pathname: '/attendance/records', params: { status: 'absent' } })} />
+              <KpiTile label="On leave" value={o?.leaveCount ?? '—'} onPress={() => router.push({ pathname: '/attendance/records', params: { status: 'leave' } })} />
+              <KpiTile label="Late" value={o?.lateCount ?? '—'} onPress={() => router.push({ pathname: '/attendance/records', params: { status: 'late' } })} />
+            </TileGrid>
           </Section>
           <View>
             <ListRow icon={ListChecks} label="Attendance records" hint="Filter, view and edit any day" onPress={() => router.push('/attendance/records')} />

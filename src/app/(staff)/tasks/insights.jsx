@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { BarList, Card, DashboardState, PageHeader, Ring, Screen, Section, StatTile, StatusCounts, Text, usePullRefresh } from '@/components';
+import { BarList, DashboardState, KpiTile, Numeral, PageHeader, Screen, Section, StageBar, Text, usePullRefresh } from '@/components';
 import { TASK_PRIORITY } from '@/constants';
 import { useGetTasksQuery } from '@/services/taskApi';
 import { formatHours } from '@/utils/formatters';
@@ -39,18 +39,18 @@ export default function TaskInsights() {
       <PageHeader caption="TASKS" title="Insights" fallback="/tasks" />
       {q.isLoading || q.isError ? <DashboardState isLoading={q.isLoading} isError={q.isError} refetch={q.refetch} /> : (
         <>
-          <Card className="flex-row items-center gap-5">
-            <Ring done={done} total={tasks.length} />
-            <StatusCounts items={Object.keys(LABELS).map((k) => ({ key: k, label: LABELS[k], dot: DOTS[k], count: count((t) => t.status === k) }))} />
-          </Card>
+          <Section title="Progress" sub={`${done} of ${tasks.length} done`}>
+            <Numeral value={`${tasks.length ? Math.round((done / tasks.length) * 100) : 0}%`} />
+            <StageBar items={Object.keys(LABELS).map((k) => ({ key: k, label: LABELS[k], dot: DOTS[k], count: count((t) => t.status === k) }))} />
+          </Section>
           <View className="gap-3">
             <View className="flex-row gap-3">
-              <StatTile label="OVERDUE" value={count(isOverdue)} alert={count(isOverdue) > 0} sub="Past due, not done" />
-              <StatTile label="TASKS" value={tasks.length} sub={tasks.length >= 100 ? 'First 100 shown' : 'In this view'} />
+              <KpiTile label="Overdue" value={count(isOverdue)} alert={count(isOverdue) > 0} sub="Past due, not done" />
+              <KpiTile label="Tasks" value={tasks.length} sub={tasks.length >= 100 ? 'First 100 shown' : 'In this view'} />
             </View>
             <View className="flex-row gap-3">
-              <StatTile label="ESTIMATED" value={short(est)} sub="Planned effort" />
-              <StatTile label="LOGGED" value={short(actual)} sub={est ? `${Math.round((actual / est) * 100)}% of estimate` : 'No estimates yet'} />
+              <KpiTile label="Estimated" value={short(est)} sub="Planned effort" />
+              <KpiTile label="Logged" value={short(actual)} sub={est ? `${Math.round((actual / est) * 100)}% of estimate` : 'No estimates yet'} />
             </View>
           </View>
           <Section title="By priority">
