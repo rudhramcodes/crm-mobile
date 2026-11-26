@@ -10,7 +10,7 @@ import { isAdmin } from '@/utils/attendance';
 import { formatCurrency } from '@/utils/formatters';
 import { isPastDue, paidPercent } from '@/utils/invoices';
 
-// Server rule: super_admin and admin only (clients get a read-only portal later).
+// Server rule: super_admin and admin only.
 export const invoiceAccess = (u) => ({ view: isAdmin(u), manage: isAdmin(u) && canWriteModule(u, 'invoices') });
 
 export function InvoiceStatusBadge({ status }) {

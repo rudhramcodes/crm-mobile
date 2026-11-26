@@ -53,17 +53,13 @@ function RootStack({ fontsReady }) {
 
   const signedIn = status === 'signedIn';
   const ready = signedIn && !user.mustChangePassword;
-  const client = user?.role === 'client';
   // Where each state lands; a guarded-off route goes here (explicit, not "first available").
-  const home = !signedIn ? '/sign-in' : !ready ? '/change-password' : client ? '/portal' : '/';
+  const home = !signedIn ? '/sign-in' : !ready ? '/change-password' : '/';
   return (
     <ThemeProvider value={navTheme(theme, scheme === 'dark')}>
     <Stack screenOptions={{ headerShown: false, animation: 'fade', contentStyle: { backgroundColor: theme.bg } }}>
-      <Stack.Protected redirectTo={home} guard={ready && !client}>
+      <Stack.Protected redirectTo={home} guard={ready}>
         <Stack.Screen name="(staff)" />
-      </Stack.Protected>
-      <Stack.Protected redirectTo={home} guard={ready && client}>
-        <Stack.Screen name="(client)" />
       </Stack.Protected>
       <Stack.Protected redirectTo={home} guard={signedIn}>
         <Stack.Screen name="change-password" options={{ gestureEnabled: ready }} />
@@ -75,7 +71,6 @@ function RootStack({ fontsReady }) {
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="forgot-password" />
         <Stack.Screen name="reset-password" />
-        <Stack.Screen name="accept-invite" />
       </Stack.Protected>
     </Stack>
     <OfflineBanner />

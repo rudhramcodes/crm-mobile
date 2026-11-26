@@ -4,13 +4,15 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { ListChecks, Plus, Search } from 'lucide-react-native';
 import {
-  Button, Card, Chip, DashboardState, DateField, EmptyState, Input, PageHeader, RecordRow, Screen, Text, usePullRefresh,
+  Button, Card, Chip, DashboardState, DateField, EmptyState, Input, PageHeader, Pager, RecordRow, Screen, Text, usePullRefresh,
 } from '@/components';
 import { useGetAttendanceListQuery } from '@/services/attendanceApi';
 import { ATTENDANCE_STATUS } from '@/constants';
 import { useTheme } from '@/constants/theme';
+import { usePage } from '@/hooks/usePaged';
 import { isAdmin, ymd } from '@/utils/attendance';
 
+const LIMIT = 20;
 const STATUSES = [{ value: '', label: 'All' }, ...ATTENDANCE_STATUS, { value: 'late', label: 'Late' }];
 
 // Admins and managers: everyone's records by status, name and date range. A tile on the tab opens it pre-filtered to today.
@@ -23,13 +25,13 @@ export default function Records() {
   const [to, setTo] = useState(ymd());
   const [typed, setTyped] = useState('');
   const [search, setSearch] = useState('');
-  // shortcut: newest 100 records only; add paging when a range routinely holds more.
-  const { data, isLoading, isFetching, isError, refetch } = useGetAttendanceListQuery({
-    status: status || undefined, search: search || undefined, dateFrom: from, dateTo: to, page: 1, limit: 100,
-  });
+  const filters = { status: status || undefined, search: search || undefined, dateFrom: from, dateTo: to };
+  const [page, setPage] = usePage(JSON.stringify(filters));
+  const { data, isLoading, isFetching, isError, refetch } = useGetAttendanceListQuery({ ...filters, page, limit: LIMIT });
   const refreshControl = usePullRefresh(refetch);
   const rows = data?.data || [];
   const total = data?.pagination?.total ?? rows.length;
+  const pages = Math.ceil(total / LIMIT);
 
   return (
     <Screen scroll className="gap-5 pt-2" refreshControl={refreshControl}>
@@ -57,12 +59,13 @@ export default function Records() {
 
       {isLoading || isError ? <DashboardState isLoading={isLoading} isError={isError} refetch={refetch} /> : rows.length ? (
         <View className="gap-2">
-          <Text className="text-caption text-muted">{isFetching ? 'UPDATING…' : `${total} ${total === 1 ? 'RECORD' : 'RECORDS'}${total > rows.length ? `, NEWEST ${rows.length} SHOWN` : ''}`}</Text>
+          <Text className="text-caption text-muted">{isFetching ? 'UPDATING…' : `${total} ${total === 1 ? 'RECORD' : 'RECORDS'}`}</Text>
           <Card className="py-1">
             {rows.map((r, i) => (
               <View key={r._id} className={i ? 'border-t border-line' : undefined}><RecordRow r={r} /></View>
             ))}
           </Card>
+          <Pager page={page} pages={pages} total={total} limit={LIMIT} loading={isFetching} onChange={setPage} />
         </View>
       ) : (
         <EmptyState icon={ListChecks} title="No records" message="Nothing matches these filters. Try a wider date range." />

@@ -60,7 +60,6 @@ export const api = createApi({
     'Lead',
     'LeadStats',
     'Client',
-    'ClientMe',
     'Meeting',
     'Project',
     'Task',

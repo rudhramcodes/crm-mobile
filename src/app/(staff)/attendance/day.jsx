@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { FilePenLine, PencilLine } from 'lucide-react-native';
@@ -25,7 +25,7 @@ export default function DaySheet() {
   const reg = r?.regularization?.approval?.status && r.regularization;
 
   return (
-    <Screen scroll edges={['bottom']} className="gap-5 pt-6">
+    <Screen scroll edges={Platform.OS === 'android' ? ['top', 'bottom'] : ['bottom']} className="gap-5 pt-6">
       <SheetHeader title={longDate(date)} sub={name || undefined} />
       {isLoading || isError ? <DashboardState isLoading={isLoading} isError={isError} refetch={refetch} /> : !r ? (
         <Text className="text-muted">No attendance record for this day.</Text>

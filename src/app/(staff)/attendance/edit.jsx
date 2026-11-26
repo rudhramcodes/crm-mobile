@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import {
   Alert, Avatar, Button, Chip, DashboardState, DateField, Input, Pressable, Screen, SheetHeader, Text, Toggle, UserPicker, backTo,
@@ -93,7 +93,7 @@ export default function EditAttendance() {
   const record = data?.data?.summary?.record;
 
   return (
-    <Screen scroll edges={['bottom']} className="gap-4 pt-6">
+    <Screen scroll edges={Platform.OS === 'android' ? ['top', 'bottom'] : ['bottom']} className="gap-4 pt-6">
       <SheetHeader title={record ? 'Edit day' : 'Add entry'} sub="The employee sees the change on their calendar." closeLabel="Cancel" />
       {!person ? <UserPicker onPick={setPerson} /> : isFetching || isError ? (
         <DashboardState isLoading={isFetching} isError={isError} refetch={refetch} />
