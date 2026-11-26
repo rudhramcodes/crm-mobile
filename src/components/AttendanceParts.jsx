@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Linking, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
@@ -10,7 +10,7 @@ import { Button } from './Button';
 import { KpiTile, SplitBar, TileGrid } from './DashboardParts';
 import { ATTENDANCE_STATUS, REQUEST_STATUS } from '@/constants';
 import { useTheme } from '@/constants/theme';
-import { attendanceRate, clockTime, placeOf, ymd } from '@/utils/attendance';
+import { activeSession, clockTime, MONTHLY_HOURS_TARGET, placeOf, presentDays, workedSeconds, workingDays, ymd } from '@/utils/attendance';
 import { formatHours, formatMinutes } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 
@@ -129,15 +129,33 @@ export function SessionList({ sessions = [] }) {
   );
 }
 
-// Month figures from /attendance/stats: rate, late arrivals, days present, hours.
-export function MonthStats({ stats, onPress }) {
-  const rate = attendanceRate(stats);
+// Month figures from /attendance/stats. Pass `today` (the own, current-month record) to count the open session live.
+export function MonthStats({ stats, year, month, holidays, today, onPress }) {
+  const live = !!activeSession(today);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (!live) return undefined;
+    const t = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(t);
+  }, [live]);
+
+  const days = workingDays(year, month, holidays);
+  const present = presentDays(stats);
+  // Server totals only include today's hours as of the last punch; swap them for the live figure.
+  const hours = Math.max(0, (stats?.totalWorkHours || 0) - (today?.workHours || 0) + (today ? workedSeconds(today, new Date()) / 3600 : 0));
+  const secs = Math.floor(hours * 3600);
+  const left = Math.max(0, MONTHLY_HOURS_TARGET - hours);
+  const done = Math.min(1, hours / MONTHLY_HOURS_TARGET);
   return (
     <TileGrid>
-      <KpiTile label="Attendance rate" value={rate == null ? '—' : `${rate}%`} sub="Present incl. WFH" onPress={onPress} />
+      <KpiTile label="Days present" value={`${present}/${days}`} sub={`${stats?.wfh || 0} WFH · ${stats?.half_day || 0} half · ${stats?.absent || 0} absent`} onPress={onPress} />
       <KpiTile label="Late arrivals" value={stats?.late ?? 0} alert={stats?.late > 0} onPress={onPress} />
-      <KpiTile label="Days present" value={(stats?.present || 0) + (stats?.wfh || 0)} sub={`${stats?.wfh || 0} WFH · ${stats?.half_day || 0} half · ${stats?.absent || 0} absent`} onPress={onPress} />
-      <KpiTile label="Hours worked" value={formatHours(stats?.totalWorkHours)} sub={`${formatHours(stats?.totalOvertime)} overtime`} onPress={onPress} />
+      <KpiTile label="Hours worked" value={`${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`} suffix={`${secs % 60}s`} sub={`${formatHours(stats?.totalOvertime)} overtime`} onPress={onPress} />
+      <KpiTile label={`Left of ${MONTHLY_HOURS_TARGET}h target`} value={left ? formatHours(left) : 'Done'} sub={`${formatHours(hours)} of ${MONTHLY_HOURS_TARGET}h done`} onPress={onPress}>
+        <View className="h-2 overflow-hidden rounded-full bg-surface-2" accessible={false}>
+          <View className="h-full rounded-full bg-accent" style={{ width: `${done * 100}%` }} />
+        </View>
+      </KpiTile>
     </TileGrid>
   );
 }

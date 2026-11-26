@@ -25,7 +25,7 @@ export const attendanceApi = api.injectEndpoints({
         url: '/attendance/break/start',
         method: 'POST',
       }),
-      invalidatesTags: ['Attendance', 'AttendanceToday'],
+      invalidatesTags: ['Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 
     endBreak: builder.mutation({
@@ -33,7 +33,7 @@ export const attendanceApi = api.injectEndpoints({
         url: '/attendance/break/end',
         method: 'POST',
       }),
-      invalidatesTags: ['Attendance', 'AttendanceToday'],
+      invalidatesTags: ['Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 
     getTodayStatus: builder.query({

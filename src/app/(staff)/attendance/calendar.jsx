@@ -3,12 +3,12 @@ import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useSelector } from 'react-redux';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { Card, DashboardState, MonthStats, PageHeader, Pressable, Screen, Text, usePullRefresh } from '@/components';
+import { Card, DashboardState, PageHeader, Pressable, Screen, Text, usePullRefresh } from '@/components';
 import { statusMeta } from '@/components/AttendanceParts';
-import { useGetAttendanceCalendarQuery, useGetAttendanceStatsQuery, useGetHolidaysQuery } from '@/services/attendanceApi';
-import { ATTENDANCE_STATUS } from '@/constants';
+import { useGetAttendanceCalendarQuery, useGetHolidaysQuery } from '@/services/attendanceApi';
+import { ATTENDANCE_STATUS, LATE_DOT } from '@/constants';
 import { useTheme } from '@/constants/theme';
-import { monthRange, ymd } from '@/utils/attendance';
+import { ymd } from '@/utils/attendance';
 import { cn } from '@/utils/cn';
 
 const WEEK = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -22,9 +22,8 @@ export default function AttendanceCalendar() {
   const employeeId = employee || me._id;
   const [{ year, month }, setYm] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 }));
   const cal = useGetAttendanceCalendarQuery({ employeeId, year, month });
-  const stats = useGetAttendanceStatsQuery({ employee: employee || undefined, ...monthRange(year, month) });
   const { data: hol } = useGetHolidaysQuery({ year, page: 1, limit: 100 });
-  const refreshControl = usePullRefresh(() => Promise.all([cal.refetch(), stats.refetch()]));
+  const refreshControl = usePullRefresh(() => cal.refetch());
 
   const shift = (d) => setYm(({ year: y, month: m }) => {
     const n = new Date(y, m - 1 + d, 1);
@@ -71,7 +70,7 @@ export default function AttendanceCalendar() {
                     <Text className={cn('font-body-medium text-sm tabular-nums', d > today && 'text-muted')}>{Number(d.slice(8))}</Text>
                     <View className="h-1.5 flex-row gap-0.5">
                       {m && <View className={cn('h-1.5 w-1.5 rounded-full', m.dot)} />}
-                      {r?.isLate && <View className="h-1.5 w-1.5 rounded-full bg-danger" />}
+                      {r?.isLate && <View className={cn('h-1.5 w-1.5 rounded-full', LATE_DOT)} />}
                     </View>
                   </Pressable>
                 </View>
@@ -87,13 +86,11 @@ export default function AttendanceCalendar() {
             </View>
           ))}
           <View className="flex-row items-center gap-1.5">
-            <View className="flex-row gap-0.5"><View className="h-2 w-2 rounded-full bg-success" /><View className="h-2 w-2 rounded-full bg-danger" /></View>
-            <Text className="text-xs text-muted">Late (extra red dot)</Text>
+            <View className={cn('h-2 w-2 rounded-full', LATE_DOT)} />
+            <Text className="text-xs text-muted">Late (extra dot)</Text>
           </View>
         </View>
       </Card>
-
-      <MonthStats stats={stats.data?.data} />
     </Screen>
   );
 }

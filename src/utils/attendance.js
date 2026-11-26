@@ -70,10 +70,20 @@ export const runAction = async (promise, done, failTitle = "Couldn't save") => {
   }
 };
 
-// Web formula: present + WFH + half of each half day, over working days with a record; leave and holidays don't count.
-export const attendanceRate = (s = {}) => {
-  const denom = (s.present || 0) + (s.wfh || 0) + (s.absent || 0) + (s.half_day || 0);
-  return denom ? Math.round((((s.present || 0) + (s.wfh || 0) + (s.half_day || 0) * 0.5) / denom) * 100) : null;
+export const MONTHLY_HOURS_TARGET = 240;
+
+// Days worked in the month: present + WFH, with each half day counting as 0.5.
+export const presentDays = (s = {}) => (s.present || 0) + (s.wfh || 0) + (s.half_day || 0) * 0.5;
+
+// Working days in the month: every day except Sundays (the server's only weekend) and holidays.
+export const workingDays = (year, month, holidays = []) => {
+  const off = new Set(holidays.map((h) => ymd(h.date)));
+  let n = 0;
+  for (let d = 1; d <= new Date(year, month, 0).getDate(); d++) {
+    const day = new Date(year, month - 1, d);
+    if (day.getDay() !== 0 && !off.has(ymd(day))) n++;
+  }
+  return n;
 };
 
 export const monthRange = (year, month) => ({ dateFrom: ymd(new Date(year, month - 1, 1)), dateTo: ymd(new Date(year, month, 0)) });

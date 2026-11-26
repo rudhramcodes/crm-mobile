@@ -74,13 +74,14 @@ export function BarList({ rows, max }) {
 
 // Big Goldenbook number with the ₹ and unit smaller, as separate texts on one baseline: nesting the Manrope ₹ inside
 // the Goldenbook number pushes the digits up and clips them on iOS. Goldenbook has no ₹ glyph.
-export function Numeral({ value, alert, className }) {
+export function Numeral({ value, suffix, alert, className }) {
   const [pre, num, unit] = splitNumber(value);
   return (
     <View className={cn('flex-row items-baseline', className)}>
       {!!pre && <Text className="font-body-semibold text-xl text-muted">{pre}</Text>}
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} className={cn('shrink font-display text-[34px] leading-[40px] tabular-nums', alert ? 'text-danger' : 'text-ink')}>{num}</Text>
       {!!unit && <Text className={cn('font-display-regular text-2xl', alert ? 'text-danger' : 'text-ink')}>{unit}</Text>}
+      {!!suffix && <Text className="font-display-regular text-xl tabular-nums text-muted"> {suffix}</Text>}
     </View>
   );
 }
@@ -227,14 +228,14 @@ export function DotGrid({ groups, total }) {
 }
 
 // Home KPI tile: label and ↗, the number, then an optional small visual and a muted line pinned to the bottom.
-export function KpiTile({ label, value, sub, alert, onPress, children }) {
+export function KpiTile({ label, value, suffix, sub, alert, onPress, children }) {
   return (
-    <Card onPress={onPress} accessibilityLabel={[label, value, sub].filter(Boolean).join(', ')} className={cn('flex-1 gap-3 p-4', alert && 'border-transparent bg-danger/10')}>
+    <Card onPress={onPress} accessibilityLabel={[label, value, suffix, sub].filter(Boolean).join(', ')} className={cn('flex-1 gap-3 p-4', alert && 'border-transparent bg-danger/10')}>
       <View className="flex-row items-start gap-2">
         <Text numberOfLines={2} className="flex-1 font-body-medium text-sm">{label}</Text>
         {onPress && <ArrowButton small />}
       </View>
-      <Numeral value={value} alert={alert} />
+      <Numeral value={value} suffix={suffix} alert={alert} />
       {children}
       {!!sub && <Text numberOfLines={1} className={cn('mt-auto text-xs', alert ? 'text-danger' : 'text-muted')}>{sub}</Text>}
     </Card>

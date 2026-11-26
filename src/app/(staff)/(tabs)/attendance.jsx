@@ -4,10 +4,10 @@ import { useSelector } from 'react-redux';
 import { BarChart3, CalendarDays, CalendarHeart, ChevronRight, Clock3, FilePenLine, ListChecks, Plane } from 'lucide-react-native';
 import { Badge, ClockPanel, Heading, ListRow, MonthStats, Screen, Section, Text, usePullRefresh } from '@/components';
 import {
-  useGetAttendanceStatsQuery, useGetLeavesQuery, useGetRegularizationRequestsQuery, useGetTodayStatusQuery,
+  useGetAttendanceStatsQuery, useGetHolidaysQuery, useGetLeavesQuery, useGetRegularizationRequestsQuery, useGetTodayStatusQuery,
 } from '@/services/attendanceApi';
 import { useTheme } from '@/constants/theme';
-import { isAdmin, isLead } from '@/utils/attendance';
+import { isAdmin, isLead, monthRange } from '@/utils/attendance';
 
 const todayLabel = () => new Intl.DateTimeFormat('en-IN', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
 // Pending count next to the chevron; ListRow drops its own chevron whenever `right` is set.
@@ -25,7 +25,11 @@ export default function AttendanceTab() {
   const user = useSelector((s) => s.auth.user);
   const lead = isLead(user);
   const today = useGetTodayStatusQuery(undefined, { pollingInterval: 60000 });
-  const stats = useGetAttendanceStatsQuery({});
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const stats = useGetAttendanceStatsQuery(monthRange(year, month));
+  const holidays = useGetHolidaysQuery({ year, page: 1, limit: 100 });
   const regs = useGetRegularizationRequestsQuery('pending', { skip: !lead });
   const leaves = useGetLeavesQuery({ status: 'pending', page: 1, limit: 1 });
   const refreshControl = usePullRefresh(() => Promise.all([today.refetch(), stats.refetch(), leaves.refetch(), ...(lead ? [regs.refetch()] : [])]));
@@ -42,7 +46,7 @@ export default function AttendanceTab() {
       <ClockPanel />
 
       <Section title="This month" sub="Your attendance so far" action="Calendar" onAction={() => router.push('/attendance/calendar')}>
-        <MonthStats stats={stats.data?.data} onPress={() => router.push('/attendance/calendar')} />
+        <MonthStats stats={stats.data?.data} year={year} month={month} holidays={holidays.data?.data} today={today.data?.data?.attendance} onPress={() => router.push('/attendance/calendar')} />
       </Section>
 
       <View>

@@ -1,5 +1,5 @@
 // Tokens and type scale from DESIGN.md; colour values live in src/constants/colors.js.
-const { colors, brand } = require('./src/constants/colors');
+const { colors, brand, status } = require('./src/constants/colors');
 
 const rgb = (hex) => hex.match(/\w\w/g).map((h) => parseInt(h, 16)).join(' ');
 const vars = (set) => Object.fromEntries(Object.entries(set).map(([k, v]) => [`--${k}`, rgb(v)]));
@@ -12,6 +12,7 @@ module.exports = {
     extend: {
       colors: {
         ...brand,
+        ...status,
         ...Object.fromEntries(Object.keys(colors.light).map((k) => [k, `rgb(var(--${k}) / <alpha-value>)`])),
       },
       fontFamily: {

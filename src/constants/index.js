@@ -252,14 +252,16 @@ export const SOCKET_URL = reachable(process.env.EXPO_PUBLIC_SOCKET_URL);
 
 // Attendance day statuses. `dot` fills calendar cells and legends; every cell also carries the word for screen readers.
 export const ATTENDANCE_STATUS = [
-  { value: 'present', label: 'Present', color: 'bg-success/15 text-success', dot: 'bg-success' },
-  { value: 'wfh', label: 'WFH', color: 'bg-accent/15 text-accent-ink', dot: 'bg-accent' },
-  { value: 'half_day', label: 'Half day', color: 'bg-sand text-brown', dot: 'bg-sand' },
-  { value: 'absent', label: 'Absent', color: 'bg-danger/15 text-danger', dot: 'bg-danger' },
-  { value: 'leave', label: 'Leave', color: 'bg-ink text-bg', dot: 'bg-ink' },
-  { value: 'holiday', label: 'Holiday', color: 'bg-surface-2 text-ink', dot: 'bg-muted' },
-  { value: 'weekend', label: 'Weekend', color: 'bg-surface-2 text-muted', dot: 'bg-line' },
+  { value: 'present', label: 'Present', color: 'bg-st-present/15 text-st-present', dot: 'bg-st-present' },
+  { value: 'wfh', label: 'WFH', color: 'bg-st-wfh/15 text-st-wfh', dot: 'bg-st-wfh' },
+  { value: 'half_day', label: 'Half day', color: 'bg-st-half/25 text-ink', dot: 'bg-st-half' },
+  { value: 'absent', label: 'Absent', color: 'bg-st-absent/15 text-st-absent', dot: 'bg-st-absent' },
+  { value: 'leave', label: 'Leave', color: 'bg-st-leave/15 text-st-leave', dot: 'bg-st-leave' },
+  { value: 'holiday', label: 'Holiday', color: 'bg-st-holiday/15 text-st-holiday', dot: 'bg-st-holiday' },
+  { value: 'weekend', label: 'Weekend', color: 'bg-st-weekend/15 text-st-weekend', dot: 'bg-st-weekend' },
 ];
+// Extra dot on a calendar day clocked in late.
+export const LATE_DOT = 'bg-st-late';
 
 export const LEAVE_TYPES = [
   { value: 'casual', label: 'Casual' },

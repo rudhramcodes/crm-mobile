@@ -14,4 +14,10 @@ const colors = {
 // Fixed brand colours from the kit; the same in both themes.
 const brand = { ochre: '#b47737', beige: '#f6f1e0', brown: '#3b2515', sand: '#dcc19d' };
 
-module.exports = { colors, brand };
+// Attendance status colours: one hue each, mid-tones that read on both the light and dark surfaces.
+const status = {
+  'st-present': '#4f8a3a', 'st-wfh': '#3b78c4', 'st-half': '#d4a017', 'st-absent': '#c2412d',
+  'st-leave': '#8a5cc2', 'st-holiday': '#1f9a8a', 'st-weekend': '#9b9387', 'st-late': '#e07b24',
+};
+
+module.exports = { colors, brand, status };
