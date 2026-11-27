@@ -71,6 +71,9 @@
           "dark": {
             "image": "./assets/images/splash-icon.png",
             "backgroundColor": "#1C120B"
+          },
+          "android": {
+            "imageWidth": 160
           }
         }
       ],

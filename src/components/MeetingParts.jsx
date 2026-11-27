@@ -220,7 +220,7 @@ export function AttendeePicker({ users, value, onChange, loading }) {
   const toggle = (id) => onChange(value.includes(id) ? value.filter((x) => x !== id) : [...value, id]);
   return (
     <View className="gap-2">
-      <Text className="font-body-medium text-sm">Attendees & team invites</Text>
+      <Text className="font-body-medium text-sm">Attendees & team invites *</Text>
       <Text className="text-sm text-muted">{value.length} {value.length === 1 ? 'attendee' : 'attendees'} assigned</Text>
       <Input value={q} onChangeText={setQ} placeholder="Search colleagues..." accessibilityLabel="Search colleagues" autoCorrect={false} autoCapitalize="none" right={<View className="h-11 w-11 items-center justify-center"><Search size={18} color={theme.muted} /></View>} />
       <View className="overflow-hidden rounded-2xl border border-line">

@@ -73,7 +73,8 @@ const Section = ({ children }) => <Text className="pt-2 text-caption text-muted"
 const idOf = (x) => (x && typeof x === "object" ? x._id : x) || "";
 const one = (v) => (typeof v === "string" ? v : "");
 // d: prefills from the URL (client page, calendar day, or an employee's meeting request).
-const initial = (m, d = {}) => ({
+// meId: new meetings start with the organizer ticked so they get the reminder; untick to skip it.
+const initial = (m, d = {}, meId = "") => ({
   title: m?.title || one(d.title),
   brand: m?.brand || "",
   status: m?.status || "scheduled",
@@ -86,7 +87,7 @@ const initial = (m, d = {}) => ({
   occurrences: "3",
   meetingLink: m?.meetingLink || "",
   location: m?.location || "",
-  attendees: m ? (m.attendees || []).map(idOf) : one(d.attendee) ? [d.attendee] : [],
+  attendees: m ? (m.attendees || []).map(idOf) : [...new Set([meId, one(d.attendee)].filter(Boolean))],
   notes: m?.notes || "",
 });
 
@@ -96,12 +97,12 @@ function MeetingForm({ meeting, defaults }) {
   const [create, c] = useCreateMeetingMutation();
   const [update, u] = useUpdateMeetingMutation();
   const [generate, g] = useGenerateMeetingLinkMutation();
-  const [f, setF] = useState(() => initial(meeting, defaults));
+  const me = useSelector((st) => st.auth.user);
+  const [f, setF] = useState(() => initial(meeting, defaults, me?._id));
   const [startRaw, setStartRaw] = useState(toDisplay(f.startTime));
   const set = (patch) => setF((x) => ({ ...x, ...patch }));
   const { message, fieldErrors } = apiError(c.error || u.error);
   const err = (k) => getFieldError(fieldErrors, k);
-  const me = useSelector((st) => st.auth.user);
   const theme = useTheme();
 
   // Clash check as you pick: that day's meetings, same rule as the server (overlap + a shared person).
@@ -141,7 +142,7 @@ function MeetingForm({ meeting, defaults }) {
   const badLink = !!link && !LINK.test(link);
   const occ = Number(f.occurrences);
   const badOcc = !editing && f.recurrence !== "none" && !(occ >= 2 && occ <= 60);
-  const ready = f.title.trim().length >= 2 && f.date && f.startTime && f.endTime && minutes > 0 && !clash && !badLink && !badOcc;
+  const ready = f.title.trim().length >= 2 && f.date && f.startTime && f.endTime && minutes > 0 && f.attendees.length > 0 && !clash && !badLink && !badOcc;
 
   const makeLink = async (provider) => {
     if (!f.title.trim() || !f.date || !f.startTime || !f.endTime) {
