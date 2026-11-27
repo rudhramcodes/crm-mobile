@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { Alert, Button, Chip, DateField, Input, Screen, SheetHeader, Text, leaveDays, backTo } from '@/components';
 import { useApplyLeaveMutation, useGetLeaveBalanceQuery } from '@/services/attendanceApi';
@@ -33,7 +33,7 @@ export default function ApplyLeave() {
   };
 
   return (
-    <Screen scroll edges={['bottom']} className="gap-4 pt-6">
+    <Screen scroll edges={Platform.OS === 'android' ? ['top', 'bottom'] : ['bottom']} className="gap-4 pt-6">
       <SheetHeader title="Apply for leave" sub="Your manager is notified right away." closeLabel="Cancel" />
       <Alert message={fieldErrors.length ? '' : message} />
       <View className="gap-1.5">
@@ -48,7 +48,7 @@ export default function ApplyLeave() {
           {HALVES.map((h) => <Chip key={h.value} label={h.label} active={halfDay === h.value} onPress={() => setHalfDay(h.value)} />)}
         </View>
       </View>
-      <DateField label={halfDay ? 'Date' : 'From'} value={startDate} onChange={(d) => { setStart(d); if (d > endDate) setEnd(d); }} error={err('startDate')} />
+      <DateField label={halfDay ? 'Date' : 'From'} value={startDate} onChange={(d) => { setStart(d); if (d > endDate) setEnd(d); }} minDate={ymd()} error={err('startDate')} />
       {!halfDay && <DateField label="To" value={endDate} onChange={setEnd} minDate={startDate} error={err('endDate')} />}
       {days > 0 && (
         <Alert
