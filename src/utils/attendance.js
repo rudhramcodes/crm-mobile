@@ -93,7 +93,8 @@ export const runAction = async (promise, done, failTitle = "Couldn't save") => {
   }
 };
 
-export const MONTHLY_HOURS_TARGET = 240;
+// shortcut: same day length for everyone (shift minus a 1 h lunch); read it from each person's shift when shifts differ.
+export const DAILY_HOURS_TARGET = 8;
 
 // Days worked in the month: present + WFH, with each half day counting as 0.5.
 export const presentDays = (s = {}) => (s.present || 0) + (s.wfh || 0) + (s.half_day || 0) * 0.5;

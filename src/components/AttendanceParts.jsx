@@ -10,7 +10,7 @@ import { Button } from './Button';
 import { KpiTile, SplitBar, TileGrid } from './DashboardParts';
 import { ATTENDANCE_STATUS, REQUEST_STATUS } from '@/constants';
 import { useTheme } from '@/constants/theme';
-import { activeSession, clockTime, MONTHLY_HOURS_TARGET, placeOf, presentDays, workedSeconds, workingDays, ymd } from '@/utils/attendance';
+import { activeSession, clockTime, DAILY_HOURS_TARGET, placeOf, presentDays, workedSeconds, workingDays, ymd } from '@/utils/attendance';
 import { formatHours, formatMinutes } from '@/utils/formatters';
 import { cn } from '@/utils/cn';
 
@@ -144,14 +144,15 @@ export function MonthStats({ stats, year, month, holidays, today, onPress }) {
   // Server totals only include today's hours as of the last punch; swap them for the live figure.
   const hours = Math.max(0, (stats?.totalWorkHours || 0) - (today?.workHours || 0) + (today ? workedSeconds(today, new Date()) / 3600 : 0));
   const secs = Math.floor(hours * 3600);
-  const left = Math.max(0, MONTHLY_HOURS_TARGET - hours);
-  const done = Math.min(1, hours / MONTHLY_HOURS_TARGET);
+  const target = days * DAILY_HOURS_TARGET;
+  const left = Math.max(0, target - hours);
+  const done = target ? Math.min(1, hours / target) : 1;
   return (
     <TileGrid>
       <KpiTile label="Days present" value={`${present}/${days}`} sub={`${stats?.wfh || 0} WFH · ${stats?.half_day || 0} half · ${stats?.absent || 0} absent`} onPress={onPress} />
       <KpiTile label="Late arrivals" value={stats?.late ?? 0} alert={stats?.late > 0} onPress={onPress} />
       <KpiTile label="Hours worked" value={`${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`} suffix={`${secs % 60}s`} sub={`${formatHours(stats?.totalOvertime)} overtime`} onPress={onPress} />
-      <KpiTile label={`Left of ${MONTHLY_HOURS_TARGET}h target`} value={left ? formatHours(left) : 'Done'} sub={`${formatHours(hours)} of ${MONTHLY_HOURS_TARGET}h done`} onPress={onPress}>
+      <KpiTile label={`Left of ${target}h target`} value={left ? formatHours(left) : 'Done'} sub={`${formatHours(hours)} of ${target}h done`} onPress={onPress}>
         <View className="h-2 overflow-hidden rounded-full bg-surface-2" accessible={false}>
           <View className="h-full rounded-full bg-accent" style={{ width: `${done * 100}%` }} />
         </View>
