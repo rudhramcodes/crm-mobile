@@ -1,15 +1,14 @@
 import { useState } from 'react';
-import { ActionSheetIOS, ActivityIndicator, Alert, Platform, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { useSelector } from 'react-redux';
-import { Ellipsis, ListTodo, Plus, Search, SlidersHorizontal } from 'lucide-react-native';
+import { ListTodo, Plus, Search, SlidersHorizontal } from 'lucide-react-native';
 import {
-  BulkBar, Button, DashboardState, EmptyState, FilterPanel, Heading, Input, ListView, MyDayView, Pressable, SELECT_HINT_KEY, Screen, SelectHint, SwipeIntro, Tabs, Text, showToast, usePullRefresh,
+  BulkBar, Button, DashboardState, EmptyState, FilterPanel, Heading, Input, ListView, MyDayView, Pressable, SELECT_HINT_KEY, Screen, SelectHint, SwipeIntro, Tabs, Text, usePullRefresh,
 } from '@/components';
 import { useGetTasksQuery } from '@/services/taskApi';
 import { useTheme } from '@/constants/theme';
-import { shareCsv } from '@/utils/tasks';
 import { setPref } from '@/utils/prefs';
 
 const VIEWS = [{ value: 'day', label: 'My Day' }, { value: 'list', label: 'All tasks' }];
@@ -17,7 +16,7 @@ const EMPTY = { status: '', priority: '', project: '', assignedTo: '', assigneeN
 // Start on what still needs doing; employees start on their own work, managers and admins on everyone's.
 const startFilters = (me) => ({ ...EMPTY, status: 'open', ...(me.role === 'employee' && { assignedTo: me._id, assigneeName: 'Me' }) });
 
-// Tasks hub: My Day (my work) and All tasks (filtered list), plus search, bulk select, and Insights / CSV export in the ⋯ menu.
+// Tasks hub: My Day (my work) and All tasks (filtered list), plus search and bulk select.
 export default function TasksTab() {
   const theme = useTheme();
   const me = useSelector((s) => s.auth.user);
@@ -50,7 +49,6 @@ export default function TasksTab() {
   const tasks = [...new Map([...(q.data?.data || []), ...(day ? doneToday.data?.data || [] : [])].map((t) => [t._id, t])).values()];
   const total = q.data?.pagination?.total ?? tasks.length;
   const active = day ? 0 : ['status', 'priority', 'project', 'assignedTo'].filter((k) => f[k] !== start[k]).length;
-  const round = 'h-11 w-11 items-center justify-center rounded-full bg-surface-2';
 
   // A new filter or search clears any selection, so hidden tasks are never bulk-changed.
   const set = (patch) => { setF((x) => ({ ...x, ...patch })); setSelecting(false); setSelected([]); };
@@ -60,19 +58,6 @@ export default function TasksTab() {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   };
   const clear = () => { setSelecting(false); setSelected([]); };
-  const exportAll = () => (tasks.length ? shareCsv(tasks).catch((e) => showToast({ title: "Couldn't export", message: e.message })) : showToast({ title: 'No tasks to export' }));
-  const insights = () => router.push({ pathname: '/tasks/insights', params: { q: JSON.stringify(params) } });
-  // Rarely used, so they live behind ⋯ instead of taking header space every day.
-  const menu = () => {
-    const actions = [['Insights', insights], ['Export as CSV', exportAll]];
-    if (Platform.OS === 'ios') {
-      return ActionSheetIOS.showActionSheetWithOptions(
-        { options: [...actions.map(([t]) => t), 'Cancel'], cancelButtonIndex: actions.length, tintColor: theme.ink },
-        (i) => actions[i]?.[1](),
-      );
-    }
-    Alert.alert('Tasks', undefined, [...actions.map(([text, onPress]) => ({ text, onPress })), { text: 'Cancel', style: 'cancel' }], { cancelable: true });
-  };
 
   return (
     <Screen tab scroll className="gap-4 pt-6" refreshControl={refreshControl}>
@@ -81,7 +66,6 @@ export default function TasksTab() {
           <Text className="text-sm text-muted">{day ? `${total} on my plate` : `${total} ${total === 1 ? 'task' : 'tasks'}`}</Text>
           <Heading>Tasks</Heading>
         </View>
-        <Pressable onPress={menu} accessibilityLabel="More: Insights, Export" className={round}><Ellipsis size={20} color={theme.ink} /></Pressable>
         <Button title="New" icon={Plus} size="sm" onPress={() => router.push('/tasks/new')} />
       </View>
 
