@@ -21,6 +21,7 @@ function EntryForm({ employee, name, date, setDate, record, onChangeEmployee }) 
   const [status, setStatus] = useState(record?.status || 'present');
   const [inTime, setIn] = useState(toDisplay(hhmm(sessions[0]?.clockIn?.time)));
   const [outTime, setOut] = useState(toDisplay(hhmm(sessions.at(-1)?.clockOut?.time)));
+  const [breakMin, setBreak] = useState(String(record?.totalBreakMinutes || ''));
   const [isWFH, setWFH] = useState(!!record?.isWFH);
   const [notes, setNotes] = useState('');
   const { message, fieldErrors } = apiError(error);
@@ -35,6 +36,7 @@ function EntryForm({ employee, name, date, setDate, record, onChangeEmployee }) 
       status,
       clockInTime: off ? undefined : parseTime(inTime) || undefined,
       clockOutTime: off ? undefined : parseTime(outTime) || undefined,
+      breakMinutes: off ? undefined : Number(breakMin) || 0,
       isWFH: off ? false : isWFH || status === 'wfh',
       notes: notes.trim(),
     };
@@ -62,6 +64,7 @@ function EntryForm({ employee, name, date, setDate, record, onChangeEmployee }) 
         <>
           <Input label="Clock in" value={inTime} onChangeText={setIn} placeholder="9:30 AM" autoCapitalize="none" error={badTime(inTime) ? 'Use a time like 9:30 AM' : err('clockInTime')} />
           <Input label="Clock out" value={outTime} onChangeText={setOut} placeholder="6:30 PM" autoCapitalize="none" hint="Leave empty to keep the session open." error={badTime(outTime) ? 'Use a time like 6:30 PM' : err('clockOutTime')} />
+          <Input label="Break (minutes)" value={breakMin} onChangeText={(v) => setBreak(v.replace(/\D/g, ''))} placeholder="0" keyboardType="number-pad" maxLength={4} hint="Taken off the worked hours." error={err('breakMinutes')} />
           <View className="flex-row items-center gap-3">
             <Text className="flex-1 font-body-medium">Worked from home</Text>
             <Toggle value={isWFH || status === 'wfh'} onValueChange={setWFH} label="Worked from home" />
