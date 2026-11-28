@@ -48,6 +48,8 @@ export function ClockPanel() {
   const holiday = holidays?.data?.find((h) => ymd(h.date) === ymd());
   const blocked = !active && blockReason(record, holiday);
   const hasSessions = record?.sessions?.some((s) => s.clockIn?.time);
+  // The server rejects a WFH clock-in without a reason of 3+ characters
+  const needsReason = wfh && wfhReason.trim().length < 3;
 
   // Get the GPS going while the person looks at the card, so Clock in doesn't wait on it.
   useEffect(() => { if (!active) warmLocation(); }, [active]);
@@ -102,7 +104,7 @@ export function ClockPanel() {
               </View>
               <Toggle value={wfh} onValueChange={(v) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setWfh(v); }} label="Working from home" />
             </View>
-            {wfh && <Input placeholder="Why are you working from home?" value={wfhReason} onChangeText={setWfhReason} maxLength={500} />}
+            {wfh && <Input placeholder="Why are you working from home?" accessibilityLabel="Reason for working from home" value={wfhReason} onChangeText={setWfhReason} maxLength={500} />}
           </View>
         )}
 
@@ -116,7 +118,7 @@ export function ClockPanel() {
             <Button title="Clock out" icon={LogOut} className="flex-1" onPress={() => router.push('/attendance/clock-out')} />
           </View>
         ) : !blocked && (
-          <Button title={busy || (hasSessions ? 'Clock in again' : 'Clock in')} icon={LogIn} loading={!!busy} disabled={wfh && wfhReason.trim().length < 3} onPress={onClockIn} />
+          <Button title={busy || (hasSessions ? 'Clock in again' : 'Clock in')} icon={LogIn} loading={!!busy} disabled={needsReason} onPress={onClockIn} />
         )}
       </Card>
 
