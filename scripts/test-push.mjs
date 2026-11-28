@@ -2,11 +2,13 @@
 // Sends the real clock-in / clock-out reminder push to one phone, shaped like the server's (CRM/server clockReminder.job.js + pushStyle.js).
 //   npm run push:out      # "Clock out before you leave", with the Clock out button
 //   npm run push:in       # "Time to clock in"
-// The phone's token comes by itself: the app in dev posts it to the Expo dev server, which saves .push-token.json
-// (metro.config.js). A token as the second argument overrides it.
+// Goes to every phone that opened the dev app: each posts its token to the Expo dev server, which keeps them in
+// .push-token.json (metro.config.js). Delete that file to forget old phones. A token as the second argument sends to just that one.
 import { existsSync, readFileSync } from 'node:fs';
 
-const phone = existsSync('.push-token.json') ? JSON.parse(readFileSync('.push-token.json', 'utf8')) : null;
+const saved = existsSync('.push-token.json') ? JSON.parse(readFileSync('.push-token.json', 'utf8')) : {};
+const phones = saved.os ? { [saved.token || '_noToken']: saved } : saved; // older one-phone file
+const phone = phones._noToken;
 
 const whyNoToken = (p) => {
   if (p.error) return p.os === 'android' ? `${p.error}\nExpo Go on Android can't get push since SDK 53; use a development build.` : p.error;
@@ -28,26 +30,32 @@ const PUSHES = {
   },
 };
 
-const [kind, token = phone?.token] = process.argv.slice(2);
+const [kind, arg] = process.argv.slice(2);
 if (!PUSHES[kind]) {
   console.error('Usage: npm run push:in | npm run push:out   (or: node scripts/test-push.mjs in|out [ExponentPushToken[...]])');
   process.exit(1);
 }
-if (!token?.startsWith('ExponentPushToken[')) {
+const isToken = (t) => t?.startsWith('ExponentPushToken[');
+const tokens = arg ? [arg].filter(isToken) : Object.keys(phones).filter(isToken);
+if (!tokens.length) {
   if (!phone) console.error('No push token yet. Restart Expo (Ctrl+C, then npx expo start) and reload the app on your phone while signed in.');
   else console.error(`The phone (${phone.os}, at ${phone.at}) has no push token: ${whyNoToken(phone)}`);
   process.exit(1);
 }
+if (phone && !arg) console.log(`Also a phone (${phone.os}, at ${phone.at}) without a token: ${whyNoToken(phone)}`);
 
 const res = await fetch('https://exp.host/--/api/v2/push/send', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-  body: JSON.stringify({ to: token, sound: 'default', priority: 'high', ...PUSHES[kind] }),
+  body: JSON.stringify(tokens.map((to) => ({ to, sound: 'default', priority: 'high', ...PUSHES[kind] }))),
 });
-const { data, errors } = await res.json();
-const ticket = Array.isArray(data) ? data[0] : data;
-if (!res.ok || errors || ticket?.status !== 'ok') {
-  console.error('Push failed:', JSON.stringify(errors || ticket));
+const { data = [], errors } = await res.json();
+if (!res.ok || errors) {
+  console.error('Push failed:', JSON.stringify(errors));
   process.exit(1);
 }
-console.log(`Sent "${PUSHES[kind].title}" at ${new Date().toLocaleTimeString()}.`);
+data.forEach((ticket, i) => {
+  const who = `${phones[tokens[i]]?.os ?? 'phone'} …${tokens[i].slice(-5, -1)}`;
+  if (ticket.status === 'ok') console.log(`Sent "${PUSHES[kind].title}" to ${who} at ${new Date().toLocaleTimeString()}.`);
+  else { console.error(`Failed for ${who}: ${ticket.message}`); process.exitCode = 1; }
+});
