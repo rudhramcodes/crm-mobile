@@ -98,7 +98,7 @@ export async function showLocalNotification(n) {
       threadIdentifier: n.referenceId ? `${n.referenceModel || 'item'}:${n.referenceId}` : undefined,
       sound: sound ? 'default' : false,
     },
-    trigger: null,
+    trigger: n.inSeconds ? { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: n.inSeconds } : null,
   });
 }
 
@@ -127,10 +127,21 @@ export async function registerPush(dispatch, { ask = false } = {}) {
   }
 
   const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
+  devToken = data;
   const res = await dispatch(authApi.endpoints.registerPushToken.initiate(data));
   if (!res.error) pushToken = data;
   return perm;
 }
+
+// Dev only: hand this phone's push token, or why there is none, to the Expo dev server (metro.config.js),
+// so `npm run push:in|out` on the Mac reaches this phone.
+let devToken = null;
+export const tellDevServer = (info) => {
+  const host = Constants.expoConfig?.hostUri;
+  if (!__DEV__ || !host) return;
+  const body = { token: devToken, os: Platform.OS, isDevice: Device.isDevice, at: new Date().toISOString(), ...info };
+  fetch(`http://${host}/__push-token`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
+};
 
 // Sign out: this phone stops getting the user's pushes. Needs the access token, so run it before logout.
 export async function unregisterPush(dispatch) {

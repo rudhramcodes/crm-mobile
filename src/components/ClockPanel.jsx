@@ -16,7 +16,7 @@ import { MiniStats, SessionList } from './AttendanceParts';
 import {
   useClockInMutation, useEndBreakMutation, useGetHolidaysQuery, useGetTodayStatusQuery, useStartBreakMutation,
 } from '@/services/attendanceApi';
-import { activeSession, clockTime, getLocation, hms, runAction, workedSeconds, ymd } from '@/utils/attendance';
+import { activeSession, clockTime, getLocation, hms, runAction, warmLocation, workedSeconds, ymd } from '@/utils/attendance';
 import { apiError } from '@/utils/apiError';
 import { formatHours, formatMinutes } from '@/utils/formatters';
 
@@ -49,6 +49,9 @@ export function ClockPanel() {
   const blocked = !active && blockReason(record, holiday);
   const hasSessions = record?.sessions?.some((s) => s.clockIn?.time);
 
+  // Get the GPS going while the person looks at the card, so Clock in doesn't wait on it.
+  useEffect(() => { if (!active) warmLocation(); }, [active]);
+
   useEffect(() => {
     if (!active || openBreak) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -59,7 +62,7 @@ export function ClockPanel() {
     setError(null);
     setBusy(wfh ? 'Clocking in…' : 'Getting your location…');
     try {
-      const location = await getLocation();
+      const location = wfh ? undefined : await getLocation();
       setBusy('Clocking in…');
       await clockIn({ location, isWFH: wfh || undefined, wfhReason: wfh && wfhReason.trim() ? wfhReason.trim() : undefined }).unwrap();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

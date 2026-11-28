@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
@@ -6,7 +6,7 @@ import { CheckCircle2, LogOut } from 'lucide-react-native';
 import { Alert, Button, MiniStats, SheetHeader, Text, backTo } from '@/components';
 import { useClockOutMutation, useGetTodayStatusQuery } from '@/services/attendanceApi';
 import { useTheme } from '@/constants/theme';
-import { activeSession, clockTime, getLocation, workedSeconds } from '@/utils/attendance';
+import { activeSession, clockTime, getLocation, warmLocation, workedSeconds } from '@/utils/attendance';
 import { apiError } from '@/utils/apiError';
 import { formatHours, formatMinutes } from '@/utils/formatters';
 
@@ -19,6 +19,7 @@ export default function ClockOutSheet() {
   const [error, setError] = useState(null);
   const [done, setDone] = useState(null);
   const [now] = useState(() => Date.now());
+  useEffect(() => { warmLocation(); }, []);
 
   const record = data?.data?.attendance;
   const active = activeSession(record);
@@ -30,7 +31,7 @@ export default function ClockOutSheet() {
     setBusy(true);
     setError(null);
     try {
-      const res = await clockOut({ location: await getLocation() }).unwrap();
+      const res = await clockOut({ location: await getLocation({ wait: 1500 }) }).unwrap();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setDone(res.data.attendance);
     } catch (e) {

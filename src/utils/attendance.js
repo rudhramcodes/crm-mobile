@@ -40,19 +40,42 @@ export const placeOf = (loc) => {
   return loc.lat != null && loc.lng != null ? `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}` : null;
 };
 
-// Location is left out (never null) when there's no permission or no fix within 8 s; the server then decides.
-export const getLocation = async () => {
+// A fix this fresh and this accurate is reused, so a tap right after warmLocation() doesn't wait on the GPS.
+const FRESH_MS = 2 * 60 * 1000;
+const GOOD_METERS = 50; // the office geofence is 100 m
+let lastFix = null;
+let pendingFix = null;
+const coords = (f) => ({ lat: f.coords.latitude, lng: f.coords.longitude });
+const fresh = (f) => f && Date.now() - f.timestamp < FRESH_MS && (f.coords.accuracy ?? 0) <= GOOD_METERS;
+const askGps = () => {
+  pendingFix ||= Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
+    .then((f) => { lastFix = f; return f; })
+    .finally(() => { pendingFix = null; });
+  return pendingFix;
+};
+
+// Location is left out (never null) when there's no permission or no fix within `wait` ms; the server then decides.
+// Office clock-in needs it (100 m geofence), so it waits up to 8 s; clock-out doesn't, so callers pass a short wait.
+export const getLocation = async ({ wait = 8000 } = {}) => {
   try {
     const { granted } = await Location.requestForegroundPermissionsAsync();
     if (!granted) return undefined;
-    const fix = await Promise.race([
-      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
-      new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
-    ]);
-    return fix ? { lat: fix.coords.latitude, lng: fix.coords.longitude } : undefined;
+    if (fresh(lastFix)) return coords(lastFix);
+    const known = await Location.getLastKnownPositionAsync({ maxAge: FRESH_MS, requiredAccuracy: GOOD_METERS });
+    if (known) return coords(known);
+    const fix = await Promise.race([askGps(), new Promise((resolve) => setTimeout(() => resolve(null), wait))]);
+    return fix ? coords(fix) : undefined;
   } catch {
     return undefined;
   }
+};
+
+// Start a GPS fix in the background when a clock screen opens, so it's ready by the time the button is tapped.
+// Never prompts for permission: that waits for the tap.
+export const warmLocation = async () => {
+  try {
+    if ((await Location.getForegroundPermissionsAsync()).granted && !fresh(lastFix)) askGps().catch(() => {});
+  } catch { /* no GPS: the tap will say so */ }
 };
 
 // Runs a mutation with the house feedback: success haptic + toast, or error haptic + toast. Returns the result or null.

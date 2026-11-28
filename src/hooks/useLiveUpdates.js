@@ -7,14 +7,14 @@ import { api } from '@/services/api';
 import { attendanceApi } from '@/services/attendanceApi';
 import { notificationApi } from '@/services/notificationApi';
 import { connectSocket, disconnectSocket } from '@/services/socket';
-import { hasPush, registerPush, showLocalNotification } from '@/services/push';
+import { hasPush, registerPush, showLocalNotification, tellDevServer } from '@/services/push';
 import { usePushTaps } from './usePushTaps';
 import { showToast } from '@/components/Toast';
 import { notificationRoute } from '@/utils/notificationRoute';
 import { playNotificationSound } from '@/utils/notificationSound';
-import { flushQueue, sendOrQueue } from '@/utils/offlineQueue';
+import { flushQueue, isOfflineError, sendOrQueue } from '@/utils/offlineQueue';
 import { apiError } from '@/utils/apiError';
-import { clockTime, getLocation } from '@/utils/attendance';
+import { activeSession, clockTime, getLocation } from '@/utils/attendance';
 import { formatHours } from '@/utils/formatters';
 
 // Mark read and open; push data carries `id`, socket/REST notifications carry `_id`.
@@ -37,16 +37,49 @@ const sendWaiting = (dispatch) => flushQueue(dispatch)
   .then((n) => n && showToast({ tone: 'success', title: 'Back online', message: n === 1 ? 'Sent 1 action you took offline.' : `Sent ${n} actions you took offline.` }))
   .catch(() => {});
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const RETRIES = 5; // about 7 s in all
+
 // "Clock out" on the 6:10 PM reminder: clocks out right away, never queued, since the server stamps the time it arrives.
+// Tapped from the lock screen, the app wakes before the phone's network does, so the first tries can fail to connect:
+// retry those. If a try did reach the server but its answer was lost, the next one is refused ("not clocked in"),
+// so a refusal after a lost connection is checked against today's record before it's called a failure.
+let clockingOut = false;
 const quickClockOut = async (dispatch) => {
+  if (clockingOut) return;
+  clockingOut = true;
+  let lostOne = false;
   try {
-    const res = await dispatch(attendanceApi.endpoints.clockOut.initiate({ location: await getLocation() })).unwrap();
-    const a = res?.data?.attendance;
-    const out = a?.sessions?.at(-1)?.clockOut?.time;
-    showToast({ tone: 'success', title: out ? `Clocked out at ${clockTime(out)}` : 'Clocked out', message: a ? `Worked ${formatHours(a.workHours)} today.` : undefined });
+    const location = await getLocation({ wait: 1500 });
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const res = await dispatch(attendanceApi.endpoints.clockOut.initiate({ location })).unwrap();
+        const a = res?.data?.attendance;
+        const out = a?.sessions?.at(-1)?.clockOut?.time;
+        showToast({ tone: 'success', title: out ? `Clocked out at ${clockTime(out)}` : 'Clocked out', message: a ? `Worked ${formatHours(a.workHours)} today.` : undefined });
+        return;
+      } catch (e) {
+        if (isOfflineError(e) && attempt < RETRIES) {
+          lostOne = true;
+          await wait(attempt * 500);
+          continue;
+        }
+        if (lostOne && !isOfflineError(e)) {
+          const today = await dispatch(attendanceApi.endpoints.getTodayStatus.initiate(undefined, { forceRefetch: true, subscribe: false })).unwrap().catch(() => null);
+          const a = today?.data?.attendance;
+          if (a && !activeSession(a)) {
+            showToast({ tone: 'success', title: 'Clocked out', message: `Worked ${formatHours(a.workHours)} today.` });
+            return;
+          }
+        }
+        throw e;
+      }
+    }
   } catch (e) {
     showToast({ tone: 'error', title: "Couldn't clock out", message: apiError(e).message });
     router.push('/attendance');
+  } finally {
+    clockingOut = false;
   }
 };
 
@@ -91,11 +124,13 @@ export function useLiveUpdates() {
     // A repeat folded into an earlier notification: refresh the list, no toast or sound.
     socket.on('notification:updated', () => dispatch(api.util.invalidateTags(['Notification'])));
     socket.on('notification:unread', ({ count }) => dispatch(notificationApi.util.upsertQueryData('getUnreadCount', undefined, count)));
-    registerPush(dispatch).catch((e) => console.warn('[push]', e.message));
+    registerPush(dispatch)
+      .then((perm) => tellDevServer({ perm }))
+      .catch((e) => { console.warn('[push]', e.message); tellDevServer({ error: e.message }); });
     // Back from the background: anything may have changed while the socket slept.
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return;
-      dispatch(api.util.invalidateTags(['Task', 'Notification']));
+      dispatch(api.util.invalidateTags(['Task', 'Notification', 'AttendanceToday']));
       sendWaiting(dispatch);
     });
     return () => { sub.remove(); net.remove(); disconnectSocket(); };

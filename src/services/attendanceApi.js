@@ -1,5 +1,14 @@
 import { api } from './api';
 
+// Clock in/out answer with today's record: put it straight into today's status, so the timer stops (or starts)
+// at once even if the refetch fails while the phone is still waking up from a notification tap.
+const writeToday = async (_, { dispatch, queryFulfilled }) => {
+  try {
+    const attendance = (await queryFulfilled).data?.data?.attendance;
+    if (attendance) dispatch(api.util.updateQueryData('getTodayStatus', undefined, (draft) => { if (draft?.data) draft.data.attendance = attendance; }));
+  } catch { /* the error reaches the caller */ }
+};
+
 export const attendanceApi = api.injectEndpoints({
   endpoints: (builder) => ({
     clockIn: builder.mutation({
@@ -8,6 +17,7 @@ export const attendanceApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
+      onQueryStarted: writeToday,
       invalidatesTags: ['Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 
@@ -17,6 +27,7 @@ export const attendanceApi = api.injectEndpoints({
         method: 'POST',
         body,
       }),
+      onQueryStarted: writeToday,
       invalidatesTags: ['Attendance', 'AttendanceToday', 'AttendanceStats'],
     }),
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Alert, AppState, Linking, Platform, Switch, View } from 'react-native';
 import { router } from 'expo-router';
 import { useDispatch, useSelector } from 'react-redux';
-import { Bell, Fingerprint, KeyRound, LogOut, MailWarning, Moon, Volume2 } from 'lucide-react-native';
+import { Bell, Clock, Fingerprint, KeyRound, LogOut, MailWarning, Moon, Volume2 } from 'lucide-react-native';
 import { Card } from './Card';
 import { Text } from './Text';
 import { Avatar } from './Avatar';
@@ -12,7 +12,7 @@ import { Chip } from './Chip';
 import { signOut } from '@/store/session';
 import { LOCK_CHOICES, authenticate, biometricLabel, getBiometricPref, getLockMinutes, setBiometricPref, setLockMinutes } from '@/utils/biometric';
 import { isQuietOn, isSoundOn, playNotificationSound, setQuietOn, setSoundOn } from '@/utils/notificationSound';
-import { hasPush, isPushOn, pushPermission, registerPush, setPrimerChoice, setPushOn, unregisterPush } from '@/services/push';
+import { hasPush, isPushOn, pushPermission, registerPush, setPrimerChoice, setPushOn, showLocalNotification, unregisterPush } from '@/services/push';
 import { ROLE_LABELS } from '@/constants';
 import { useTheme } from '@/constants/theme';
 
@@ -108,6 +108,15 @@ export function PhoneSettings({ test }) {
         )}
       />
       {Platform.OS !== 'web' && <ListRow icon={Moon} label="Quiet at night" hint="9 PM to 8 AM, silent while the app is open" right={<Toggle value={quiet} onValueChange={toggleQuiet} label="Quiet at night" />} />}
+      {/* Dev builds only: fires the 6:10 PM reminder now, to try its "Clock out" button. Tapping it really clocks you out. */}
+      {__DEV__ && Platform.OS !== 'web' && (
+        <ListRow
+          icon={Clock}
+          label="Test clock-out reminder"
+          hint="Arrives in 5 seconds. Lock the phone, then tap Clock out."
+          onPress={() => showLocalNotification({ type: 'clock_out_reminder', title: 'Time to clock out', message: 'Your shift is over. Clock out before you leave.', inSeconds: 5 })}
+        />
+      )}
     </Card>
   );
 }
