@@ -4,6 +4,7 @@ import { useDispatch } from 'react-redux';
 import { AuthScreen, Alert, Button, Input, PasswordInput } from '@/components';
 import { useLoginMutation } from '@/services/authApi';
 import { signIn } from '@/store/session';
+import { useTheme } from '@/constants/theme';
 import { apiError } from '@/utils/apiError';
 import { getFieldError } from '@/utils/getFieldError';
 
@@ -14,6 +15,7 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const passwordRef = useRef(null);
   const { message, fieldErrors } = apiError(error);
+  const placeholderTextColor = `${useTheme().muted}80`; // 80 = 50% alpha on the #rrggbb token
 
   const submit = async () => {
     const res = await login({ email: email.trim(), password });
@@ -28,6 +30,7 @@ export default function SignIn() {
         value={email}
         onChangeText={setEmail}
         placeholder="you@company.com"
+        placeholderTextColor={placeholderTextColor}
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
@@ -43,6 +46,7 @@ export default function SignIn() {
         value={password}
         onChangeText={setPassword}
         placeholder="••••••••"
+        placeholderTextColor={placeholderTextColor}
         autoComplete="current-password"
         textContentType="password"
         returnKeyType="go"

@@ -21,6 +21,7 @@ function EntryForm({ employee, name, date, setDate, record, onChangeEmployee }) 
   const [status, setStatus] = useState(record?.status || 'present');
   const [inTime, setIn] = useState(toDisplay(hhmm(sessions[0]?.clockIn?.time)));
   const [outTime, setOut] = useState(toDisplay(hhmm(sessions.at(-1)?.clockOut?.time)));
+  const [breakMin, setBreak] = useState(String(record?.totalBreakMinutes || ''));
   const [isWFH, setWFH] = useState(!!record?.isWFH);
   const [notes, setNotes] = useState('');
   const { message, fieldErrors } = apiError(error);
@@ -35,12 +36,19 @@ function EntryForm({ employee, name, date, setDate, record, onChangeEmployee }) 
       status,
       clockInTime: off ? undefined : parseTime(inTime) || undefined,
       clockOutTime: off ? undefined : parseTime(outTime) || undefined,
+      breakMinutes: off ? undefined : Number(breakMin) || 0,
       isWFH: off ? false : isWFH || status === 'wfh',
       notes: notes.trim(),
     };
     if (await runAction(save(body), record ? 'Day updated' : 'Entry added', "Couldn't save")) backTo();
   };
   const badTime = (t) => !!t.trim() && !parseTime(t);
+  const inH = parseTime(inTime);
+  const outH = parseTime(outTime);
+  const outError = badTime(outTime) ? 'Use a time like 6:30 PM'
+    : inH && outH && outH <= inH ? 'Must be after clock in'
+    : inH && !outH && date < ymd() ? 'Needed for a past day'
+    : err('clockOutTime');
 
   return (
     <>
@@ -51,7 +59,9 @@ function EntryForm({ employee, name, date, setDate, record, onChangeEmployee }) 
         {!!onChangeEmployee && <Text className="font-body-semibold text-accent-ink">Change</Text>}
       </Pressable>
       <DateField label="Day" value={date} onChange={setDate} maxDate={ymd()} error={err('date')} />
-      {record && <Alert tone="info" message="Saving replaces this day's sessions with the times below." />}
+      {record && <Alert tone="info" message={sessions.length > 1
+        ? `This day has ${sessions.length} sessions. Saving merges them into one, so gaps between them count as work. Put the gaps in Break.`
+        : "Saving replaces this day's sessions with the times below."} />}
       <View className="gap-1.5">
         <Text className="font-body-medium text-sm">Status</Text>
         <View className="flex-row flex-wrap gap-2">
@@ -61,7 +71,8 @@ function EntryForm({ employee, name, date, setDate, record, onChangeEmployee }) 
       {!off && (
         <>
           <Input label="Clock in" value={inTime} onChangeText={setIn} placeholder="9:30 AM" autoCapitalize="none" error={badTime(inTime) ? 'Use a time like 9:30 AM' : err('clockInTime')} />
-          <Input label="Clock out" value={outTime} onChangeText={setOut} placeholder="6:30 PM" autoCapitalize="none" hint="Leave empty to keep the session open." error={badTime(outTime) ? 'Use a time like 6:30 PM' : err('clockOutTime')} />
+          <Input label="Clock out" value={outTime} onChangeText={setOut} placeholder="6:30 PM" autoCapitalize="none" hint={date < ymd() ? undefined : 'Leave empty if they are still at work.'} error={outError} />
+          <Input label="Break (minutes)" value={breakMin} onChangeText={(v) => setBreak(v.replace(/\D/g, ''))} placeholder="0" keyboardType="number-pad" maxLength={4} hint="Taken off the worked hours." error={err('breakMinutes')} />
           <View className="flex-row items-center gap-3">
             <Text className="flex-1 font-body-medium">Worked from home</Text>
             <Toggle value={isWFH || status === 'wfh'} onValueChange={setWFH} label="Worked from home" />
@@ -79,7 +90,7 @@ function EntryForm({ employee, name, date, setDate, record, onChangeEmployee }) 
         hint="Saved on the record as the note."
         error={err('notes')}
       />
-      <Button title={record ? 'Save changes' : 'Add entry'} loading={isLoading} disabled={!notes.trim() || badTime(inTime) || badTime(outTime)} onPress={submit} />
+      <Button title={record ? 'Save changes' : 'Add entry'} loading={isLoading} disabled={!notes.trim() || badTime(inTime) || (!off && outError !== err('clockOutTime'))} onPress={submit} />
     </>
   );
 }

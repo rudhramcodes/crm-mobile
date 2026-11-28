@@ -54,6 +54,7 @@ const CATEGORIES = {
   task_new: [{ identifier: 'start', buttonTitle: 'Start work', options: { opensAppToForeground: true } }, { identifier: 'open', buttonTitle: 'Open' }],
   chat: [{ identifier: 'reply', buttonTitle: 'Reply', textInput: { submitButtonTitle: 'Send', placeholder: 'Write a reply' }, options: { opensAppToForeground: true } }],
   open: [{ identifier: 'open', buttonTitle: 'Open' }],
+  clock_out: [{ identifier: 'clock_out', buttonTitle: 'Clock out', options: { opensAppToForeground: true } }],
 };
 
 if (Platform.OS !== 'web') {
@@ -83,6 +84,7 @@ const CATEGORY_OF = {
   task_comment: 'chat', mention: 'chat',
   task_changes_requested: 'open', task_due_soon: 'open', task_reassigned: 'open', task_rescheduled: 'open',
   lead_assigned: 'open', meeting_requested: 'open', meeting_reminder: 'open', leave_applied: 'open', regularization_request: 'open',
+  clock_out_reminder: 'clock_out',
 };
 // Follows the in-app sound setting and quiet hours, like the server pushes do through the foreground handler.
 export async function showLocalNotification(n) {
@@ -96,7 +98,7 @@ export async function showLocalNotification(n) {
       threadIdentifier: n.referenceId ? `${n.referenceModel || 'item'}:${n.referenceId}` : undefined,
       sound: sound ? 'default' : false,
     },
-    trigger: null,
+    trigger: n.inSeconds ? { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: n.inSeconds } : null,
   });
 }
 
@@ -125,10 +127,22 @@ export async function registerPush(dispatch, { ask = false } = {}) {
   }
 
   const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
+  devToken = data;
+  tellDevServer({ perm }); // also after Allow in the explainer or Settings, not only at app start
   const res = await dispatch(authApi.endpoints.registerPushToken.initiate(data));
   if (!res.error) pushToken = data;
   return perm;
 }
+
+// Dev only: hand this phone's push token, or why there is none, to the Expo dev server (metro.config.js),
+// so `npm run push:in|out` on the Mac reaches this phone.
+let devToken = null;
+export const tellDevServer = (info) => {
+  const host = Constants.expoConfig?.hostUri;
+  if (!__DEV__ || !host) return;
+  const body = { token: devToken, os: Platform.OS, isDevice: Device.isDevice, at: new Date().toISOString(), ...info };
+  fetch(`http://${host}/__push-token`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
+};
 
 // Sign out: this phone stops getting the user's pushes. Needs the access token, so run it before logout.
 export async function unregisterPush(dispatch) {

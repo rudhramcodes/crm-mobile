@@ -20,6 +20,7 @@
     },
     "android": {
       "package": "com.rudhram.crm",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#F6F1E0",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -71,6 +72,9 @@
           "dark": {
             "image": "./assets/images/splash-icon.png",
             "backgroundColor": "#1C120B"
+          },
+          "android": {
+            "imageWidth": 160
           }
         }
       ],

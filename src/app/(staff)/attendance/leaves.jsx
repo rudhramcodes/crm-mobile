@@ -23,9 +23,9 @@ function LeaveCard({ l, canReview, showName, mine, lead }) {
   const [comment, setComment] = useState('');
   const s = ymd(l.startDate);
   const e = ymd(l.endDate);
-  const days = leaveDays(s, e);
-  // Same rule as the server: own pending any time, own approved before it starts; managers can cancel any approved leave.
-  const canCancel = mine ? l.status === 'pending' || (l.status === 'approved' && s > ymd()) : lead && l.status === 'approved';
+  const days = l.days ?? leaveDays(s, e); // the server's count; older leave falls back to Sundays-only
+  // Same rule as the server: own pending any time, own approved before it starts; admins and managers can cancel pending or approved leave from today on.
+  const canCancel = ['pending', 'approved'].includes(l.status) && ((mine && (l.status === 'pending' || s > ymd())) || (lead && s >= ymd()));
   const go = () => runAction((acting === 'approve' ? approve : reject)({ id: l._id, comment: comment.trim() || undefined }), acting === 'approve' ? 'Leave approved' : 'Leave rejected');
 
   return (
@@ -65,7 +65,7 @@ function LeaveCard({ l, canReview, showName, mine, lead }) {
         loading={c.isLoading}
         onCancel={() => setConfirming(false)}
         onConfirm={async () => {
-          await runAction(cancel(l._id), 'Leave cancelled');
+          await runAction(cancel(l._id), 'Leave cancelled', "Couldn't cancel leave");
           setConfirming(false);
         }}
       />

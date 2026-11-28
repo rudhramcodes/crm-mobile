@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "949737276573",
+    "project_id": "rudhram-crm",
+    "storage_bucket": "rudhram-crm.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:949737276573:android:991005058e7565ea268074",
+        "android_client_info": {
+          "package_name": "com.rudhram.crm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAsZre3O0SO8Ku_WvToxaHJmMWmyj3t6FA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

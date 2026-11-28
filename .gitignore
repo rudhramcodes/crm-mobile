@@ -51,3 +51,6 @@ credentials.json
 
 # personal Claude Code settings
 .claude/settings.local.json
+
+# phone push token for npm run push:in|out (metro.config.js)
+.push-token.json

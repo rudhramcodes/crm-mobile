@@ -40,19 +40,42 @@ export const placeOf = (loc) => {
   return loc.lat != null && loc.lng != null ? `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}` : null;
 };
 
-// Location is left out (never null) when there's no permission or no fix within 8 s; the server then decides.
-export const getLocation = async () => {
+// A fix this fresh and this accurate is reused, so a tap right after warmLocation() doesn't wait on the GPS.
+const FRESH_MS = 2 * 60 * 1000;
+const GOOD_METERS = 50; // the office geofence is 100 m
+let lastFix = null;
+let pendingFix = null;
+const coords = (f) => ({ lat: f.coords.latitude, lng: f.coords.longitude });
+const fresh = (f) => f && Date.now() - f.timestamp < FRESH_MS && (f.coords.accuracy ?? 0) <= GOOD_METERS;
+const askGps = () => {
+  pendingFix ||= Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High })
+    .then((f) => { lastFix = f; return f; })
+    .finally(() => { pendingFix = null; });
+  return pendingFix;
+};
+
+// Location is left out (never null) when there's no permission or no fix within `wait` ms; the server then decides.
+// Office clock-in needs it (100 m geofence), so it waits up to 8 s; clock-out doesn't, so callers pass a short wait.
+export const getLocation = async ({ wait = 8000 } = {}) => {
   try {
     const { granted } = await Location.requestForegroundPermissionsAsync();
     if (!granted) return undefined;
-    const fix = await Promise.race([
-      Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
-      new Promise((resolve) => setTimeout(() => resolve(null), 8000)),
-    ]);
-    return fix ? { lat: fix.coords.latitude, lng: fix.coords.longitude } : undefined;
+    if (fresh(lastFix)) return coords(lastFix);
+    const known = await Location.getLastKnownPositionAsync({ maxAge: FRESH_MS, requiredAccuracy: GOOD_METERS });
+    if (known) return coords(known);
+    const fix = await Promise.race([askGps(), new Promise((resolve) => setTimeout(() => resolve(null), wait))]);
+    return fix ? coords(fix) : undefined;
   } catch {
     return undefined;
   }
+};
+
+// Start a GPS fix in the background when a clock screen opens, so it's ready by the time the button is tapped.
+// Never prompts for permission: that waits for the tap.
+export const warmLocation = async () => {
+  try {
+    if ((await Location.getForegroundPermissionsAsync()).granted && !fresh(lastFix)) askGps().catch(() => {});
+  } catch { /* no GPS: the tap will say so */ }
 };
 
 // Runs a mutation with the house feedback: success haptic + toast, or error haptic + toast. Returns the result or null.
@@ -70,10 +93,21 @@ export const runAction = async (promise, done, failTitle = "Couldn't save") => {
   }
 };
 
-// Web formula: present + WFH + half of each half day, over working days with a record; leave and holidays don't count.
-export const attendanceRate = (s = {}) => {
-  const denom = (s.present || 0) + (s.wfh || 0) + (s.absent || 0) + (s.half_day || 0);
-  return denom ? Math.round((((s.present || 0) + (s.wfh || 0) + (s.half_day || 0) * 0.5) / denom) * 100) : null;
+// shortcut: same day length for everyone (shift minus a 1 h lunch); read it from each person's shift when shifts differ.
+export const DAILY_HOURS_TARGET = 8;
+
+// Days worked in the month: present + WFH, with each half day counting as 0.5.
+export const presentDays = (s = {}) => (s.present || 0) + (s.wfh || 0) + (s.half_day || 0) * 0.5;
+
+// Working days in the month: every day except Sundays (the server's only weekend) and holidays.
+export const workingDays = (year, month, holidays = []) => {
+  const off = new Set(holidays.map((h) => ymd(h.date)));
+  let n = 0;
+  for (let d = 1; d <= new Date(year, month, 0).getDate(); d++) {
+    const day = new Date(year, month - 1, d);
+    if (day.getDay() !== 0 && !off.has(ymd(day))) n++;
+  }
+  return n;
 };
 
 export const monthRange = (year, month) => ({ dateFrom: ymd(new Date(year, month - 1, 1)), dateTo: ymd(new Date(year, month, 0)) });

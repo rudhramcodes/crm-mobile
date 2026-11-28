@@ -21,6 +21,7 @@ import {
 } from "@/components";
 import { MEETING_STATUS } from "@/constants";
 import { useTheme } from "@/constants/theme";
+import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { useGetClientsQuery } from "@/services/clientApi";
 import {
   useDeleteMeetingMutation,
@@ -38,7 +39,6 @@ import {
   SlidersHorizontal,
 } from "lucide-react-native";
 import { useState } from "react";
-import { useDebouncedSearch } from "@/hooks/useDebouncedSearch";
 import { View } from "react-native";
 import { useSelector } from "react-redux";
 
@@ -110,7 +110,13 @@ export default function Meetings() {
               onPress={() => router.push("/meetings/new")}
             />
           ) : me?.role === "employee" ? (
-            <Button title="Request" icon={Plus} size="sm" variant="secondary" onPress={() => router.push("/meetings/request")} />
+            <Button
+              title="Request"
+              icon={Plus}
+              size="sm"
+              variant="secondary"
+              onPress={() => router.push("/meetings/request")}
+            />
           ) : null
         }
       />
@@ -304,16 +310,14 @@ export default function Meetings() {
 
       <ConfirmDialog
         visible={!!deleting}
-        title={
-          deleting?.seriesId ? "Delete recurring meeting?" : "Delete meeting?"
-        }
+        title={deleting?.seriesId ? "Delete recurring meeting?" : "Delete?"}
         message={
           deleting?.seriesId
             ? `"${deleting?.title}" is part of a recurring series.`
             : `Are you sure you want to delete meeting "${deleting?.title}"? This cannot be undone.`
         }
         confirmLabel={
-          deleting?.seriesId ? "Delete this occurrence only" : "Delete meeting"
+          deleting?.seriesId ? "Delete this occurrence only" : "Delete"
         }
         secondaryLabel={deleting?.seriesId ? "Delete entire series" : undefined}
         onSecondary={() => remove(true)}
