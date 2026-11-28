@@ -98,7 +98,8 @@
         }
       ],
       "expo-asset",
-      "expo-widgets"
+      "expo-widgets",
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": false,
