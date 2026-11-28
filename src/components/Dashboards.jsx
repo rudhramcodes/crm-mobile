@@ -228,7 +228,7 @@ function PendingLeaves({ leaves, count }) {
     <Section title="Leave requests" sub={`${count} waiting for approval`} action="Open leave requests" onAction={() => router.push('/attendance/leaves')}>
       <View>
         {leaves.map((l, i) => {
-          const days = leaveDays(ymd(l.startDate), ymd(l.endDate));
+          const days = l.days ?? leaveDays(ymd(l.startDate), ymd(l.endDate));
           return (
             <Pressable
               key={l._id}

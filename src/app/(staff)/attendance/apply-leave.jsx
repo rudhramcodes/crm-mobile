@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Platform, View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { Alert, Button, Chip, DateField, Input, Screen, SheetHeader, Text, leaveDays, backTo } from '@/components';
-import { useApplyLeaveMutation, useGetLeaveBalanceQuery } from '@/services/attendanceApi';
+import { useApplyLeaveMutation, useGetHolidaysQuery, useGetLeaveBalanceQuery } from '@/services/attendanceApi';
 import { LEAVE_TYPES } from '@/constants';
 import { runAction, ymd } from '@/utils/attendance';
 import { apiError } from '@/utils/apiError';
@@ -23,7 +23,10 @@ export default function ApplyLeave() {
   const { message, fieldErrors } = apiError(error);
   const err = (f) => getFieldError(fieldErrors, f);
 
-  const days = halfDay ? 0.5 : startDate && endDate && endDate >= startDate ? leaveDays(startDate, endDate) : 0;
+  // shortcut: holidays of the start year only; the server's count wins for leave that crosses into a new year.
+  const { data: hol } = useGetHolidaysQuery({ year: Number(startDate.slice(0, 4)), page: 1, limit: 100 });
+  const working = startDate && endDate && endDate >= startDate ? leaveDays(startDate, halfDay ? startDate : endDate, hol?.data || []) : 0;
+  const days = halfDay && working ? 0.5 : working;
   const left = data?.data?.balance?.[leaveType]?.balance;
   const over = left != null && days > left;
 
@@ -50,6 +53,7 @@ export default function ApplyLeave() {
       </View>
       <DateField label={halfDay ? 'Date' : 'From'} value={startDate} onChange={(d) => { setStart(d); if (d > endDate) setEnd(d); }} minDate={ymd()} error={err('startDate')} />
       {!halfDay && <DateField label="To" value={endDate} onChange={setEnd} minDate={startDate} error={err('endDate')} />}
+      {!days && !!startDate && <Alert tone="info" message="Only Sundays or holidays in these dates, so no leave is needed." />}
       {days > 0 && (
         <Alert
           tone={over ? 'error' : 'info'}

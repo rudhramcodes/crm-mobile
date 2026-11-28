@@ -160,8 +160,15 @@ export function MonthStats({ stats, year, month, holidays, today, onPress }) {
   );
 }
 
-// Inclusive day count between two "YYYY-MM-DD" dates, as the server counts leave.
-export const leaveDays = (a, b) => Math.round((new Date(`${b}T00:00:00`) - new Date(`${a}T00:00:00`)) / 864e5) + 1;
+// Working days between two "YYYY-MM-DD" dates, as the server charges leave: Sundays and holidays are free.
+export const leaveDays = (a, b, holidays = []) => {
+  const off = new Set(holidays.map((h) => ymd(h.date)));
+  let n = 0;
+  for (const d = new Date(`${a}T00:00:00`); ymd(d) <= b; d.setDate(d.getDate() + 1)) {
+    if (d.getDay() !== 0 && !off.has(ymd(d))) n += 1;
+  }
+  return n;
+};
 export function BalanceCards({ balance }) {
   return (
     <View className="flex-row gap-3">
