@@ -128,6 +128,7 @@ export async function registerPush(dispatch, { ask = false } = {}) {
 
   const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
   devToken = data;
+  tellDevServer({ perm }); // also after Allow in the explainer or Settings, not only at app start
   const res = await dispatch(authApi.endpoints.registerPushToken.initiate(data));
   if (!res.error) pushToken = data;
   return perm;

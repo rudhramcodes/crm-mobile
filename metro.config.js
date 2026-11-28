@@ -16,7 +16,13 @@ config.server.enhanceMiddleware = (middleware, server) => {
     req.on('data', (c) => { body += c; if (body.length > 4096) req.destroy(); });
     req.on('end', () => {
       try {
-        fs.writeFileSync(PUSH_FILE, JSON.stringify(JSON.parse(body), null, 2));
+        const phone = JSON.parse(body);
+        // One entry per phone token, so push:in|out reaches every phone; the newest token-less report explains why.
+        let phones = {};
+        try { phones = JSON.parse(fs.readFileSync(PUSH_FILE, 'utf8')); } catch {}
+        if (phones.os) phones = {}; // older one-phone file
+        phones[phone.token || '_noToken'] = phone;
+        fs.writeFileSync(PUSH_FILE, JSON.stringify(phones, null, 2));
         res.end('ok');
       } catch {
         res.statusCode = 400;
