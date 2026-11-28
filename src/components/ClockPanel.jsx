@@ -48,6 +48,8 @@ export function ClockPanel() {
   const holiday = holidays?.data?.find((h) => ymd(h.date) === ymd());
   const blocked = !active && blockReason(record, holiday);
   const hasSessions = record?.sessions?.some((s) => s.clockIn?.time);
+  // The server rejects a WFH clock-in without a reason of 3+ characters
+  const needsReason = wfh && wfhReason.trim().length < 3;
 
   useEffect(() => {
     if (!active || openBreak) return;
@@ -61,7 +63,7 @@ export function ClockPanel() {
     try {
       const location = await getLocation();
       setBusy('Clocking in…');
-      await clockIn({ location, isWFH: wfh || undefined, wfhReason: wfh && wfhReason.trim() ? wfhReason.trim() : undefined }).unwrap();
+      await clockIn({ location, isWFH: wfh || undefined, wfhReason: wfh ? wfhReason.trim() : undefined }).unwrap();
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showToast({ title: hasSessions ? 'Clocked in again' : 'Clocked in. Have a good day.' });
     } catch (e) {
@@ -99,7 +101,7 @@ export function ClockPanel() {
               </View>
               <Toggle value={wfh} onValueChange={(v) => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setWfh(v); }} label="Working from home" />
             </View>
-            {wfh && <Input placeholder="Reason (optional)" value={wfhReason} onChangeText={setWfhReason} maxLength={500} />}
+            {wfh && <Input placeholder="Why are you working from home?" accessibilityLabel="Reason for working from home" value={wfhReason} onChangeText={setWfhReason} maxLength={500} />}
           </View>
         )}
 
@@ -113,7 +115,7 @@ export function ClockPanel() {
             <Button title="Clock out" icon={LogOut} className="flex-1" onPress={() => router.push('/attendance/clock-out')} />
           </View>
         ) : !blocked && (
-          <Button title={busy || (hasSessions ? 'Clock in again' : 'Clock in')} icon={LogIn} loading={!!busy} onPress={onClockIn} />
+          <Button title={busy || (hasSessions ? 'Clock in again' : 'Clock in')} icon={LogIn} loading={!!busy} disabled={needsReason} onPress={onClockIn} />
         )}
       </Card>
 
